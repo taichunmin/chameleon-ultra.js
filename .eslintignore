@@ -129,5 +129,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# mkcert
-/mkcert
+# eslint
+.eslintrc.cjs
+rollup.config.mjs

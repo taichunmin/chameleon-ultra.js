@@ -1,0 +1,17 @@
+{
+  "extends": "@tsconfig/node18/tsconfig.json",
+  "include": ["./**/*.js", "./**/*.cjs", "./**/*.mjs", "./**/*.ts"],
+  "exclude": ["./dist/**/*", "./node_modules/**/*", "./**/*.d.ts"],
+  "compilerOptions": {
+    "module": "ESNext",
+    "outDir": "./dist/tsc/",
+    "resolveJsonModule": true,
+    "rootDir": "./",
+    "useUnknownInCatchVariables": false
+  },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS",
+    }
+  }
+}
