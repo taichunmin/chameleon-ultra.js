@@ -1,15 +1,15 @@
 import { Buffer } from './buffer'
 
-describe('Buffer.fromArrayBufferView()', () => {
+describe('Buffer.fromView()', () => {
   test('with TypedArray', async () => {
     const view = new Uint8Array([0, 1, 2, 3, 4]).subarray(1, 4)
-    const actual = Buffer.fromArrayBufferView(view).toString('hex')
+    const actual = Buffer.fromView(view).toString('hex')
     expect(actual).toEqual('010203')
   })
 
   test('with DataView', async () => {
     const view = new DataView(new Uint8Array([0, 1, 2, 3, 4]).buffer, 1, 3)
-    const actual = Buffer.fromArrayBufferView(view).toString('hex')
+    const actual = Buffer.fromView(view).toString('hex')
     expect(actual).toEqual('010203')
   })
 })
@@ -211,5 +211,28 @@ test.each([
   ['SGVs_G8-d29ybGQ', 'SGVs/G8+d29ybGQ='],
 ])('Buffer.from(%j, \'base64url\').toString(\'base64\') = %j', async (str, expected) => {
   const actual = Buffer.from(str, 'base64url').toString('base64')
+  expect(actual).toEqual(expected)
+})
+
+test.each([
+  { str1: 'ABC', str2: 'ABC', expected: 0 },
+  { str1: 'ABC', str2: 'BCD', expected: -1 },
+  { str1: 'ABC', str2: 'ABCD', expected: -1 },
+  { str1: 'BCD', str2: 'ABC', expected: 1 },
+  { str1: 'BCD', str2: 'ABCD', expected: 1 },
+])('Buffer.compare("$str1", "$str2") = $expected', async ({ str1, str2, expected }) => {
+  const buf1 = Buffer.from(str1)
+  const buf2 = Buffer.from(str2)
+  expect(Buffer.compare(buf1, buf2)).toEqual(expected)
+  expect(buf1.compare(buf2)).toEqual(expected)
+})
+
+test.each([
+  { str: '', expected: false },
+  { str: 'hex', expected: true },
+  { str: 'utf/8', expected: false },
+  { str: 'utf8', expected: true },
+])('Buffer.isEncoding("$str") = $expected', async ({ str, expected }) => {
+  const actual = Buffer.isEncoding(str)
   expect(actual).toEqual(expected)
 })

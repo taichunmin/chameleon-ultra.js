@@ -22,11 +22,13 @@ block content
 
 block script
   script.
-    const { Buffer, ChameleonUltra } = ChameleonUltraJS // eslint-disable-line no-unused-vars
+    const { Buffer, ChameleonUltra, WebserialAdapter, LoggerRxTx } = ChameleonUltraJS // eslint-disable-line no-unused-vars
     const ultraUsb = new ChameleonUltra(console.log)
-    ultraUsb.use(new ChameleonUltraWebserialAdapter())
+    ultraUsb.use(new WebserialAdapter())
+    ultraUsb.use(new LoggerRxTx())
     const ultraBle = new ChameleonUltra(console.log)
     //- ultraBle.use(new ChameleonWebbleAdapter())
+    ultraBle.use(new LoggerRxTx())
 
     window.vm = new Vue({
       el: '#app',

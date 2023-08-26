@@ -15,7 +15,14 @@ const HEX_CHAR = _.transform('0123456789abcdef'.split(''), (m, v, k) => {
 const K_MAX_LENGTH = 0x7FFFFFFF
 const SIGNED_MAX_VALUE = [0, 0x7F, 0x7FFF, 0x7FFFFF, 0x7FFFFFFF, 0x7FFFFFFFFF, 0x7FFFFFFFFFFF]
 const SIGNED_OFFSET = [0, 0x100, 0x10000, 0x1000000, 0x100000000, 0x10000000000, 0x1000000000000]
-if (typeof SharedArrayBuffer === 'undefined') (globalThis as any).SharedArrayBuffer = ArrayBuffer
+
+function isInstance<T> (obj: any, type: Newable<T>): obj is T {
+  return obj instanceof type || obj?.constructor?.name === type?.name
+}
+
+function isSharedArrayBuffer (val: any): val is SharedArrayBuffer {
+  return typeof SharedArrayBuffer !== 'undefined' && (isInstance(val, SharedArrayBuffer) || isInstance(val?.buffer, SharedArrayBuffer))
+}
 
 export class Buffer extends Uint8Array {
   static readonly poolSize = 8192
@@ -36,8 +43,11 @@ export class Buffer extends Uint8Array {
     this.dv = new DataView(this.buffer, this.byteOffset, this.byteLength)
   }
 
-  static alloc (size: number, fill?: string | Buffer | Uint8Array | number, encoding: Encoding = 'utf8'): Buffer {
-    if (size >= K_MAX_LENGTH) throw new RangeError(`Invalid size: ${size}`)
+  static alloc (size: number, fill: string, encoding?: Encoding): Buffer
+  static alloc (size: number, fill?: Buffer | Uint8Array | number): Buffer
+
+  static alloc (size: number, fill: any = 0, encoding: Encoding = 'utf8'): Buffer {
+    if (!_.isSafeInteger(size) || size >= K_MAX_LENGTH) throw new RangeError(`Invalid size: ${size}`)
     const buf = new Buffer(size)
     if (_.isNil(fill)) return buf
     return _.isNil(encoding) ? buf.fill(fill) : buf.fill(fill, encoding)
@@ -55,7 +65,7 @@ export class Buffer extends Uint8Array {
   static byteLength (string: string, encoding?: Encoding): number
 
   static byteLength (string: any, encoding: Encoding = 'utf8'): number {
-    if (Buffer.isBuffer(string) || string instanceof ArrayBuffer || string instanceof SharedArrayBuffer || ArrayBuffer.isView(string)) return string.byteLength
+    if (Buffer.isBuffer(string) || isInstance(string, ArrayBuffer) || isSharedArrayBuffer(string) || ArrayBuffer.isView(string)) return string.byteLength
     if (!_.isString(string)) throw new TypeError(`Invalid type of string: ${typeof string}`)
     switch (encoding) {
       case 'ascii':
@@ -81,7 +91,9 @@ export class Buffer extends Uint8Array {
     }
   }
 
-  static compare (buf1: Buffer, buf2: Buffer): number {
+  static compare (buf1: any, buf2: any): number {
+    if (!Buffer.isBuffer(buf1) && !isInstance(buf1, Uint8Array)) throw new TypeError('Invalid type of buf1')
+    if (!Buffer.isBuffer(buf2) && !isInstance(buf2, Uint8Array)) throw new TypeError('Invalid type of buf2')
     const len = Math.max(buf1.length, buf2.length)
     for (let i = 0; i < len; i++) {
       if (i >= buf1.length) return -1
@@ -104,10 +116,7 @@ export class Buffer extends Uint8Array {
     const buf = new Buffer(totalLength)
     let start = 0
     for (let i = 0; i < list.length; i++) {
-      if (start + list[i].length > totalLength) {
-        buf.set(list[i].subarray(0, totalLength - start), start)
-        break
-      }
+      if (start + list[i].length > totalLength) list[i] = list[i].subarray(0, totalLength - start)
       buf.set(list[i], start)
       start += list[i].length
     }
@@ -131,17 +140,17 @@ export class Buffer extends Uint8Array {
     if (!_.isNil(valFromObject) && valFromObject !== val) val = valFromObject
 
     if (_.isString(val)) return Buffer.fromString(val, encodingOrOffset)
-    if (ArrayBuffer.isView(val) || Buffer.isBuffer(val)) return Buffer.fromArrayBufferView(val)
+    if (ArrayBuffer.isView(val) || Buffer.isBuffer(val)) return Buffer.fromView(val)
 
     if (_.isNil(val) || _.isNumber(val)) throw new TypeError(`Invalid type of value: ${typeof val}`)
 
-    if (val instanceof ArrayBuffer || val instanceof SharedArrayBuffer) return new Buffer(val, encodingOrOffset, length)
+    if (isInstance(val, ArrayBuffer) || isSharedArrayBuffer(val)) return new Buffer(val, encodingOrOffset, length)
     if (_.isArrayLike(val)) return Buffer.fromArray(val)
 
     throw new TypeError(`Invalid type of value: ${typeof val}`)
   }
 
-  static fromString (string: string, encoding: Encoding = 'utf8'): Buffer {
+  static fromString (str: string, encoding: Encoding = 'utf8'): Buffer {
     encoding = _.toLower(encoding) as Encoding
     if (!Buffer.isEncoding(encoding)) throw new TypeError(`Unknown encoding: ${encoding as string}`)
     const fromStringFns = {
@@ -158,7 +167,7 @@ export class Buffer extends Uint8Array {
       utf16le: Buffer.fromUcs2String,
       utf8: Buffer.fromUtf8String,
     }
-    return fromStringFns[encoding](string)
+    return fromStringFns[encoding](str)
   }
 
   static fromUcs2String (ucs2: string): Buffer {
@@ -168,7 +177,7 @@ export class Buffer extends Uint8Array {
   }
 
   static fromUtf8String (utf8: string): Buffer {
-    return Buffer.fromArrayBufferView(new TextEncoder().encode(utf8))
+    return Buffer.fromView(new TextEncoder().encode(utf8))
   }
 
   static fromAsciiString (ascii: string): Buffer {
@@ -223,7 +232,7 @@ export class Buffer extends Uint8Array {
     return buf
   }
 
-  static fromArrayBufferView (view: ArrayBufferView): Buffer {
+  static fromView (view: ArrayBufferView): Buffer {
     if (!ArrayBuffer.isView(view)) throw new TypeError('invalid view')
     return new Buffer(view.buffer, view.byteOffset, view.byteLength)
   }
@@ -235,14 +244,15 @@ export class Buffer extends Uint8Array {
   }
 
   static isBuffer (obj: any): obj is Buffer {
-    return obj instanceof Buffer
+    return isInstance(obj, Buffer)
   }
 
   static isEncoding (encoding: any): encoding is Encoding {
     return _.isString(encoding) && _.has(EncodingConst, encoding)
   }
 
-  compare (target: Buffer, targetStart: number = 0, targetEnd: number = target.length, sourceStart: number = 0, sourceEnd: number = this.length): number {
+  compare (target: any, targetStart: number = 0, targetEnd: number = target.length, sourceStart: number = 0, sourceEnd: number = this.length): number {
+    if (!Buffer.isBuffer(target) && !isInstance(target, Uint8Array)) throw new TypeError('Invalid type of target')
     return Buffer.compare(this.subarray(sourceStart, sourceEnd), target.subarray(targetStart, targetEnd))
   }
 
@@ -270,7 +280,7 @@ export class Buffer extends Uint8Array {
     if (!_.isSafeInteger(offset) || !_.isSafeInteger(end)) throw new RangeError('Invalid type of offset or end')
 
     if (_.isString(val)) val = Buffer.fromString(val, encoding)
-    else if (val instanceof Uint8Array) val = Buffer.fromArrayBufferView(val)
+    else if (isInstance(val, Uint8Array)) val = Buffer.fromView(val)
 
     if (Buffer.isBuffer(val) && val.length < 2) val = val.length > 0 ? val[0] : 0 // try to convert Buffer to number
     if (_.isNumber(val)) {
@@ -298,7 +308,7 @@ export class Buffer extends Uint8Array {
     if (!_.isSafeInteger(offset)) throw new RangeError('Invalid type of offset')
 
     if (_.isString(val)) val = Buffer.fromString(val, encoding)
-    else if (val instanceof Uint8Array) val = Buffer.fromArrayBufferView(val)
+    else if (isInstance(val, Uint8Array)) val = Buffer.fromView(val)
 
     if (Buffer.isBuffer(val)) { // try to convert Buffer to number
       if (val.length === 0) return false
@@ -330,7 +340,7 @@ export class Buffer extends Uint8Array {
     if (!_.isSafeInteger(offset)) throw new RangeError('Invalid type of offset')
 
     if (_.isString(val)) val = Buffer.fromString(val, encoding)
-    else if (val instanceof Uint8Array) val = Buffer.fromArrayBufferView(val)
+    else if (isInstance(val, Uint8Array)) val = Buffer.fromView(val)
 
     if (Buffer.isBuffer(val)) { // try to convert Buffer to number
       if (val.length === 0) return -1
@@ -362,7 +372,7 @@ export class Buffer extends Uint8Array {
     if (!_.isSafeInteger(offset)) throw new RangeError('Invalid type of offset')
 
     if (_.isString(val)) val = Buffer.fromString(val, encoding)
-    else if (val instanceof Uint8Array) val = Buffer.fromArrayBufferView(val)
+    else if (isInstance(val, Uint8Array)) val = Buffer.fromView(val)
 
     if (Buffer.isBuffer(val)) { // try to convert Buffer to number
       if (val.length === 0) return -1
@@ -480,11 +490,11 @@ export class Buffer extends Uint8Array {
   }
 
   subarray (start: number = 0, end: number = this.length): Buffer {
-    return Buffer.fromArrayBufferView(super.subarray(start, end))
+    return Buffer.fromView(super.subarray(start, end))
   }
 
   slice (start: number = 0, end: number = this.length): Buffer {
-    return Buffer.fromArrayBufferView(super.slice(start, end))
+    return Buffer.fromView(super.slice(start, end))
   }
 
   swap16 (): this {
@@ -585,7 +595,6 @@ export class Buffer extends Uint8Array {
       ])
     }
     const tmp = (buf.length + 2) % 3 - 2
-    console.log(`tmp = ${tmp}`)
     return (tmp !== 0 ? arr.slice(0, tmp) : arr).join('')
   }
 
@@ -767,3 +776,6 @@ export interface ArrayLike<T> {
   readonly length: number
   readonly [n: number]: T
 }
+
+// https://stackoverflow.com/questions/12802317/passing-class-as-parameter-causes-is-not-newable-error
+export type Newable<T> = new (...args: any[]) => T
