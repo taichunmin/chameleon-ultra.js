@@ -8,7 +8,7 @@ const WEBSERIAL_FILTERS = [
   { usbVendorId: 0x6868, usbProductId: 0x8686 }, // Chameleon Tiny
 ]
 
-export default class ChameleonWebserialAdapter implements ChameleonPlugin {
+export default class WebserialAdapter implements ChameleonPlugin {
   isOpen: boolean = false
   name = 'adapter'
   port?: SerialPort & Partial<ChameleonSerialPort<Buffer, Buffer>> & { addEventListener?: CallableFunction }

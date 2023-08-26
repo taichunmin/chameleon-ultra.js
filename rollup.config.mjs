@@ -81,8 +81,20 @@ export default [
     plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
     output: [
       { file: `dist/es/plugin/WebserialAdapter.mjs`, format: 'es' },
-      { file: 'dist/iife/plugin/WebserialAdapter.js', format: 'iife', globals, name: 'ChameleonUltraWebserialAdapter' },
-      { file: 'dist/iife/plugin/WebserialAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraWebserialAdapter', plugins: [terser()] },
+      { file: 'dist/iife/plugin/WebserialAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter' },
+      { file: 'dist/iife/plugin/WebserialAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter', plugins: [terser()] },
+    ]
+  },
+
+  // src/plugin/LoggerRxTx.ts (esm, iife)
+  {
+    external,
+    input: `src/plugin/LoggerRxTx.ts`,
+    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
+    output: [
+      { file: `dist/es/plugin/LoggerRxTx.mjs`, format: 'es' },
+      { file: 'dist/iife/plugin/LoggerRxTx.js', format: 'iife', globals, name: 'ChameleonUltraJS.LoggerRxTx' },
+      { file: 'dist/iife/plugin/LoggerRxTx.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.LoggerRxTx', plugins: [terser()] },
     ]
   },
 ]

@@ -89,7 +89,7 @@ export class ChameleonUltra {
   }
 
   async _writeBuffer (buf: Buffer): Promise<void> {
-    await this.invokeHook('writeBuffer', { buf }, async (ctx, next) => {
+    await this.invokeHook('_writeBuffer', { buf }, async (ctx, next) => {
       try {
         if (!Buffer.isBuffer(ctx.buf)) throw new TypeError('buf should be a Buffer')
         if (!this.isConnected()) await this.connect()
@@ -127,8 +127,9 @@ export class ChameleonUltra {
       startedAt?: number
       nowts?: number
       timeout?: number
+      resp?: ChameleonUltraFrame
     }
-    return await this.invokeHook('readRespTimeout', { timeout }, async (ctx: Context, next) => {
+    return await this.invokeHook('_readRespTimeout', { timeout }, async (ctx: Context, next) => {
       try {
         if (!this.isConnected()) await this.connect()
         if (_.isNil(this.rxSink)) throw new Error('rxSink is undefined')
@@ -150,7 +151,8 @@ export class ChameleonUltra {
             if (buf.length < lenFrame) throw new Error('waiting for more data')
             if (this._calcLrc(buf.subarray(9, -1)) !== buf[buf.length - 1]) throw _.merge(new Error('data lrc mismatch'), { skip: 1 })
             if (buf.length > lenFrame) this.rxSink.bufs.unshift(buf.subarray(lenFrame))
-            return new ChameleonUltraFrame(buf.subarray(0, lenFrame))
+            ctx.resp = new ChameleonUltraFrame(buf.subarray(0, lenFrame))
+            break
           } catch (err) {
             const skip = err.skip ?? 0
             if (skip > 0) buf = buf.subarray(skip)
@@ -158,6 +160,8 @@ export class ChameleonUltra {
           }
           await sleep(10)
         }
+        if (RespStatusFail.has(ctx.resp.status)) throw _.merge(new Error(RespStatusMsg.get(ctx.resp.status)), { data: { resp: ctx.resp } })
+        return ctx.resp
       } catch (err) {
         throw _.merge(new Error(err.message ?? 'Failed read resp'), { originalError: err })
       }
@@ -182,8 +186,9 @@ export class ChameleonUltra {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_DEVICE_ADDRESS })
     const data = (await this._readRespTimeout())?.data
-    data.reverse()
-    return data.toString('hex')
+    const arr = []
+    for (let i = data.length - 1; i >= 0; i--) arr.push(data.subarray(i, i + 1).toString('hex'))
+    return _.toUpper(arr.join(':'))
   }
 
   async getGitVersion (): Promise<string> {
@@ -191,6 +196,30 @@ export class ChameleonUltra {
     await this._writeCmd({ cmd: Cmd.GET_GIT_VERSION })
     const data = (await this._readRespTimeout())?.data
     return data.toString('utf8')
+  }
+
+  async getDeviceMode (): Promise<DeviceMode> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_DEVICE_MODE })
+    const data = (await this._readRespTimeout())?.data
+    return data[0] as DeviceMode
+  }
+
+  async setDeviceMode (mode: DeviceMode): Promise<void> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.CHANGE_MODE, data: Buffer.from([mode]) })
+    await this._readRespTimeout()
+  }
+
+  async scan14aTag (): Promise<boolean> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SCAN_14A_TAG })
+    try {
+      await this._readRespTimeout()
+      return true
+    } catch (err) {
+      return false
+    }
   }
 }
 
@@ -307,6 +336,101 @@ export enum TagType {
   NTAG_215 = 7,
   NTAG_216 = 8,
 }
+
+export enum DeviceMode {
+  TAG = 0,
+  READER = 1,
+}
+
+export enum RespStatus {
+  HF_TAG_OK = 0x00, // IC卡操作成功
+  HF_TAG_NOT_FOUND = 0x01, // 沒有發現IC卡
+  HF_ERRSTAT = 0x02, // IC卡通訊異常
+  HF_ERRCRC = 0x03, // IC卡通訊校驗異常
+  HF_COLLISION = 0x04, // IC卡衝突
+  HF_ERRBCC = 0x05, // IC卡BCC錯誤
+  MF_ERRAUTH = 0x06, // MF卡驗證失敗
+  HF_ERRPARITY = 0x07, // IC卡奇偶校驗錯誤
+
+  DARKSIDE_CANT_FIXED_NT = 0x20, // Darkside，無法固定隨機數，這個情況可能出現在UID卡上
+  DARKSIDE_LUCK_AUTH_OK = 0x21, // Darkside，直接驗證成功了，可能剛好金鑰是空的
+  DARKSIDE_NACK_NO_SEND = 0x22, // Darkside，卡片不響應nack，可能是一張修復了nack邏輯漏洞的卡片
+  DARKSIDE_TAG_CHANGED = 0x23, // Darkside，在運行darkside的過程中出現了卡片切換，可能訊號問題，或者真的是兩張卡迅速切換了
+  NESTED_TAG_IS_STATIC = 0x24, // Nested，檢測到卡片應答的隨機數是固定的
+  NESTED_TAG_IS_HARD = 0x25, // Nested，檢測到卡片應答的隨機數是不可預測的
+
+  LF_TAG_OK = 0x40, // 低頻卡的一些操作成功！
+  LF_TAG_NOT_FOUND = 0x41, // 無法搜尋到有效的EM410X標籤
+
+  PAR_ERR = 0x60, // BLE指令傳遞的參數錯誤，或者是呼叫某些函數傳遞的參數錯誤
+  DEVICE_MODE_ERROR = 0x66, // 當前裝置所處的模式錯誤，無法呼叫對應的API
+  INVALID_CMD = 0x67, // 無效的指令
+  DEVICE_SUCCESS = 0x68, // 裝置相關操作成功執行
+  NOT_IMPLEMENTED = 0x69, // 呼叫了某些未實現的操作，屬於開發者遺漏的錯誤
+  FLASH_WRITE_FAIL = 0x70, // flash寫入失敗
+  FLASH_READ_FAIL = 0x71, // flash讀取失敗
+}
+
+export const RespStatusMsg = new Map([
+  [RespStatus.HF_TAG_OK, 'HF tag operation succeeded'],
+  [RespStatus.HF_TAG_NOT_FOUND, 'HF tag no found or lost'],
+  [RespStatus.HF_ERRSTAT, 'HF tag status error'],
+  [RespStatus.HF_ERRCRC, 'HF tag data crc error'],
+  [RespStatus.HF_COLLISION, 'HF tag collision'],
+  [RespStatus.HF_ERRBCC, 'HF tag uid bcc error'],
+  [RespStatus.MF_ERRAUTH, 'HF tag auth fail'],
+  [RespStatus.HF_ERRPARITY, 'HF tag data parity error'],
+
+  [RespStatus.DARKSIDE_CANT_FIXED_NT, 'Darkside Can\'t select a nt(PRNG is unpredictable)'],
+  [RespStatus.DARKSIDE_LUCK_AUTH_OK, 'Darkside try to recover a default key'],
+  [RespStatus.DARKSIDE_NACK_NO_SEND, 'Darkside can\'t make tag response nack(enc)'],
+  [RespStatus.DARKSIDE_TAG_CHANGED, 'Darkside running, can\'t change tag'],
+  [RespStatus.NESTED_TAG_IS_STATIC, 'StaticNested tag, not weak nested'],
+  [RespStatus.NESTED_TAG_IS_HARD, 'HardNested tag, not weak nested'],
+
+  [RespStatus.LF_TAG_OK, 'LF tag operation succeeded'],
+  [RespStatus.LF_TAG_NOT_FOUND, 'EM410x tag no found'],
+
+  [RespStatus.PAR_ERR, 'API request fail, param error'],
+  [RespStatus.DEVICE_MODE_ERROR, 'API request fail, device mode error'],
+  [RespStatus.INVALID_CMD, 'API request fail, cmd invalid'],
+  [RespStatus.DEVICE_SUCCESS, 'Device operation succeeded'],
+  [RespStatus.NOT_IMPLEMENTED, 'Some api not implemented'],
+  [RespStatus.FLASH_WRITE_FAIL, 'Flash write failed'],
+  [RespStatus.FLASH_READ_FAIL, 'Flash read faile'],
+])
+
+export const RespStatusSuccess = new Set([
+  RespStatus.HF_TAG_OK,
+  RespStatus.DARKSIDE_LUCK_AUTH_OK,
+  RespStatus.LF_TAG_OK,
+  RespStatus.DEVICE_SUCCESS,
+])
+
+export const RespStatusFail = new Set([
+  RespStatus.HF_TAG_NOT_FOUND,
+  RespStatus.HF_ERRSTAT,
+  RespStatus.HF_ERRCRC,
+  RespStatus.HF_COLLISION,
+  RespStatus.HF_ERRBCC,
+  RespStatus.MF_ERRAUTH,
+  RespStatus.HF_ERRPARITY,
+
+  RespStatus.DARKSIDE_CANT_FIXED_NT,
+  RespStatus.DARKSIDE_NACK_NO_SEND,
+  RespStatus.DARKSIDE_TAG_CHANGED,
+  RespStatus.NESTED_TAG_IS_STATIC,
+  RespStatus.NESTED_TAG_IS_HARD,
+
+  RespStatus.LF_TAG_NOT_FOUND,
+
+  RespStatus.PAR_ERR,
+  RespStatus.DEVICE_MODE_ERROR,
+  RespStatus.INVALID_CMD,
+  RespStatus.NOT_IMPLEMENTED,
+  RespStatus.FLASH_WRITE_FAIL,
+  RespStatus.FLASH_READ_FAIL,
+])
 
 export enum MifareWriteMode {
   NORMAL = 0, // Normal write
