@@ -39,7 +39,7 @@ export default class LoggerRxTx implements ChameleonPlugin {
         log.resp(frameToString(resp.buf))
         return resp
       } catch (err) {
-        log.error(err?.data?.resp)
+        if (err?.data?.resp?.length > 0) log.error(err.data.resp)
         throw err
       }
     })

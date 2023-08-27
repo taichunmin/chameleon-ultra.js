@@ -489,12 +489,28 @@ export class Buffer extends Uint8Array {
     return tmp
   }
 
+  readBitMSB (bitOffset: number): number {
+    const tmp = [bitOffset >>> 3, (bitOffset & 7) ^ 7]
+    return (this[tmp[0]] >>> tmp[1]) & 1
+  }
+
+  readBitLSB (bitOffset: number): number {
+    const tmp = [this.length - (bitOffset >>> 3) - 1, bitOffset & 7]
+    return (this[tmp[0]] >>> tmp[1]) & 1
+  }
+
   subarray (start: number = 0, end: number = this.length): Buffer {
     return Buffer.fromView(super.subarray(start, end))
   }
 
   slice (start: number = 0, end: number = this.length): Buffer {
     return Buffer.fromView(super.slice(start, end))
+  }
+
+  reverse (): Buffer {
+    const buf = new Buffer(this.length)
+    for (let i = buf.length - 1; i >= 0; i--) buf[i] = this[this.length - i - 1]
+    return buf
   }
 
   swap16 (): this {
@@ -737,6 +753,20 @@ export class Buffer extends Uint8Array {
       val /= 0x100
     }
     return offset + byteLength
+  }
+
+  writeBitMSB (bitOffset: number, val: number): this {
+    const tmp = [bitOffset >>> 3, (bitOffset & 7) ^ 7]
+    const oldBit = (this[tmp[0]] >>> tmp[1]) & 1
+    if ((oldBit ^ (val !== 0 ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
+    return this
+  }
+
+  writeBitLSB (bitOffset: number, val: number): this {
+    const tmp = [this.length - (bitOffset >>> 3) - 1, bitOffset & 7]
+    const oldBit = (this[tmp[0]] >>> tmp[1]) & 1
+    if ((oldBit ^ (val !== 0 ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
+    return this
   }
 
   chunk (bytesPerChunk: number): Buffer[] {

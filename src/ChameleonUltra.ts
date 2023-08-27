@@ -160,7 +160,10 @@ export class ChameleonUltra {
           }
           await sleep(10)
         }
-        if (RespStatusFail.has(ctx.resp.status)) throw _.merge(new Error(RespStatusMsg.get(ctx.resp.status)), { data: { resp: ctx.resp } })
+        if (RespStatusFail.has(ctx.resp.status)) {
+          const status = ctx.resp.status
+          throw _.merge(new Error(RespStatusMsg.get(status)), { status, data: { resp: ctx.resp } })
+        }
         return ctx.resp
       } catch (err) {
         throw _.merge(new Error(err.message ?? 'Failed read resp'), { originalError: err })
@@ -211,15 +214,47 @@ export class ChameleonUltra {
     await this._readRespTimeout()
   }
 
-  async scan14aTag (): Promise<boolean> {
+  async scan14aTag (): Promise<Picc14aTag> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SCAN_14A_TAG })
+    return new Picc14aTag((await this._readRespTimeout())?.data)
+  }
+
+  async mf1SupportDetect (): Promise<boolean> {
     try {
+      this._clearRxBufs()
+      await this._writeCmd({ cmd: Cmd.MF1_SUPPORT_DETECT })
       await this._readRespTimeout()
       return true
     } catch (err) {
-      return false
+      if (err.status === RespStatus.HF_ERRSTAT) return false
+      throw err
     }
+  }
+
+  async mf1NtLevelDetect (): Promise<Mf1PrngAttack> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.MF1_NT_LEVEL_DETECT })
+    const status = (await this._readRespTimeout())?.status
+    const statusToString: Record<number, Mf1PrngAttack> = {
+      0x00: 'weak',
+      0x24: 'static',
+      0x25: 'hard',
+    }
+    return statusToString[status] ?? 'unknown'
+  }
+
+  async hf14aInfo (): Promise<Hf14aInfoResp> {
+    if (await this.getDeviceMode() !== DeviceMode.READER) await this.setDeviceMode(DeviceMode.READER)
+    const resp: Hf14aInfoResp = {
+      tag: await this.scan14aTag(),
+    }
+    if (await this.mf1SupportDetect()) {
+      resp.mifare = {
+        prngAttack: await this.mf1NtLevelDetect(),
+      }
+    }
+    return resp
   }
 }
 
@@ -373,7 +408,7 @@ export enum RespStatus {
 
 export const RespStatusMsg = new Map([
   [RespStatus.HF_TAG_OK, 'HF tag operation succeeded'],
-  [RespStatus.HF_TAG_NOT_FOUND, 'HF tag no found or lost'],
+  [RespStatus.HF_TAG_NOT_FOUND, 'HF tag not found or lost'],
   [RespStatus.HF_ERRSTAT, 'HF tag status error'],
   [RespStatus.HF_ERRCRC, 'HF tag data crc error'],
   [RespStatus.HF_COLLISION, 'HF tag collision'],
@@ -401,10 +436,12 @@ export const RespStatusMsg = new Map([
 ])
 
 export const RespStatusSuccess = new Set([
-  RespStatus.HF_TAG_OK,
   RespStatus.DARKSIDE_LUCK_AUTH_OK,
-  RespStatus.LF_TAG_OK,
   RespStatus.DEVICE_SUCCESS,
+  RespStatus.HF_TAG_OK,
+  RespStatus.LF_TAG_OK,
+  RespStatus.NESTED_TAG_IS_HARD,
+  RespStatus.NESTED_TAG_IS_STATIC,
 ])
 
 export const RespStatusFail = new Set([
@@ -484,4 +521,41 @@ export class ChameleonUltraFrame {
   get cmd (): Cmd { return this.buf.readUInt16BE(2) }
   get status (): number { return this.buf.readUInt16BE(4) }
   get data (): Buffer { return this.buf.subarray(9, -1) }
+}
+
+export class Picc14aTag {
+  buf: Buffer
+
+  constructor (buf: Buffer) {
+    this.buf = buf
+  }
+
+  get uid (): Buffer {
+    return this.buf.subarray(0, this.uidLen)
+  }
+
+  get uidLen (): number {
+    return this.buf[10]
+  }
+
+  get cascade (): number {
+    return this.buf[11]
+  }
+
+  get sak (): number {
+    return this.buf[12]
+  }
+
+  get atqa (): Buffer {
+    return this.buf.subarray(13, 15).reverse()
+  }
+}
+
+export type Mf1PrngAttack = 'static' | 'weak' | 'hard' | 'unknown'
+
+export interface Hf14aInfoResp {
+  tag: Picc14aTag
+  mifare?: {
+    prngAttack: Mf1PrngAttack
+  }
 }
