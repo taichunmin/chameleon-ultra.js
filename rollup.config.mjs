@@ -51,28 +51,54 @@ export default [
     ],
   },
 
+  // src/Crypto1.ts
+  {
+    external,
+    input: 'src/Crypto1.ts',
+    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
+    output: [
+      { file: 'dist/es/Crypto1.mjs', format: 'es' },
+      { file: 'dist/cjs/Crypto1.cjs', format: 'cjs' },
+      { file: 'dist/iife/Crypto1.js', format: 'iife', globals, name: 'Crypto1' },
+      { file: 'dist/iife/Crypto1.min.js', format: 'iife', globals, name: 'Crypto1', plugins: [terser()] },
+    ],
+  },
+
+  // src/plugin/LoggerRxTx.ts
+  {
+    external,
+    input: `src/plugin/LoggerRxTx.ts`,
+    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
+    output: [
+      { file: `dist/es/plugin/LoggerRxTx.mjs`, format: 'es' },
+      { file: `dist/es/plugin/LoggerRxTx.cjs`, format: 'cjs' },
+      { file: 'dist/iife/plugin/LoggerRxTx.js', format: 'iife', globals, name: 'ChameleonUltraJS.LoggerRxTx' },
+      { file: 'dist/iife/plugin/LoggerRxTx.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.LoggerRxTx', plugins: [terser()] },
+    ]
+  },
+
   // src/plugin/SerialPortAdapter.ts (cjs, es)
-  // {
-  //   external,
-  //   input: `src/plugin/SerialPortAdapter.ts`,
-  //   plugins: [typescript()],
-  //   output: [
-  //     { file: `dist/cjs/plugin/SerialPortAdapter.cjs`, format: 'cjs' },
-  //     { file: `dist/es/plugin/SerialPortAdapter.mjs`, format: 'es' },
-  //   ]
-  // },
+  {
+    external,
+    input: `src/plugin/SerialPortAdapter.ts`,
+    plugins: [typescript()],
+    output: [
+      { file: `dist/cjs/plugin/SerialPortAdapter.cjs`, format: 'cjs' },
+      { file: `dist/es/plugin/SerialPortAdapter.mjs`, format: 'es' },
+    ]
+  },
 
   // src/plugin/WebbleAdapter.ts (esm, iife)
-  // {
-  //   external,
-  //   input: `src/plugin/WebbleAdapter.ts`,
-  //   plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
-  //   output: [
-  //     { file: `dist/es/plugin/WebbleAdapter.mjs`, format: 'es' },
-  //     { file: 'dist/iife/plugin/WebbleAdapter.js', format: 'iife', globals, name: 'ChameleonWebbleAdapter' },
-  //     { file: 'dist/iife/plugin/WebbleAdapter.min.js', format: 'iife', globals, name: 'ChameleonWebbleAdapter', plugins: [terser()] },
-  //   ]
-  // },
+  {
+    external,
+    input: `src/plugin/WebbleAdapter.ts`,
+    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
+    output: [
+      { file: `dist/es/plugin/WebbleAdapter.mjs`, format: 'es' },
+      { file: 'dist/iife/plugin/WebbleAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebbleAdapter' },
+      { file: 'dist/iife/plugin/WebbleAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebbleAdapter', plugins: [terser()] },
+    ]
+  },
 
   // src/plugin/WebserialAdapter.ts (esm, iife)
   {
@@ -83,18 +109,6 @@ export default [
       { file: `dist/es/plugin/WebserialAdapter.mjs`, format: 'es' },
       { file: 'dist/iife/plugin/WebserialAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter' },
       { file: 'dist/iife/plugin/WebserialAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter', plugins: [terser()] },
-    ]
-  },
-
-  // src/plugin/LoggerRxTx.ts (esm, iife)
-  {
-    external,
-    input: `src/plugin/LoggerRxTx.ts`,
-    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
-    output: [
-      { file: `dist/es/plugin/LoggerRxTx.mjs`, format: 'es' },
-      { file: 'dist/iife/plugin/LoggerRxTx.js', format: 'iife', globals, name: 'ChameleonUltraJS.LoggerRxTx' },
-      { file: 'dist/iife/plugin/LoggerRxTx.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.LoggerRxTx', plugins: [terser()] },
     ]
   },
 ]

@@ -2,7 +2,7 @@ import _ from 'lodash'
 import { serial, type SerialPort } from 'web-serial-polyfill'
 import { sleep } from '../helper'
 import { type Buffer } from '../buffer'
-import { type ChameleonPlugin, type PluginInstallContext, type ChameleonSerialPort } from '../ChameleonUltra'
+import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
 
 const WEBSERIAL_FILTERS = [
   { usbVendorId: 0x6868, usbProductId: 0x8686 }, // Chameleon Tiny
@@ -14,7 +14,11 @@ export default class WebserialAdapter implements ChameleonPlugin {
   port?: SerialPort & Partial<ChameleonSerialPort<Buffer, Buffer>> & { addEventListener?: CallableFunction }
 
   async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
-    const { ultra } = context
+    const { ultra, createDebugger } = context
+
+    const log = {
+      webserial: createDebugger('ultra:webserial'),
+    }
 
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect()
     const adapter: any = {}
@@ -36,12 +40,12 @@ export default class WebserialAdapter implements ChameleonPlugin {
         this.isOpen = true
 
         const info = await this.port.getInfo() as { usbVendorId: number, usbProductId: number }
-        ultra.verboseLog(`port selected, usbVendorId = ${info.usbVendorId}, usbProductId = ${info.usbProductId}`)
+        log.webserial(`port selected, usbVendorId = ${info.usbVendorId}, usbProductId = ${info.usbProductId}`)
         this.port.addEventListener?.('disconnect', () => { void ultra.disconnect() })
         ultra.port = this.port satisfies ChameleonSerialPort<Buffer, Buffer>
         return await next()
       } catch (err) {
-        ultra.verboseLog(err)
+        log.webserial(err)
         throw err
       }
     })

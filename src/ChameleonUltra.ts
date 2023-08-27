@@ -2,9 +2,14 @@ import _ from 'lodash'
 import { asBuffer, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { Buffer } from './buffer'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'web-streams-polyfill'
+import createDebugger from 'debug'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = Buffer.from([0x11, 0xEF])
+
+const log = {
+  core: createDebugger('ultra:core'),
+}
 
 export class ChameleonUltra {
   hooks: Record<string, MiddlewareComposeFn[]>
@@ -21,14 +26,11 @@ export class ChameleonUltra {
     this.verboseFunc = verboseFunc
   }
 
-  verboseLog (text: string): void {
-    this.verboseFunc?.(text)
-  }
-
   async use (plugin: ChameleonPlugin, option?: any): Promise<this> {
     const pluginId = `$${plugin.name}`
     const installResp = await plugin.install({
       ultra: this,
+      createDebugger,
     }, option)
     if (!_.isNil(installResp)) (this as Record<string, any>)[pluginId] = installResp
     return this
@@ -62,7 +64,7 @@ export class ChameleonUltra {
         // this.versionString = await this.cmdGetVersion()
         // this.supportedConfs = new Set(await this.getCmdSuggestions(COMMAND.CONFIG))
       } catch (err) {
-        this.verboseLog(`Failed to connect: ${err.message as string}`)
+        log.core(`Failed to connect: ${err.message as string}`)
         if (this.isConnected()) await this.disconnect()
         throw _.merge(new Error(err.message ?? 'Failed to connect'), { originalError: err })
       }
@@ -72,7 +74,7 @@ export class ChameleonUltra {
   async disconnect (): Promise<void> {
     await this.invokeHook('disconnect', {}, async (ctx, next) => {
       try {
-        this.verboseLog('disconnected')
+        log.core('disconnected')
         delete this.port
       } catch (err) {
         throw _.merge(new Error(err.message ?? 'Failed to connect'), { originalError: err })
@@ -504,6 +506,7 @@ export class ChameleonRxSink implements UnderlyingSink<Buffer> {
 
 export interface PluginInstallContext {
   ultra: ChameleonUltra
+  createDebugger: (namespace: string) => debug.Debugger
 }
 
 export interface ChameleonPlugin {
