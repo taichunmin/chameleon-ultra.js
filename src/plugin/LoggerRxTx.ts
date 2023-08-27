@@ -1,12 +1,5 @@
 import { Buffer } from '../buffer'
 import { type ChameleonPlugin, type PluginInstallContext } from '../ChameleonUltra'
-import createDebugger from 'debug'
-
-const log = {
-  send: createDebugger('ultra:send'),
-  resp: createDebugger('ultra:resp'),
-  error: createDebugger('ultra:error'),
-}
 
 function frameToString (buf: Buffer): string {
   if (!Buffer.isBuffer(buf)) return 'Invalid frame'
@@ -26,7 +19,13 @@ export default class LoggerRxTx implements ChameleonPlugin {
   name = 'loggerRxTx'
 
   async install (context: PluginInstallContext, pluginOption: any): Promise<void> {
-    const { ultra } = context
+    const { ultra, createDebugger } = context
+
+    const log = {
+      send: createDebugger('ultra:send'),
+      resp: createDebugger('ultra:resp'),
+      error: createDebugger('ultra:error'),
+    }
 
     ultra.addHook('_writeBuffer', async (ctx, next) => {
       log.send(frameToString(ctx.buf))

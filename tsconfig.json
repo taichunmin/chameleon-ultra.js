@@ -4,6 +4,7 @@
   "exclude": ["./dist/**/*", "./node_modules/**/*", "./**/*.d.ts"],
   "compilerOptions": {
     "module": "ESNext",
+    "moduleResolution": "Node16",
     "outDir": "./dist/tsc/",
     "resolveJsonModule": true,
     "rootDir": "./",
