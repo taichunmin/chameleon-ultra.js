@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import { Buffer } from './buffer'
 
 describe('Buffer.fromView()', () => {
@@ -235,4 +236,32 @@ test.each([
 ])('Buffer.isEncoding("$str") = $expected', async ({ str, expected }) => {
   const actual = Buffer.isEncoding(str)
   expect(actual).toEqual(expected)
+})
+
+test.each([
+  ['12', 8],
+  ['1234', 16],
+  ['123456', 24],
+  ['12345678', 32],
+  ['FF', 8],
+  ['FFFF', 16],
+  ['FFFFFF', 24],
+])('Buffer.from(%j, \'hex\').readBitMSB(offset)', async (hex, bits) => {
+  const buf = Buffer.from(hex, 'hex')
+  const actual = _.times(bits, i => `${buf.readBitMSB(i)}`).join('')
+  expect(actual).toEqual(BigInt(`0x${hex}`).toString(2).padStart(bits, '0'))
+})
+
+test.each([
+  ['12', 8],
+  ['1234', 16],
+  ['123456', 24],
+  ['12345678', 32],
+  ['FF', 8],
+  ['FFFF', 16],
+  ['FFFFFF', 24],
+])('Buffer.from(%j, \'hex\').readBitLSB(offset)', async (hex, bits) => {
+  const buf = Buffer.from(hex, 'hex')
+  const actual = _.times(bits, i => `${buf.readBitLSB(i)}`).reverse().join('')
+  expect(actual).toEqual(BigInt(`0x${hex}`).toString(2).padStart(bits, '0'))
 })
