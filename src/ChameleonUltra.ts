@@ -1,6 +1,7 @@
 import _ from 'lodash'
-import { asBuffer, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { Buffer } from './buffer'
+import { createIsEnum, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
+import { type ValuesType } from 'utility-types'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'web-streams-polyfill'
 import createDebugger from 'debug'
 
@@ -29,8 +30,9 @@ export class ChameleonUltra {
   async use (plugin: ChameleonPlugin, option?: any): Promise<this> {
     const pluginId = `$${plugin.name}`
     const installResp = await plugin.install({
-      ultra: this,
+      Buffer,
       createDebugger,
+      ultra: this,
     }, option)
     if (!_.isNil(installResp)) (this as Record<string, any>)[pluginId] = installResp
     return this
@@ -132,44 +134,40 @@ export class ChameleonUltra {
       resp?: ChameleonUltraFrame
     }
     return await this.invokeHook('_readRespTimeout', { timeout }, async (ctx: Context, next) => {
-      try {
-        if (!this.isConnected()) await this.connect()
-        if (_.isNil(this.rxSink)) throw new Error('rxSink is undefined')
-        ctx.timeout = ctx.timeout ?? READ_DEFAULT_TIMEOUT
-        ctx.startedAt = Date.now()
-        while (true) {
-          if (!this.isConnected()) throw new Error('device disconnected')
-          ctx.nowts = Date.now()
-          if (ctx.nowts > ctx.startedAt + ctx.timeout) throw new Error(`readRespTimeout ${ctx.timeout}ms`)
-          let buf = Buffer.concat(this._clearRxBufs())
-          try {
-            const sofIdx = buf.indexOf(START_OF_FRAME)
-            if (sofIdx < 0) throw new Error('SOF not found')
-            buf = buf.subarray(sofIdx) // ignore bytes before SOF
-            // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
-            if (buf.length < 10) throw new Error('buf.length < 10')
-            if (this._calcLrc(buf.subarray(2, 8)) !== buf[8]) throw _.merge(new Error('head lrc mismatch'), { skip: 1 })
-            const lenFrame = buf.readUInt16BE(6) + 10
-            if (buf.length < lenFrame) throw new Error('waiting for more data')
-            if (this._calcLrc(buf.subarray(9, -1)) !== buf[buf.length - 1]) throw _.merge(new Error('data lrc mismatch'), { skip: 1 })
-            if (buf.length > lenFrame) this.rxSink.bufs.unshift(buf.subarray(lenFrame))
-            ctx.resp = new ChameleonUltraFrame(buf.subarray(0, lenFrame))
-            break
-          } catch (err) {
-            const skip = err.skip ?? 0
-            if (skip > 0) buf = buf.subarray(skip)
-            this.rxSink.bufs.unshift(buf)
-          }
-          await sleep(10)
+      if (!this.isConnected()) await this.connect()
+      if (_.isNil(this.rxSink)) throw new Error('rxSink is undefined')
+      ctx.timeout = ctx.timeout ?? READ_DEFAULT_TIMEOUT
+      ctx.startedAt = Date.now()
+      while (true) {
+        if (!this.isConnected()) throw new Error('device disconnected')
+        ctx.nowts = Date.now()
+        if (ctx.nowts > ctx.startedAt + ctx.timeout) throw new Error(`readRespTimeout ${ctx.timeout}ms`)
+        let buf = Buffer.concat(this._clearRxBufs())
+        try {
+          const sofIdx = buf.indexOf(START_OF_FRAME)
+          if (sofIdx < 0) throw new Error('SOF not found')
+          buf = buf.subarray(sofIdx) // ignore bytes before SOF
+          // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
+          if (buf.length < 10) throw new Error('buf.length < 10')
+          if (this._calcLrc(buf.subarray(2, 8)) !== buf[8]) throw _.merge(new Error('head lrc mismatch'), { skip: 1 })
+          const lenFrame = buf.readUInt16BE(6) + 10
+          if (buf.length < lenFrame) throw new Error('waiting for more data')
+          if (this._calcLrc(buf.subarray(9, -1)) !== buf[buf.length - 1]) throw _.merge(new Error('data lrc mismatch'), { skip: 1 })
+          if (buf.length > lenFrame) this.rxSink.bufs.unshift(buf.subarray(lenFrame))
+          ctx.resp = new ChameleonUltraFrame(buf.subarray(0, lenFrame))
+          break
+        } catch (err) {
+          const skip = err.skip ?? 0
+          if (skip > 0) buf = buf.subarray(skip)
+          this.rxSink.bufs.unshift(buf)
         }
-        if (RespStatusFail.has(ctx.resp.status)) {
-          const status = ctx.resp.status
-          throw _.merge(new Error(RespStatusMsg.get(status)), { status, data: { resp: ctx.resp } })
-        }
-        return ctx.resp
-      } catch (err) {
-        throw _.merge(new Error(err.message ?? 'Failed read resp'), { originalError: err })
+        await sleep(10)
       }
+      if (RespStatusFail.has(ctx.resp.status)) {
+        const status = ctx.resp.status
+        throw _.merge(new Error(RespStatusMsg.get(status)), { status, data: { resp: ctx.resp } })
+      }
+      return ctx.resp
     }) as ChameleonUltraFrame
   }
 
@@ -219,7 +217,7 @@ export class ChameleonUltra {
   async scan14aTag (): Promise<Picc14aTag> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SCAN_14A_TAG })
-    return new Picc14aTag((await this._readRespTimeout())?.data)
+    return mf1ParsePicc14aTag((await this._readRespTimeout())?.data)
   }
 
   async mf1SupportDetect (): Promise<boolean> {
@@ -257,6 +255,111 @@ export class ChameleonUltra {
       }
     }
     return resp
+  }
+
+  async mf1ReadBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: Mf1ReadBlockArgs = {}): Promise<Buffer> {
+    if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
+    this._clearRxBufs()
+    await this._writeCmd({
+      cmd: Cmd.MF1_READ_ONE_BLOCK,
+      data: Buffer.concat([Buffer.from([keyType, block]), key]),
+    })
+    return (await this._readRespTimeout())?.data
+  }
+
+  async mf1WriteBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex'), data }: Mf1WriteBlockArgs = {}): Promise<void> {
+    if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
+    if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
+    this._clearRxBufs()
+    await this._writeCmd({
+      cmd: Cmd.MF1_WRITE_ONE_BLOCK,
+      data: Buffer.concat([Buffer.from([keyType, block]), key, data]),
+    })
+    await this._readRespTimeout()
+  }
+
+  async mf1SetDetection (enable: boolean = true): Promise<void> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SET_MF1_DETECTION_ENABLE, data: Buffer.from([enable ? 1 : 0]) })
+    await this._readRespTimeout()
+  }
+
+  async mf1GetDetectionCount (): Promise<number> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_MF1_DETECTION_COUNT })
+    return (await this._readRespTimeout())?.data.readUInt32LE()
+  }
+
+  async mf1GetDetectionRecords (index: number = 0): Promise<Mf1AuthLog[]> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_MF1_DETECTION_RESULT, data: new Buffer(4).writeUInt32BE(index) })
+    const data = (await this._readRespTimeout())?.data
+    return _.map(data.chunk(18), mf1ParseAuthLog)
+  }
+
+  async mf1EmuSetBlock (blockStart: number = 0, data: Buffer): Promise<void> {
+    if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
+    this._clearRxBufs()
+    await this._writeCmd({
+      cmd: Cmd.LOAD_MF1_EMU_BLOCK_DATA,
+      data: Buffer.concat([Buffer.from([blockStart]), data]),
+    })
+    await this._readRespTimeout()
+  }
+
+  async mf1EmuGetBlock (blockStart: number = 0, blockCount: number = 1): Promise<Buffer> {
+    this._clearRxBufs()
+    const buf = new Buffer(3)
+    buf.writeUInt8(blockStart)
+    buf.writeUInt16LE(blockCount, 1)
+    await this._writeCmd({ cmd: Cmd.READ_MF1_EMU_BLOCK_DATA, data: buf })
+    return (await this._readRespTimeout())?.data
+  }
+
+  async mf1SetAntiCollision ({ sak, atqa, uid }: Mf1SetAnticollisionArgs): Promise<void> {
+    if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
+    if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
+    if (!Buffer.isBuffer(uid) || uid.length !== 4) throw new TypeError('uid should be a Buffer with length 4')
+    this._clearRxBufs()
+    await this._writeCmd({
+      cmd: Cmd.SET_MF1_ANTI_COLLISION_RES,
+      data: Buffer.concat([sak, atqa, uid]),
+    })
+    await this._readRespTimeout()
+  }
+
+  async setSlotTagName (slot: Slot, field: RfidFieldType, name: string): Promise<void> {
+    const data = Buffer.concat([Buffer.from([slot, field]), Buffer.from(name)])
+    if (!_.inRange(data.length, 3, 35)) throw new TypeError('byteLength of name should between 1 and 32')
+    this._clearRxBufs()
+    await this._writeCmd({
+      cmd: Cmd.SET_SLOT_TAG_NICK,
+      data: Buffer.concat([Buffer.from([slot, field]), Buffer.from(name)]),
+    })
+    await this._readRespTimeout()
+  }
+
+  async getSlotTagName (slot: Slot, field: RfidFieldType): Promise<string | undefined> {
+    try {
+      if (!isSlot(slot)) throw new TypeError('slot should between 0 and 7')
+      if (!isRfidFieldType(field) || field < 1) throw new TypeError('field should be 1 or 2')
+      this._clearRxBufs()
+      await this._writeCmd({ cmd: Cmd.GET_SLOT_TAG_NICK, data: Buffer.from([slot, field]) })
+      return (await this._readRespTimeout())?.data.toString('utf8')
+    } catch (err) {
+      if (err.status === RespStatus.FLASH_READ_FAIL) return // slot name is empty
+      throw err
+    }
+  }
+
+  async mf1EmuGetConfig (): Promise<Mf1EmuConfig> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_MF1_EMULATOR_CONFIG })
+    return mf1ParseEmuConfig((await this._readRespTimeout())?.data)
+  }
+
+  async mf1EmuGetCard (): Promise<Buffer> {
+    return new Buffer() // TODO: need get_active_slot and get_slot_info
   }
 }
 
@@ -341,22 +444,25 @@ export enum Cmd {
   GET_EM410X_EMU_ID = 5001,
 }
 
-export enum Slot {
-  SLOT_1 = 0,
-  SLOT_2 = 1,
-  SLOT_3 = 2,
-  SLOT_4 = 3,
-  SLOT_5 = 4,
-  SLOT_6 = 5,
-  SLOT_7 = 6,
-  SLOT_8 = 7,
-}
+export const SlotConst = {
+  SLOT_1: 0,
+  SLOT_2: 1,
+  SLOT_3: 2,
+  SLOT_4: 3,
+  SLOT_5: 4,
+  SLOT_6: 5,
+  SLOT_7: 6,
+  SLOT_8: 7,
+} as const
+export type Slot = ValuesType<typeof SlotConst>
+export const isSlot = createIsEnum(SlotConst)
 
 export enum RfidFieldType {
   NONE = 0, // 無場感應
   LF = 1, // 低頻125khz場感應
   HF = 2, // 高頻13.56mhz場感應
 }
+export const isRfidFieldType = createIsEnum(RfidFieldType)
 
 export enum TagType {
   // 特定的且必須存在的標誌不存在的類型
@@ -373,11 +479,13 @@ export enum TagType {
   NTAG_215 = 7,
   NTAG_216 = 8,
 }
+export const isTagType = createIsEnum(TagType)
 
 export enum DeviceMode {
   TAG = 0,
   READER = 1,
 }
+export const isDeviceMode = createIsEnum(DeviceMode)
 
 export enum RespStatus {
   HF_TAG_OK = 0x00, // IC卡操作成功
@@ -434,7 +542,7 @@ export const RespStatusMsg = new Map([
   [RespStatus.DEVICE_SUCCESS, 'Device operation succeeded'],
   [RespStatus.NOT_IMPLEMENTED, 'Some api not implemented'],
   [RespStatus.FLASH_WRITE_FAIL, 'Flash write failed'],
-  [RespStatus.FLASH_READ_FAIL, 'Flash read faile'],
+  [RespStatus.FLASH_READ_FAIL, 'Flash read failed'],
 ])
 
 export const RespStatusSuccess = new Set([
@@ -471,17 +579,11 @@ export const RespStatusFail = new Set([
   RespStatus.FLASH_READ_FAIL,
 ])
 
-export enum MifareWriteMode {
-  NORMAL = 0, // Normal write
-  DEINED = 1, // Send NACK to write attempts
-  DECEIVE = 2, // Acknowledge writes, but don't remember contents
-  SHADOW = 3, // Store data to RAM, but not to ROM
-}
-
 export enum ButtonType {
   BUTTON_A = 'A',
   BUTTON_B = 'B',
 }
+export const isButtonType = createIsEnum(ButtonType)
 
 export enum ButtonAction {
   DISABLE = 0,
@@ -489,6 +591,7 @@ export enum ButtonAction {
   CYCLE_SLOT_DEC = 2,
   CLONE_IC_UID = 3,
 }
+export const isButtonAction = createIsEnum(ButtonAction)
 
 export interface ChameleonSerialPort<I, O> {
   isOpen?: () => boolean
@@ -500,13 +603,14 @@ export class ChameleonRxSink implements UnderlyingSink<Buffer> {
   bufs: Buffer[] = []
 
   write (chunk: Buffer): void {
-    this.bufs.push(asBuffer(chunk))
+    this.bufs.push(Buffer.from(chunk))
   }
 }
 
 export interface PluginInstallContext {
-  ultra: ChameleonUltra
+  Buffer: typeof Buffer
   createDebugger: (namespace: string) => debug.Debugger
+  ultra: ChameleonUltra
 }
 
 export interface ChameleonPlugin {
@@ -526,31 +630,20 @@ export class ChameleonUltraFrame {
   get data (): Buffer { return this.buf.subarray(9, -1) }
 }
 
-export class Picc14aTag {
-  buf: Buffer
+export interface Picc14aTag {
+  uid: Buffer
+  cascade: number
+  sak: Buffer
+  atqa: Buffer
+}
 
-  constructor (buf: Buffer) {
-    this.buf = buf
-  }
-
-  get uid (): Buffer {
-    return this.buf.subarray(0, this.uidLen)
-  }
-
-  get uidLen (): number {
-    return this.buf[10]
-  }
-
-  get cascade (): number {
-    return this.buf[11]
-  }
-
-  get sak (): number {
-    return this.buf[12]
-  }
-
-  get atqa (): Buffer {
-    return this.buf.subarray(13, 15).reverse()
+export function mf1ParsePicc14aTag (buf: Buffer): Picc14aTag {
+  if (!Buffer.isBuffer(buf) || buf.length !== 15) throw new TypeError('buf should be a Buffer with length 15')
+  return {
+    uid: buf.subarray(0, buf[10]),
+    cascade: buf[11],
+    sak: buf.subarray(12, 13),
+    atqa: buf.subarray(13, 15),
   }
 }
 
@@ -560,5 +653,80 @@ export interface Hf14aInfoResp {
   tag: Picc14aTag
   mifare?: {
     prngAttack: Mf1PrngAttack
+  }
+}
+
+export enum Mf1KeyType {
+  KEY_A = 0x60,
+  KEY_B = 0x61,
+}
+export const isMf1KeyType = createIsEnum(Mf1KeyType)
+
+export interface Mf1ReadBlockArgs {
+  block?: number
+  keyType?: Mf1KeyType
+  key?: Buffer
+}
+
+export interface Mf1WriteBlockArgs {
+  block?: number
+  keyType?: Mf1KeyType
+  key?: Buffer
+  data?: Buffer
+}
+
+export interface Mf1AuthLog {
+  block: number
+  isKeyB: boolean
+  isNested: boolean
+  uid: Buffer
+  nt: Buffer
+  nr: Buffer
+  ar: Buffer
+}
+
+export function mf1ParseAuthLog (buf: Buffer): Mf1AuthLog {
+  if (!Buffer.isBuffer(buf) || buf.length !== 18) throw new TypeError('buf should be a Buffer with length 18')
+  return {
+    block: buf[0],
+    isKeyB: buf.subarray(1, 2).readBitLSB(0) === 1,
+    isNested: buf.subarray(1, 2).readBitLSB(1) === 1,
+    uid: buf.subarray(2, 6),
+    nt: buf.subarray(6, 10),
+    nr: buf.subarray(10, 14),
+    ar: buf.subarray(14, 18),
+  }
+}
+
+export interface Mf1SetAnticollisionArgs {
+  sak: Buffer
+  atqa: Buffer
+  uid: Buffer
+}
+
+export enum MifareWriteMode {
+  NORMAL = 0, // Normal write
+  DEINED = 1, // Send NACK to write attempts
+  DECEIVE = 2, // Acknowledge writes, but don't remember contents
+  SHADOW = 3, // Store data to RAM, but not to ROM
+}
+export const isMifareWriteMode = createIsEnum(MifareWriteMode)
+
+export interface Mf1EmuConfig {
+  detection: boolean
+  gen1a: boolean
+  gen2: boolean
+  block0AntiCollision: boolean
+  writeMode: MifareWriteMode
+}
+
+export function mf1ParseEmuConfig (buf: Buffer): Mf1EmuConfig {
+  if (!Buffer.isBuffer(buf) || buf.length !== 5) throw new TypeError('buf should be a Buffer with length 5')
+  return {
+    detection: buf[0] === 1,
+    gen1a: buf[1] === 1,
+    gen2: buf[2] === 1,
+    block0AntiCollision: buf[3] === 1,
+    writeMode: buf[4],
   }
 }

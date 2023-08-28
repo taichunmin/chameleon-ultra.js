@@ -1,4 +1,6 @@
 import _ from 'lodash'
+import { createIsEnum } from './helper'
+import { type Class } from 'utility-types'
 
 const BASE64_CHAR = _.transform('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'.split(''), (m, v, k) => {
   m.set(k, v).set(v, k)
@@ -16,7 +18,7 @@ const K_MAX_LENGTH = 0x7FFFFFFF
 const SIGNED_MAX_VALUE = [0, 0x7F, 0x7FFF, 0x7FFFFF, 0x7FFFFFFF, 0x7FFFFFFFFF, 0x7FFFFFFFFFFF]
 const SIGNED_OFFSET = [0, 0x100, 0x10000, 0x1000000, 0x100000000, 0x10000000000, 0x1000000000000]
 
-function isInstance<T> (obj: any, type: Newable<T>): obj is T {
+function isInstance<T> (obj: any, type: Class<T>): obj is T {
   return obj instanceof type || obj?.constructor?.name === type?.name
 }
 
@@ -24,16 +26,32 @@ function isSharedArrayBuffer (val: any): val is SharedArrayBuffer {
   return typeof SharedArrayBuffer !== 'undefined' && (isInstance(val, SharedArrayBuffer) || isInstance(val?.buffer, SharedArrayBuffer))
 }
 
+export const EncodingConst = {
+  'ucs-2': 'ucs-2',
+  'utf-16le': 'utf-16le',
+  'utf-8': 'utf-8',
+  ascii: 'ascii',
+  base64: 'base64',
+  base64url: 'base64url',
+  binary: 'binary',
+  hex: 'hex',
+  latin1: 'latin1',
+  ucs2: 'ucs2',
+  utf16le: 'utf16le',
+  utf8: 'utf8',
+} as const
+
+export type Encoding = keyof typeof EncodingConst
+
 export class Buffer extends Uint8Array {
   static readonly poolSize = 8192
+  static isEncoding = createIsEnum(EncodingConst)
   dv: DataView
 
   constructor ()
-  constructor (arrayLike: ArrayLike<number>)
   constructor (length: number)
-  constructor (object: BufferFromObjectArg)
-  constructor (typedArray: TypedArray)
-  constructor (buffer: ArrayBuffer, byteOffset?: number, length?: number)
+  constructor (arrayLike: ArrayLike<number>)
+  constructor (arrayBuffer: ArrayBufferLike, byteOffset?: number, length?: number)
 
   constructor (val?: any, offset?: any, length?: any) {
     if (_.isNil(val)) super()
@@ -61,7 +79,7 @@ export class Buffer extends Uint8Array {
     return new Buffer(size)
   }
 
-  static byteLength (string: TypedArray | DataView | ArrayBuffer | SharedArrayBuffer): number
+  static byteLength (string: TypedArray | DataView | ArrayBufferLike): number
   static byteLength (string: string, encoding?: Encoding): number
 
   static byteLength (string: any, encoding: Encoding = 'utf8'): number {
@@ -128,24 +146,20 @@ export class Buffer extends Uint8Array {
     return new Buffer(view.buffer, offset * view.BYTES_PER_ELEMENT, (offset + length) * view.BYTES_PER_ELEMENT)
   }
 
-  static from (array: number[]): Buffer
-  static from (arrayBuffer: ArrayBuffer | SharedArrayBuffer, byteOffset?: number, length?: number): Buffer
-  static from (buffer: Buffer | Uint8Array): Buffer
-  static from (object: BufferFromObjectArg, offset?: number, length?: number): Buffer
-  static from (object: BufferFromObjectArg, encoding?: Encoding): Buffer
-  static from (string: string, encoding?: Encoding): Buffer
+  static from (data: WithImplicitCoercion<Uint8Array | Buffer | ArrayLike<number> | Iterable<number>>): Buffer
+  static from (arrayBuffer: WithImplicitCoercion<ArrayBufferLike>, byteOffset?: number, length?: number): Buffer
+  static from (object: WithImplicitCoercion<string> | { [Symbol.toPrimitive]: (hint: 'string') => string }, encoding?: Encoding): Buffer
 
   static from (val: any, encodingOrOffset?: any, length?: number): Buffer {
-    const valFromObject = val?.valueOf?.() ?? val?.[Symbol.toPrimitive]?.('string')
-    if (!_.isNil(valFromObject) && valFromObject !== val) val = valFromObject
+    const valueOfObj = val?.valueOf?.() ?? val?.[Symbol.toPrimitive]?.('string')
+    if (!_.isNil(valueOfObj) && valueOfObj !== val) val = valueOfObj
 
-    if (_.isString(val)) return Buffer.fromString(val, encodingOrOffset)
-    if (ArrayBuffer.isView(val) || Buffer.isBuffer(val)) return Buffer.fromView(val)
-
-    if (_.isNil(val) || _.isNumber(val)) throw new TypeError(`Invalid type of value: ${typeof val}`)
-
+    if (Buffer.isBuffer(val)) return val
+    if (ArrayBuffer.isView(val)) return Buffer.fromView(val)
     if (isInstance(val, ArrayBuffer) || isSharedArrayBuffer(val)) return new Buffer(val, encodingOrOffset, length)
-    if (_.isArrayLike(val)) return Buffer.fromArray(val)
+    if (_.isString(val)) return Buffer.fromString(val, encodingOrOffset)
+    if (typeof val[Symbol.iterator] === 'function') return Buffer.fromArray([...val])
+    if (_.isArray(val)) return Buffer.fromArray(val)
 
     throw new TypeError(`Invalid type of value: ${typeof val}`)
   }
@@ -238,6 +252,7 @@ export class Buffer extends Uint8Array {
   }
 
   static fromArray (arr: ArrayLike<number>): Buffer {
+    if (!_.isArray(arr) || !_.every(arr, _.isSafeInteger)) throw new TypeError('all elements in array must be a integer')
     const buf = new Buffer(arr.length)
     for (let i = 0; i < buf.length; i++) buf[i] = arr[i] & 0xFF
     return buf
@@ -245,10 +260,6 @@ export class Buffer extends Uint8Array {
 
   static isBuffer (obj: any): obj is Buffer {
     return isInstance(obj, Buffer)
-  }
-
-  static isEncoding (encoding: any): encoding is Encoding {
-    return _.isString(encoding) && _.has(EncodingConst, encoding)
   }
 
   compare (target: any, targetStart: number = 0, targetEnd: number = target.length, sourceStart: number = 0, sourceEnd: number = this.length): number {
@@ -631,128 +642,128 @@ export class Buffer extends Uint8Array {
     return length
   }
 
-  writeBigInt64BE (val: bigint, offset: number = 0): number {
+  writeBigInt64BE (val: bigint, offset: number = 0): this {
     this.dv.setBigInt64(offset, val)
-    return offset + 8
+    return this
   }
 
-  writeBigInt64LE (val: bigint, offset: number = 0): number {
+  writeBigInt64LE (val: bigint, offset: number = 0): this {
     this.dv.setBigInt64(offset, val, true)
-    return offset + 8
+    return this
   }
 
-  writeBigUInt64BE (val: bigint, offset: number = 0): number {
+  writeBigUInt64BE (val: bigint, offset: number = 0): this {
     this.dv.setBigUint64(offset, val)
-    return offset + 8
+    return this
   }
 
-  writeBigUInt64LE (val: bigint, offset: number = 0): number {
+  writeBigUInt64LE (val: bigint, offset: number = 0): this {
     this.dv.setBigUint64(offset, val, true)
-    return offset + 8
+    return this
   }
 
-  writeDoubleBE (val: number, offset: number = 0): number {
+  writeDoubleBE (val: number, offset: number = 0): this {
     this.dv.setFloat64(offset, val)
-    return offset + 8
+    return this
   }
 
-  writeDoubleLE (val: number, offset: number = 0): number {
+  writeDoubleLE (val: number, offset: number = 0): this {
     this.dv.setFloat64(offset, val, true)
-    return offset + 8
+    return this
   }
 
-  writeFloatBE (val: number, offset: number = 0): number {
+  writeFloatBE (val: number, offset: number = 0): this {
     this.dv.setFloat32(offset, val)
-    return offset + 4
+    return this
   }
 
-  writeFloatLE (val: number, offset: number = 0): number {
+  writeFloatLE (val: number, offset: number = 0): this {
     this.dv.setFloat32(offset, val, true)
-    return offset + 4
+    return this
   }
 
-  writeInt8 (val: number, offset: number = 0): number {
+  writeInt8 (val: number, offset: number = 0): this {
     this.dv.setInt8(offset, val)
-    return offset + 1
+    return this
   }
 
-  writeInt16BE (val: number, offset: number = 0): number {
+  writeInt16BE (val: number, offset: number = 0): this {
     this.dv.setInt16(offset, val)
-    return offset + 2
+    return this
   }
 
-  writeInt16LE (val: number, offset: number = 0): number {
+  writeInt16LE (val: number, offset: number = 0): this {
     this.dv.setInt16(offset, val, true)
-    return offset + 2
+    return this
   }
 
-  writeInt32BE (val: number, offset: number = 0): number {
+  writeInt32BE (val: number, offset: number = 0): this {
     this.dv.setInt32(offset, val)
-    return offset + 4
+    return this
   }
 
-  writeInt32LE (val: number, offset: number = 0): number {
+  writeInt32LE (val: number, offset: number = 0): this {
     this.dv.setInt32(offset, val, true)
-    return offset + 4
+    return this
   }
 
-  writeIntBE (val: number, offset: number = 0, byteLength: number = 6): number {
+  writeIntBE (val: number, offset: number = 0, byteLength: number = 6): this {
     if (byteLength < 1 || byteLength > 6) throw new RangeError(`Invalid byteLength: ${byteLength}`)
     if (val < 0) val += SIGNED_OFFSET[byteLength]
     this.writeUIntBE(val, offset, byteLength)
-    return offset + byteLength
+    return this
   }
 
-  writeIntLE (val: number, offset: number = 0, byteLength: number = 6): number {
+  writeIntLE (val: number, offset: number = 0, byteLength: number = 6): this {
     if (byteLength < 1 || byteLength > 6) throw new RangeError(`Invalid byteLength: ${byteLength}`)
     if (val < 0) val += SIGNED_OFFSET[byteLength]
     this.writeUIntLE(val, offset, byteLength)
-    return offset + byteLength
+    return this
   }
 
-  writeUInt8 (val: number, offset: number = 0): number {
+  writeUInt8 (val: number, offset: number = 0): this {
     this.dv.setUint8(offset, val)
-    return offset + 1
+    return this
   }
 
-  writeUInt16BE (val: number, offset: number = 0): number {
+  writeUInt16BE (val: number, offset: number = 0): this {
     this.dv.setUint16(offset, val)
-    return offset + 2
+    return this
   }
 
-  writeUInt16LE (val: number, offset: number = 0): number {
+  writeUInt16LE (val: number, offset: number = 0): this {
     this.dv.setUint16(offset, val, true)
-    return offset + 2
+    return this
   }
 
-  writeUInt32BE (val: number, offset: number = 0): number {
+  writeUInt32BE (val: number, offset: number = 0): this {
     this.dv.setUint32(offset, val)
-    return offset + 4
+    return this
   }
 
-  writeUInt32LE (val: number, offset: number = 0): number {
+  writeUInt32LE (val: number, offset: number = 0): this {
     this.dv.setUint32(offset, val, true)
-    return offset + 4
+    return this
   }
 
-  writeUIntBE (val: number, offset: number = 0, byteLength: number = 6): number {
+  writeUIntBE (val: number, offset: number = 0, byteLength: number = 6): this {
     if (byteLength < 1 || byteLength > 6) throw new RangeError(`Invalid byteLength: ${byteLength}`)
     if (offset + byteLength > this.length) throw new RangeError(`Invalid offset: ${offset}`)
     for (let i = byteLength - 1; i >= 0; i--) {
       this[offset + i] = val & 0xFF
       val /= 0x100
     }
-    return offset + byteLength
+    return this
   }
 
-  writeUIntLE (val: number, offset: number = 0, byteLength: number = 6): number {
+  writeUIntLE (val: number, offset: number = 0, byteLength: number = 6): this {
     if (byteLength < 1 || byteLength > 6) throw new RangeError(`Invalid byteLength: ${byteLength}`)
     if (offset + byteLength > this.length) throw new RangeError(`Invalid offset: ${offset}`)
     for (let i = 0; i < byteLength; i++) {
       this[offset + i] = val & 0xFF
       val /= 0x100
     }
-    return offset + byteLength
+    return this
   }
 
   writeBitMSB (bitOffset: number, val: number): this {
@@ -781,23 +792,6 @@ export class Buffer extends Uint8Array {
   }
 }
 
-export const EncodingConst = {
-  'ucs-2': 'ucs-2',
-  'utf-16le': 'utf-16le',
-  'utf-8': 'utf-8',
-  ascii: 'ascii',
-  base64: 'base64',
-  base64url: 'base64url',
-  binary: 'binary',
-  hex: 'hex',
-  latin1: 'latin1',
-  ucs2: 'ucs2',
-  utf16le: 'utf16le',
-  utf8: 'utf8',
-} as const
-
-export type Encoding = keyof typeof EncodingConst
-
 export type TypedArray = NodeJS.TypedArray | Buffer
 
 export type BufferFromObjectArg = { [Symbol.toPrimitive]: (hint: string) => string } | { valueOf: () => string }
@@ -807,5 +801,4 @@ export interface ArrayLike<T> {
   readonly [n: number]: T
 }
 
-// https://stackoverflow.com/questions/12802317/passing-class-as-parameter-causes-is-not-newable-error
-export type Newable<T> = new (...args: any[]) => T
+export type WithImplicitCoercion<T> = T | { valueOf: () => T }
