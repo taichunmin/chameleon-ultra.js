@@ -2,8 +2,7 @@ import _ from 'lodash'
 import { bluetooth } from 'webbluetooth'
 import { sleep } from '../helper'
 import { type Buffer } from '../buffer'
-import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
-import { type Debugger } from 'debug'
+import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext, type Logger } from '../ChameleonUltra'
 import {
   ReadableStream,
   type ReadableStreamDefaultController,
@@ -28,7 +27,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
   Buffer?: typeof Buffer
   device?: BluetoothDevice
   isOpen: boolean = false
-  log?: Record<string, Debugger>
+  logger: Record<string, Logger> = {}
   name = 'adapter'
   recv?: BluetoothRemoteGATTCharacteristic
   rxSource?: ChameleonWebbleAdapterRxSource
@@ -37,11 +36,9 @@ export default class WebbleAdapter implements ChameleonPlugin {
   txSink?: ChameleonWebbleAdapterTxSink
 
   async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
-    const { ultra, createDebugger, Buffer } = context
+    const { ultra, Buffer } = context
     this.Buffer = Buffer
-    this.log = {
-      webble: createDebugger('ultra:webble'),
-    }
+    this.logger.webble = ultra.createDebugger('webble')
 
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect()
     const adapter: any = {}
@@ -62,14 +59,14 @@ export default class WebbleAdapter implements ChameleonPlugin {
           optionalServices: _.uniq(_.map(BLESERIAL_UUID, 'serv')),
         })
         if (_.isNil(this.device)) throw new Error('no device')
-        this.log?.webble(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)
+        this.logger.webble(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)
 
         this.rxSource = new ChameleonWebbleAdapterRxSource(this)
         this.txSink = new ChameleonWebbleAdapterTxSink(this)
 
         for (let i = 0; i < 100; i++) {
-          this.log?.webble(`gatt connecting, retry = ${i}`)
-          if (!gattIsConnected()) await this.device.gatt?.connect().catch((err: any) => { this.log?.webble(err.message) })
+          this.logger.webble(`gatt connecting, retry = ${i}`)
+          if (!gattIsConnected()) await this.device.gatt?.connect().catch((err: any) => { this.logger.webble(err.message) })
 
           // find serv, send, recv, ctrl
           const primaryServices = _.map(await this.device.gatt?.getPrimaryServices(), 'uuid')
@@ -88,7 +85,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
             }
 
             if (!_.isNil(this.send) && !_.isNil(this.recv)) {
-              this.log?.webble(`gatt connected, serv = ${this.serv?.uuid ?? '?'}, recv = ${this.recv?.uuid ?? '?'}, send = ${this.send?.uuid ?? '?'}'`)
+              this.logger.webble(`gatt connected, serv = ${this.serv?.uuid ?? '?'}, recv = ${this.recv?.uuid ?? '?'}, send = ${this.send?.uuid ?? '?'}'`)
               this.isOpen = true
               break
             }
@@ -106,7 +103,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
         } satisfies ChameleonSerialPort<Buffer, Buffer>
         return await next()
       } catch (err) {
-        this.log?.webble(`Failed to connect: ${err.message as string}`)
+        this.logger.webble(`Failed to connect: ${err.message as string}`)
         throw err
       }
     })
@@ -154,7 +151,7 @@ class ChameleonWebbleAdapterRxSource implements UnderlyingSource<Buffer> {
 
   onNotify (event: any): void {
     const buf = this.adapter.Buffer?.from(event?.target?.value?.buffer) as Buffer
-    this.adapter.log?.webble(`onNotify = ${buf.toString('hex')}`)
+    this.adapter.logger.webble(`onNotify = ${buf.toString('hex')}`)
     this.controller?.enqueue(buf)
   }
 }
@@ -172,7 +169,7 @@ class ChameleonWebbleAdapterTxSink implements UnderlyingSink<Buffer> {
     // https://stackoverflow.com/questions/38913743/maximum-packet-length-for-bluetooth-le
     for (let i = 0; i < chunk.length; i += 20) {
       const buf = chunk.subarray(i, i + 20)
-      this.adapter.log?.webble(`bleWrite = ${buf.toString('hex')}`)
+      this.adapter.logger.webble(`bleWrite = ${buf.toString('hex')}`)
       await this.adapter.send?.writeValueWithoutResponse(buf.buffer)
     }
   }
