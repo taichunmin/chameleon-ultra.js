@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import { bluetooth } from 'webbluetooth'
-import { Buffer } from '../buffer'
-import { sleep, asBuffer } from '../helper'
+import { sleep } from '../helper'
+import { type Buffer } from '../buffer'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
 import { type Debugger } from 'debug'
 import {
@@ -25,6 +25,7 @@ const BLESERIAL_UUID = [
 ]
 
 export default class WebbleAdapter implements ChameleonPlugin {
+  Buffer?: typeof Buffer
   device?: BluetoothDevice
   isOpen: boolean = false
   log?: Record<string, Debugger>
@@ -36,7 +37,8 @@ export default class WebbleAdapter implements ChameleonPlugin {
   txSink?: ChameleonWebbleAdapterTxSink
 
   async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
-    const { ultra, createDebugger } = context
+    const { ultra, createDebugger, Buffer } = context
+    this.Buffer = Buffer
     this.log = {
       webble: createDebugger('ultra:webble'),
     }
@@ -79,9 +81,6 @@ export default class WebbleAdapter implements ChameleonPlugin {
               this.recv = await this.serv?.getCharacteristic(uuids.recv)
               this.recv?.addEventListener('characteristicvaluechanged', (event: any): void => this.rxSource?.onNotify(event))
               await this.recv?.startNotifications()
-
-              // try to write escape
-              await this.send?.writeValueWithoutResponse(Buffer.from('1B', 'hex').buffer)
             } catch (err) {
               delete this.serv
               delete this.send
@@ -154,7 +153,7 @@ class ChameleonWebbleAdapterRxSource implements UnderlyingSource<Buffer> {
   start (controller: ReadableStreamDefaultController<Buffer>): void { this.controller = controller }
 
   onNotify (event: any): void {
-    const buf = asBuffer(event?.target?.value?.buffer as ArrayBuffer)
+    const buf = this.adapter.Buffer?.from(event?.target?.value?.buffer) as Buffer
     this.adapter.log?.webble(`onNotify = ${buf.toString('hex')}`)
     this.controller?.enqueue(buf)
   }

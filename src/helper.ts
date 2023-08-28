@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { Buffer } from './buffer'
+import { type ValuesType } from 'utility-types'
 
 export type MiddlewareComposeFn = (ctx: Record<string, any>, next: () => Promise<unknown>) => Promise<unknown>
 
@@ -45,10 +45,7 @@ export async function sleep (ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export function asBuffer (input: any, encoding: BufferEncoding = 'binary'): Buffer {
-  if (Buffer.isBuffer(input)) return input
-  if (_.isString(input)) return Buffer.from(input, encoding)
-  if (input instanceof ArrayBuffer) input = new Uint8Array(input)
-  if (ArrayBuffer.isView(input)) return Buffer.from(input.buffer, input.byteOffset, input.byteLength)
-  return Buffer.from(input)
+export function createIsEnum<T extends readonly any[] | ArrayLike<any> | Record<any, any>> (e: T): (val: any) => val is ValuesType<T> {
+  const s = new Set(_.values(e))
+  return (val: any): val is ValuesType<T> => s.has(val)
 }
