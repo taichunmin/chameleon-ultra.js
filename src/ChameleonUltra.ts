@@ -10,6 +10,7 @@ const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
 export class ChameleonUltra {
   debug: boolean
   hooks: Record<string, MiddlewareComposeFn[]>
+  isDisconnecting: boolean = false
   logger: Record<string, Logger> = {}
   plugins: Map<string, ChameleonPlugin>
   port?: ChameleonSerialPort<Buffer, Buffer>
@@ -58,14 +59,16 @@ export class ChameleonUltra {
 
         // serial.readable pipeTo this.rxSink
         this.rxSink = new ChameleonRxSink()
-        this.rxSink.writable = new WritableStream(this.rxSink)
-        void this.port.readable.pipeTo(this.rxSink.writable).catch(err => {
+        this.rxSink.controller = new AbortController()
+        void this.port.readable.pipeTo(new WritableStream(this.rxSink), {
+          signal: this.rxSink.controller.signal,
+        }).catch(err => {
           void this.disconnect()
-          throw _.merge(new Error('serial.readable.pipeTo error'), { originalError: err })
+          throw _.merge(new Error(`Failed to read resp: ${err.message}`), { originalError: err })
         })
 
-        // Try to retrieve chameleons version information and supported confs
         this.versionString = `${await this.cmdGetAppVersion()} (${await this.cmdGetGitVersion()})`
+        this.logger.core(`connected, version = ${this.versionString}`)
       } catch (err) {
         this.logger.core(`Failed to connect: ${err.message as string}`)
         if (this.isConnected()) await this.disconnect()
@@ -75,15 +78,22 @@ export class ChameleonUltra {
   }
 
   async disconnect (): Promise<void> {
-    await this.invokeHook('disconnect', {}, async (ctx, next) => {
-      try {
-        await this.rxSink?.writable?.close()
-        this.logger.core('disconnected')
-        delete this.port
-      } catch (err) {
-        throw _.merge(new Error(err.message ?? 'Failed to connect'), { originalError: err })
-      }
-    })
+    try {
+      if (this.isDisconnecting) return
+      this.isDisconnecting = true // 避免重複執行
+      await this.invokeHook('disconnect', {}, async (ctx, next) => {
+        try {
+          this.logger.core('disconnected')
+          this.rxSink?.controller?.abort(new Error('disconnected'))
+          while (this.port?.readable?.locked === true) await sleep(10)
+          delete this.port
+        } catch (err) {
+          throw _.merge(new Error(err.message ?? 'Failed to disconnect'), { originalError: err })
+        }
+      })
+    } finally {
+      this.isDisconnecting = false
+    }
   }
 
   isConnected (): boolean {
@@ -168,7 +178,7 @@ export class ChameleonUltra {
       }
       if (RespStatusFail.has(ctx.resp.status)) {
         const status = ctx.resp.status
-        this.logger.respError(ctx.resp.buf)
+        this.logger.respError(frameToString(ctx.resp.buf))
         throw _.merge(new Error(RespStatusMsg.get(status)), { status, data: { resp: ctx.resp } })
       }
       this.logger.resp(frameToString(ctx.resp.buf))
@@ -250,7 +260,7 @@ export class ChameleonUltra {
     }
   }
 
-  async cmdSaveSlotDataConfig (): Promise<void> {
+  async cmdSaveSlotSettings (): Promise<void> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SLOT_DATA_CONFIG_SAVE }) // cmd = 1009
     await this._readRespTimeout()
@@ -412,6 +422,64 @@ export class ChameleonUltra {
       0x25: 'hard',
     }
     return statusToString[status] ?? 'unknown'
+  }
+
+  async cmdTestMf1Darkside (): Promise<boolean> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.MF1_DARKSIDE_DETECT }) // cmd = 2003
+    const status = (await this._readRespTimeout({ timeout: 6e4 }))?.status
+    return status === RespStatus.HF_TAG_OK
+  }
+
+  async cmdAcquireMf1Darkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax = 15): Promise<Mf1DarksideCore> {
+    this._clearRxBufs()
+    await this._writeCmd({
+      cmd: Cmd.MF1_DARKSIDE_ACQUIRE, // cmd = 2004
+      data: Buffer.from([keyType, block, isFirst ? 1 : 0, syncMax]),
+    })
+    return mf1ParseDarksideCore((await this._readRespTimeout({ timeout: (syncMax + 5) * 1000 }))?.data)
+  }
+
+  async cmdTestMf1NtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<Mf1NtDistance> {
+    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
+    if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
+    this._clearRxBufs()
+    await this._writeCmd({
+      cmd: Cmd.MF1_NT_DIST_DETECT, // cmd = 2005
+      data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey]),
+    })
+    return mf1ParseNtDistance((await this._readRespTimeout())?.data)
+  }
+
+  async cmdAcquireMf1Nested ({
+    src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') },
+    dst: { dstBlock = 0, dstKeyType = Mf1KeyType.KEY_A },
+  }: CmdAcquireMf1NestedArgs): Promise<Mf1NestedCore> {
+    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
+    if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
+    if (!_.isSafeInteger(dstKeyType) || !isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dstKeyType')
+    this._clearRxBufs()
+    await this._writeCmd({
+      cmd: Cmd.MF1_NESTED_ACQUIRE, // cmd = 2006
+      data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey, Buffer.from([dstKeyType, dstBlock])]),
+    })
+    return mf1ParseNestedCore((await this._readRespTimeout())?.data)
+  }
+
+  async cmdCheckMf1BlockKey ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdCheckMf1BlockKeyArgs = {}): Promise<boolean> {
+    try {
+      if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
+      this._clearRxBufs()
+      await this._writeCmd({
+        cmd: Cmd.MF1_CHECK_ONE_KEY_BLOCK, // cmd = 2007
+        data: Buffer.concat([Buffer.from([keyType, block]), key]),
+      })
+      await this._readRespTimeout()
+      return true
+    } catch (err) {
+      if (err.status === RespStatus.MF_ERRAUTH) return false
+      throw err
+    }
   }
 
   async cmdReadMf1Block ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdReadMf1BlockArgs = {}): Promise<Buffer> {
@@ -637,11 +705,11 @@ export enum Cmd {
   SCAN_14A_TAG = 2000,
   MF1_SUPPORT_DETECT = 2001,
   MF1_NT_LEVEL_DETECT = 2002,
-  MF1_DARKSIDE_DETECT = 2003, // TODO: not implemented
-  MF1_DARKSIDE_ACQUIRE = 2004, // TODO: not implemented
-  MF1_NT_DIST_DETECT = 2005, // TODO: not implemented
-  MF1_NESTED_ACQUIRE = 2006, // TODO: not implemented
-  MF1_CHECK_ONE_KEY_BLOCK = 2007, // TODO: not implemented
+  MF1_DARKSIDE_DETECT = 2003,
+  MF1_DARKSIDE_ACQUIRE = 2004,
+  MF1_NT_DIST_DETECT = 2005,
+  MF1_NESTED_ACQUIRE = 2006,
+  MF1_CHECK_ONE_KEY_BLOCK = 2007,
   MF1_READ_ONE_BLOCK = 2008,
   MF1_WRITE_ONE_BLOCK = 2009,
 
@@ -827,7 +895,7 @@ export interface ChameleonSerialPort<I, O> {
 
 export class ChameleonRxSink implements UnderlyingSink<Buffer> {
   bufs: Buffer[] = []
-  writable?: WritableStream<Buffer>
+  controller?: AbortController
 
   write (chunk: Buffer): void {
     this.bufs.push(Buffer.from(chunk))
@@ -889,6 +957,12 @@ export enum Mf1KeyType {
 export const isMf1KeyType = createIsEnum(Mf1KeyType)
 
 export interface CmdReadMf1BlockArgs {
+  block?: number
+  keyType?: Mf1KeyType
+  key?: Buffer
+}
+
+export interface CmdCheckMf1BlockKeyArgs {
   block?: number
   keyType?: Mf1KeyType
   key?: Buffer
@@ -1002,4 +1076,74 @@ export function frameToString (buf: any): string {
     buf.readUInt16LE(6) > 0 ? buf.slice(9, -1).toString('hex') : '(no data)', // data
     buf.slice(-1).toString('hex'), // data lrc
   ].join(' ')
+}
+
+export interface Mf1NtDistance {
+  uid: Buffer
+  distance: Buffer
+}
+
+export function mf1ParseNtDistance (buf: Buffer): Mf1NtDistance {
+  if (!Buffer.isBuffer(buf) || buf.length !== 8) throw new TypeError('buf should be a Buffer with length 8')
+  return {
+    uid: buf.subarray(0, 4),
+    distance: buf.subarray(4, 8),
+  }
+}
+
+export interface CmdTestMf1NtDistanceArgs {
+  src: {
+    srcKeyType?: Mf1KeyType
+    srcBlock?: number
+    srcKey?: Buffer
+  }
+}
+
+export interface CmdAcquireMf1NestedArgs {
+  src: {
+    srcKeyType?: Mf1KeyType
+    srcBlock?: number
+    srcKey?: Buffer
+  }
+  dst: {
+    dstKeyType?: Mf1KeyType
+    dstBlock?: number
+  }
+}
+
+// Answer the random number parameters required for Nested attack
+export interface Mf1NestedCore {
+  nt1: Buffer // Unblocked explicitly random number
+  nt2: Buffer // Random number of nested verification encryption
+  par: Buffer // The puppet test of the communication process of nested verification encryption, only the "low 3 digits', that is, the right 3
+}
+
+export function mf1ParseNestedCore (buf: Buffer): Mf1NestedCore {
+  if (!Buffer.isBuffer(buf) || buf.length !== 9) throw new TypeError('buf should be a Buffer with length 9')
+  return {
+    nt1: buf.subarray(0, 4),
+    nt2: buf.subarray(4, 8),
+    par: buf.subarray(8, 9),
+  }
+}
+
+export interface Mf1DarksideCore {
+  uid: Buffer
+  nt: Buffer
+  pars: Buffer
+  kses: Buffer
+  nr: Buffer
+  ar: Buffer
+}
+
+export function mf1ParseDarksideCore (buf: Buffer): Mf1DarksideCore {
+  if (!Buffer.isBuffer(buf) || buf.length !== 32) throw new TypeError('buf should be a Buffer with length 32')
+  return {
+    uid: buf.subarray(0, 4),
+    nt: buf.subarray(4, 8),
+    pars: buf.subarray(8, 16),
+    kses: buf.subarray(16, 24),
+    nr: buf.subarray(24, 28),
+    ar: buf.subarray(28, 32),
+  }
 }

@@ -49,12 +49,11 @@ export default class WebserialAdapter implements ChameleonPlugin {
     })
 
     ultra.addHook('disconnect', async (ctx: any, next: () => Promise<unknown>) => {
-      if (ultra.$adapter !== adapter) return await next() // 代表已經被其他 adapter 接管
+      if (ultra.$adapter !== adapter || _.isNil(this.port)) return await next() // 代表已經被其他 adapter 接管
 
-      this.isOpen = false
       await next()
-      if (_.isNil(this.port)) return
       await this.port.close()
+      this.isOpen = false
       delete this.port
     })
 
