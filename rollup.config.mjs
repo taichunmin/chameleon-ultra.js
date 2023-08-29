@@ -64,19 +64,6 @@ export default [
     ],
   },
 
-  // src/plugin/LoggerRxTx.ts
-  {
-    external,
-    input: `src/plugin/LoggerRxTx.ts`,
-    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
-    output: [
-      { file: `dist/es/plugin/LoggerRxTx.mjs`, format: 'es' },
-      { file: `dist/es/plugin/LoggerRxTx.cjs`, format: 'cjs' },
-      { file: 'dist/iife/plugin/LoggerRxTx.js', format: 'iife', globals, name: 'ChameleonUltraJS.LoggerRxTx' },
-      { file: 'dist/iife/plugin/LoggerRxTx.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.LoggerRxTx', plugins: [terser()] },
-    ]
-  },
-
   // src/plugin/SerialPortAdapter.ts (cjs, es)
   {
     external,

@@ -2,18 +2,16 @@ import _ from 'lodash'
 import { Duplex } from 'stream'
 import { SerialPort } from 'serialport'
 import { type Buffer } from '../buffer'
-import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
+import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext, type Logger } from '../ChameleonUltra'
 
 export default class SerialPortAdapter implements ChameleonPlugin {
+  logger: Record<string, Logger> = {}
   name = 'adapter'
   port?: SerialPort
 
   async install (context: AdapterInstallContext, pluginOption: SerialPortOption): Promise<AdapterInstallResp> {
-    const { ultra, createDebugger } = context
-
-    const log = {
-      serial: createDebugger('ultra:serial'),
-    }
+    const { ultra } = context
+    this.logger.serial = ultra.createDebugger('serial')
 
     if (!_.isNil(ultra.$adapter)) {
       await ultra.disconnect()
@@ -35,13 +33,13 @@ export default class SerialPortAdapter implements ChameleonPlugin {
           const port1 = new SerialPort(pluginOption as any, err => { _.isNil(err) ? resolve(port1) : reject(err) })
         })
         this.port?.once('close', () => { void ultra.disconnect() })
-        log.serial(`port connected, path = ${pluginOption.path}, baudRate = ${pluginOption.baudRate as number}`)
+        this.logger.serial(`port connected, path = ${pluginOption.path}, baudRate = ${pluginOption.baudRate as number}`)
         const ultraPort = Duplex.toWeb(this.port) as Partial<ChameleonSerialPort<Buffer, Buffer>>
         ultraPort.isOpen = () => { return this.port?.isOpen ?? false }
         ultra.port = ultraPort as any satisfies ChameleonSerialPort<Buffer, Buffer>
         return await next()
       } catch (err) {
-        log.serial(err)
+        this.logger.serial(err)
         throw err
       }
     })
