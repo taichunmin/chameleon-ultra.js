@@ -45,11 +45,11 @@ export default class SerialPortAdapter implements ChameleonPlugin {
     })
 
     ultra.addHook('disconnect', async (ctx: any, next: () => Promise<unknown>) => {
-      if (ultra.$adapter !== adapter) return await next() // 代表已經被其他 adapter 接管
+      if (ultra.$adapter !== adapter || _.isNil(this.port)) return await next() // 代表已經被其他 adapter 接管
 
       await next()
-      if (_.isNil(this.port)) return
       await new Promise<void>((resolve, reject) => { this.port?.close(err => { _.isNil(err) ? resolve() : reject(err) }) })
+      delete this.port
     })
 
     return adapter as AdapterInstallResp

@@ -109,11 +109,9 @@ export default class WebbleAdapter implements ChameleonPlugin {
     })
 
     ultra.addHook('disconnect', async (ctx: any, next: () => Promise<unknown>) => {
-      if (ultra.$adapter !== adapter) return await next() // 代表已經被其他 adapter 接管
+      if (ultra.$adapter !== adapter || _.isNil(this.device)) return await next() // 代表已經被其他 adapter 接管
 
-      this.isOpen = false
       await next()
-      if (_.isNil(this.device)) return
       if (!_.isNil(this.recv)) {
         if (gattIsConnected()) await this.recv.stopNotifications()
         delete this.recv
@@ -125,6 +123,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
       }
       if (!_.isNil(this.serv)) delete this.serv
       if (gattIsConnected()) this.device.gatt?.disconnect()
+      this.isOpen = false
       delete this.device
     })
 
