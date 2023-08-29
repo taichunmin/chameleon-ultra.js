@@ -23,9 +23,9 @@ block content
 block script
   script.
     const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line no-unused-vars
-    const ultraUsb = new ChameleonUltra(console.log)
+    const ultraUsb = new ChameleonUltra(true)
     ultraUsb.use(new WebserialAdapter())
-    const ultraBle = new ChameleonUltra(console.log)
+    const ultraBle = new ChameleonUltra(true)
     ultraBle.use(new WebbleAdapter())
 
     window.vm = new Vue({
@@ -33,7 +33,6 @@ block script
       data: {
         h: {
           adapter: 'ble',
-          settings: [],
         },
       },
       async mounted () {
