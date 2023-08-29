@@ -65,7 +65,7 @@ export class ChameleonUltra {
         })
 
         // Try to retrieve chameleons version information and supported confs
-        this.versionString = `${await this.getAppVersion()} (${await this.getGitVersion()})`
+        this.versionString = `${await this.cmdGetAppVersion()} (${await this.cmdGetGitVersion()})`
       } catch (err) {
         this.logger.core(`Failed to connect: ${err.message as string}`)
         if (this.isConnected()) await this.disconnect()
@@ -176,66 +176,73 @@ export class ChameleonUltra {
     }) as ChameleonUltraFrame
   }
 
-  async getAppVersion (): Promise<string> {
+  async cmdGetAppVersion (): Promise<string> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_APP_VERSION })
+    await this._writeCmd({ cmd: Cmd.GET_APP_VERSION }) // cmd = 1000
     const data = (await this._readRespTimeout())?.data
     return `${data[1]}.${data[0]}`
   }
 
-  async getDeivceChipId (): Promise<string> {
+  async cmdSetDeviceMode (mode: DeviceMode): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_CHIP_ID })
-    const data = (await this._readRespTimeout())?.data
-    return data.toString('hex')
+    await this._writeCmd({ cmd: Cmd.CHANGE_MODE, data: Buffer.from([mode]) }) // cmd = 1001
+    await this._readRespTimeout()
   }
 
-  async getDeviceAddress (): Promise<string> {
+  async cmdGetDeviceMode (): Promise<DeviceMode> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_ADDRESS })
-    const data = (await this._readRespTimeout())?.data
-    const arr = []
-    for (let i = data.length - 1; i >= 0; i--) arr.push(data.subarray(i, i + 1).toString('hex'))
-    return _.toUpper(arr.join(':'))
-  }
-
-  async getGitVersion (): Promise<string> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_GIT_VERSION })
-    const data = (await this._readRespTimeout())?.data
-    return data.toString('utf8')
-  }
-
-  async getDeviceMode (): Promise<DeviceMode> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_MODE })
+    await this._writeCmd({ cmd: Cmd.GET_DEVICE_MODE }) // cmd = 1002
     const data = (await this._readRespTimeout())?.data
     return data[0] as DeviceMode
   }
 
-  async setDeviceMode (mode: DeviceMode): Promise<void> {
+  async cmdSetActiveSlot (slot: Slot): Promise<void> {
+    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.CHANGE_MODE, data: Buffer.from([mode]) })
+    await this._writeCmd({ cmd: Cmd.SET_SLOT_ACTIVATED, data: Buffer.from([slot]) }) // cmd = 1003
     await this._readRespTimeout()
   }
 
-  async setSlotTagName (slot: Slot, field: RfidType, name: string): Promise<void> {
-    const data = Buffer.concat([Buffer.from([slot, field]), Buffer.from(name)])
+  async cmdSlotSetTagType (slot: Slot, tagType: TagType): Promise<void> {
+    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!_.isSafeInteger(tagType) || !isTagType(tagType)) throw new TypeError('Invalid tag type')
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SET_SLOT_TAG_TYPE, data: Buffer.from([slot, tagType]) }) // cmd = 1004
+    await this._readRespTimeout()
+  }
+
+  async cmdSlotResetData (slot: Slot, rfidType: RfidType): Promise<void> {
+    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!_.isSafeInteger(rfidType) || !isRfidType(rfidType)) throw new TypeError('Invalid rfid')
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SET_SLOT_DATA_DEFAULT, data: Buffer.from([slot, rfidType]) }) // cmd = 1005
+    await this._readRespTimeout()
+  }
+
+  async cmdSlotSetEnable (slot: Slot, enable: boolean): Promise<void> {
+    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SET_SLOT_ENABLE, data: Buffer.from([slot, enable ? 1 : 0]) }) // cmd = 1006
+    await this._readRespTimeout()
+  }
+
+  async cmdSlotSetTagName (slot: Slot, rfid: RfidType, name: string): Promise<void> {
+    const data = Buffer.concat([Buffer.from([slot, rfid]), Buffer.from(name)])
     if (!_.inRange(data.length, 3, 35)) throw new TypeError('byteLength of name should between 1 and 32')
     this._clearRxBufs()
     await this._writeCmd({
-      cmd: Cmd.SET_SLOT_TAG_NICK,
-      data: Buffer.concat([Buffer.from([slot, field]), Buffer.from(name)]),
+      cmd: Cmd.SET_SLOT_TAG_NICK, // cmd = 1007
+      data: Buffer.concat([Buffer.from([slot, rfid]), Buffer.from(name)]),
     })
     await this._readRespTimeout()
   }
 
-  async getSlotTagName (slot: Slot, field: RfidType): Promise<string | undefined> {
+  async cmdGetSlotTagName (slot: Slot, rfid: RfidType): Promise<string | undefined> {
     try {
       if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('slot should between 0 and 7')
-      if (!_.isSafeInteger(field) || !isRfidType(field) || field < 1) throw new TypeError('field should be 1 or 2')
+      if (!_.isSafeInteger(rfid) || !isRfidType(rfid) || rfid < 1) throw new TypeError('rfid should be 1 or 2')
       this._clearRxBufs()
-      await this._writeCmd({ cmd: Cmd.GET_SLOT_TAG_NICK, data: Buffer.from([slot, field]) })
+      await this._writeCmd({ cmd: Cmd.GET_SLOT_TAG_NICK, data: Buffer.from([slot, rfid]) }) // cmd = 1008
       return (await this._readRespTimeout())?.data.toString('utf8')
     } catch (err) {
       if (err.status === RespStatus.FLASH_READ_FAIL) return // slot name is empty
@@ -243,188 +250,150 @@ export class ChameleonUltra {
     }
   }
 
-  async enterBootloader (): Promise<void> {
+  async cmdSaveSlotDataConfig (): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.ENTER_BOOTLOADER })
+    await this._writeCmd({ cmd: Cmd.SLOT_DATA_CONFIG_SAVE }) // cmd = 1009
     await this._readRespTimeout()
   }
 
-  async getAnimationMode (): Promise<AnimationMode> {
+  async cmdEnterBootloader (): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_ANIMATION_MODE })
+    await this._writeCmd({ cmd: Cmd.ENTER_BOOTLOADER }) // cmd = 1010
+    await this._readRespTimeout()
+  }
+
+  async cmdGetDeivceChipId (): Promise<string> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_DEVICE_CHIP_ID }) // cmd = 1011
+    const data = (await this._readRespTimeout())?.data
+    return data.toString('hex')
+  }
+
+  async cmdGetDeviceAddress (): Promise<string> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_DEVICE_ADDRESS }) // cmd = 1012
+    const data = (await this._readRespTimeout())?.data
+    const arr = []
+    for (let i = data.length - 1; i >= 0; i--) arr.push(data.subarray(i, i + 1).toString('hex'))
+    return _.toUpper(arr.join(':'))
+  }
+
+  async cmdSetAnimationMode (mode: AnimationMode): Promise<void> {
+    if (!_.isSafeInteger(mode) || !isAnimationMode(mode)) throw new TypeError('Invalid animation mode')
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SET_ANIMATION_MODE, data: Buffer.from([mode]) }) // cmd = 1015
+    await this._readRespTimeout()
+  }
+
+  async cmdSaveSettings (): Promise<void> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SAVE_SETTINGS }) // cmd = 1013
+    await this._readRespTimeout()
+  }
+
+  async cmdResetSettings (): Promise<void> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.RESET_SETTINGS }) // cmd = 1014
+    await this._readRespTimeout()
+  }
+
+  async cmdGetAnimationMode (): Promise<AnimationMode> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_ANIMATION_MODE }) // cmd = 1016
     return (await this._readRespTimeout())?.data[0] as AnimationMode
   }
 
-  async setAnimationMode (mode: AnimationMode): Promise<void> {
-    if (!_.isSafeInteger(mode) || !isAnimationMode(mode)) throw new TypeError('Invalid animation mode')
+  async cmdGetGitVersion (): Promise<string> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_ANIMATION_MODE, data: Buffer.from([mode]) })
-    await this._readRespTimeout()
+    await this._writeCmd({ cmd: Cmd.GET_GIT_VERSION }) // cmd = 1017
+    const data = (await this._readRespTimeout())?.data
+    return data.toString('utf8')
   }
 
-  async saveSlotDataConfig (): Promise<void> {
+  async cmdGetActiveSlot (): Promise<Slot> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SLOT_DATA_CONFIG_SAVE })
-    await this._readRespTimeout()
-  }
-
-  async getEnabledSlots (): Promise<Buffer> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_ENABLED_SLOTS })
-    return (await this._readRespTimeout())?.data
-  }
-
-  async settingReset (): Promise<void> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.RESET_SETTINGS })
-    await this._readRespTimeout()
-  }
-
-  async settingSave (): Promise<void> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SAVE_SETTINGS })
-    await this._readRespTimeout()
-  }
-
-  async factoryReset (): Promise<void> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.WIPE_FDS })
-    await this._readRespTimeout()
-  }
-
-  async getBatteryInfo (): Promise<BatteryInfo> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_BATTERY_INFO })
-    return mf1ParseBatteryInfo((await this._readRespTimeout())?.data)
-  }
-
-  async getButtonPressAction (btn: ButtonType): Promise<ButtonAction> {
-    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_BUTTON_PRESS_CONFIG, data: Buffer.from(btn) })
-    return (await this._readRespTimeout())?.data[0] as ButtonAction
-  }
-
-  async setButtonPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
-    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
-    if (!_.isSafeInteger(action) || !isButtonAction(action)) throw new TypeError('Invalid button action')
-    this._clearRxBufs()
-    const data = new Buffer(2)
-    data.write(btn, 0)
-    data[1] = action
-    await this._writeCmd({ cmd: Cmd.SET_BUTTON_PRESS_CONFIG, data })
-    await this._readRespTimeout()
-  }
-
-  async getButtonLongPressAction (btn: ButtonType): Promise<ButtonAction> {
-    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_LONG_BUTTON_PRESS_CONFIG, data: Buffer.from(btn) })
-    return (await this._readRespTimeout())?.data[0] as ButtonAction
-  }
-
-  async setButtonLongPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
-    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
-    if (!_.isSafeInteger(action) || !isButtonAction(action)) throw new TypeError('Invalid button action')
-    this._clearRxBufs()
-    const data = new Buffer(2)
-    data.write(btn, 0)
-    data[1] = action
-    await this._writeCmd({ cmd: Cmd.SET_LONG_BUTTON_PRESS_CONFIG, data })
-    await this._readRespTimeout()
-  }
-
-  async getSlotInfo (): Promise<SlotInfo[]> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_SLOT_INFO })
-    return mf1ParseSlotInfo((await this._readRespTimeout())?.data)
-  }
-
-  async getActiveSlot (): Promise<Slot> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_ACTIVE_SLOT })
+    await this._writeCmd({ cmd: Cmd.GET_ACTIVE_SLOT }) // cmd = 1018
     return (await this._readRespTimeout())?.data[0] as Slot
   }
 
-  async setActiveSlot (slot: Slot): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
+  async cmdGetSlotInfo (): Promise<SlotInfo[]> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_SLOT_ACTIVATED, data: Buffer.from([slot]) })
+    await this._writeCmd({ cmd: Cmd.GET_SLOT_INFO }) // cmd = 1019
+    return mf1ParseSlotInfo((await this._readRespTimeout())?.data)
+  }
+
+  async cmdFactoryReset (): Promise<void> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.WIPE_FDS }) // cmd = 1020
     await this._readRespTimeout()
   }
 
-  async setSlotTagType (slot: Slot, tagType: TagType): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!_.isSafeInteger(tagType) || !isTagType(tagType)) throw new TypeError('Invalid tag type')
+  async cmdGetEnabledSlots (): Promise<Buffer> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_SLOT_TAG_TYPE, data: Buffer.from([slot, tagType]) })
-    await this._readRespTimeout()
-  }
-
-  async deleteSlotRfidField (slot: Slot, rfidType: RfidType): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!_.isSafeInteger(rfidType) || !isRfidType(rfidType)) throw new TypeError('Invalid rfid')
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.DELETE_SLOT_SENSE_TYPE, data: Buffer.from([slot, rfidType]) })
-    await this._readRespTimeout()
-  }
-
-  async resetSlotData (slot: Slot, rfidType: RfidType): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!_.isSafeInteger(rfidType) || !isRfidType(rfidType)) throw new TypeError('Invalid rfid')
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_SLOT_DATA_DEFAULT, data: Buffer.from([slot, rfidType]) })
-    await this._readRespTimeout()
-  }
-
-  async setSlotEnable (slot: Slot, enable: boolean): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_SLOT_ENABLE, data: Buffer.from([slot, enable ? 1 : 0]) })
-    await this._readRespTimeout()
-  }
-
-  async em410xScanTag (): Promise<Buffer> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SCAN_EM410X_TAG })
+    await this._writeCmd({ cmd: Cmd.GET_ENABLED_SLOTS }) // cmd = 1023
     return (await this._readRespTimeout())?.data
   }
 
-  async em410xWriteT55xx (uid: Buffer): Promise<void> {
-    if (!Buffer.isBuffer(uid) || uid.length !== 5) throw new TypeError('uid should be a Buffer with length 5')
+  async cmdSlotDeleteRfidField (slot: Slot, rfidType: RfidType): Promise<void> {
+    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!_.isSafeInteger(rfidType) || !isRfidType(rfidType)) throw new TypeError('Invalid rfid')
     this._clearRxBufs()
-    const data = new Buffer(17)
-    uid.copy(data, 0)
-    data.writeUInt32BE(0x20206666, 5) // new key
-    data.writeUInt32BE(0x51243648, 9) // old key 1
-    data.writeUInt32BE(0x19920427, 13) // old key 2
-    await this._writeCmd({ cmd: Cmd.WRITE_EM410X_TO_T5577, data })
+    await this._writeCmd({ cmd: Cmd.DELETE_SLOT_SENSE_TYPE, data: Buffer.from([slot, rfidType]) }) // cmd = 1024
     await this._readRespTimeout()
   }
 
-  async em410xEmuGetUid (): Promise<Buffer> {
+  async cmdGetBatteryInfo (): Promise<BatteryInfo> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_EM410X_EMU_ID })
-    return (await this._readRespTimeout())?.data
+    await this._writeCmd({ cmd: Cmd.GET_BATTERY_INFO }) // cmd = 1025
+    return mf1ParseBatteryInfo((await this._readRespTimeout())?.data)
   }
 
-  async em410xEmuSetUid (uid: Buffer): Promise<void> {
-    if (!Buffer.isBuffer(uid) || uid.length !== 5) throw new TypeError('uid should be a Buffer with length 5')
+  async cmdGetButtonPressAction (btn: ButtonType): Promise<ButtonAction> {
+    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_EM410X_EMU_ID, data: uid })
+    await this._writeCmd({ cmd: Cmd.GET_BUTTON_PRESS_CONFIG, data: Buffer.from(btn) }) // cmd = 1026
+    return (await this._readRespTimeout())?.data[0] as ButtonAction
+  }
+
+  async cmdSetButtonPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
+    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
+    if (!_.isSafeInteger(action) || !isButtonAction(action)) throw new TypeError('Invalid button action')
+    this._clearRxBufs()
+    const data = new Buffer(2)
+    data.write(btn, 0)
+    data[1] = action
+    await this._writeCmd({ cmd: Cmd.SET_BUTTON_PRESS_CONFIG, data }) // cmd = 1027
     await this._readRespTimeout()
   }
 
-  async scan14aTag (): Promise<Picc14aTag> {
+  async cmdGetButtonLongPressAction (btn: ButtonType): Promise<ButtonAction> {
+    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SCAN_14A_TAG })
+    await this._writeCmd({ cmd: Cmd.GET_LONG_BUTTON_PRESS_CONFIG, data: Buffer.from(btn) }) // cmd = 1028
+    return (await this._readRespTimeout())?.data[0] as ButtonAction
+  }
+
+  async cmdSetButtonLongPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
+    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
+    if (!_.isSafeInteger(action) || !isButtonAction(action)) throw new TypeError('Invalid button action')
+    this._clearRxBufs()
+    const data = new Buffer(2)
+    data.write(btn, 0)
+    data[1] = action
+    await this._writeCmd({ cmd: Cmd.SET_LONG_BUTTON_PRESS_CONFIG, data }) // cmd = 1029
+    await this._readRespTimeout()
+  }
+
+  async cmdScan14aTag (): Promise<Picc14aTag> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SCAN_14A_TAG }) // cmd = 2000
     return mf1ParsePicc14aTag((await this._readRespTimeout())?.data)
   }
 
-  async mf1SupportDetect (): Promise<boolean> {
+  async cmdIsSupportMf1 (): Promise<boolean> {
     try {
       this._clearRxBufs()
-      await this._writeCmd({ cmd: Cmd.MF1_SUPPORT_DETECT })
+      await this._writeCmd({ cmd: Cmd.MF1_SUPPORT_DETECT }) // cmd = 2001
       await this._readRespTimeout()
       return true
     } catch (err) {
@@ -433,11 +402,11 @@ export class ChameleonUltra {
     }
   }
 
-  async mf1NtLevelDetect (): Promise<Mf1PrngAttack> {
+  async cmdTestMf1NtLevel (): Promise<Mf1NtLevel> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_NT_LEVEL_DETECT })
+    await this._writeCmd({ cmd: Cmd.MF1_NT_LEVEL_DETECT }) // cmd = 2002
     const status = (await this._readRespTimeout())?.status
-    const statusToString: Record<number, Mf1PrngAttack> = {
+    const statusToString: Record<number, Mf1NtLevel> = {
       0x00: 'weak',
       0x24: 'static',
       0x25: 'hard',
@@ -445,147 +414,174 @@ export class ChameleonUltra {
     return statusToString[status] ?? 'unknown'
   }
 
-  async hf14aInfo (): Promise<Hf14aInfoResp> {
-    if (await this.getDeviceMode() !== DeviceMode.READER) await this.setDeviceMode(DeviceMode.READER)
-    const resp: Hf14aInfoResp = {
-      tag: await this.scan14aTag(),
-    }
-    if (await this.mf1SupportDetect()) {
-      resp.mifare = {
-        prngAttack: await this.mf1NtLevelDetect(),
-      }
-    }
-    return resp
-  }
-
-  async mf1ReadBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: Mf1ReadBlockArgs = {}): Promise<Buffer> {
+  async cmdReadMf1Block ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdReadMf1BlockArgs = {}): Promise<Buffer> {
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
     this._clearRxBufs()
     await this._writeCmd({
-      cmd: Cmd.MF1_READ_ONE_BLOCK,
+      cmd: Cmd.MF1_READ_ONE_BLOCK, // cmd = 2008
       data: Buffer.concat([Buffer.from([keyType, block]), key]),
     })
     return (await this._readRespTimeout())?.data
   }
 
-  async mf1WriteBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex'), data }: Mf1WriteBlockArgs = {}): Promise<void> {
+  async cmdWriteMf1Block ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex'), data }: CmdWriteMf1BlockArgs = {}): Promise<void> {
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
     if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
     this._clearRxBufs()
     await this._writeCmd({
-      cmd: Cmd.MF1_WRITE_ONE_BLOCK,
+      cmd: Cmd.MF1_WRITE_ONE_BLOCK, // cmd = 2009
       data: Buffer.concat([Buffer.from([keyType, block]), key, data]),
     })
     await this._readRespTimeout()
   }
 
-  async mf1SetDetection (enable: boolean = true): Promise<void> {
+  async hf14aInfo (): Promise<Hf14aInfoResp> {
+    if (await this.cmdGetDeviceMode() !== DeviceMode.READER) await this.cmdSetDeviceMode(DeviceMode.READER)
+    const resp: Hf14aInfoResp = {
+      tag: await this.cmdScan14aTag(),
+    }
+    if (await this.cmdIsSupportMf1()) {
+      resp.mifare = {
+        prngAttack: await this.cmdTestMf1NtLevel(),
+      }
+    }
+    return resp
+  }
+
+  async cmdScanEm410xTag (): Promise<Buffer> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_MF1_DETECTION_ENABLE, data: Buffer.from([enable ? 1 : 0]) })
+    await this._writeCmd({ cmd: Cmd.SCAN_EM410X_TAG }) // cmd = 3000
+    return (await this._readRespTimeout())?.data
+  }
+
+  async cmdEm410xWriteT55xx (uid: Buffer): Promise<void> {
+    if (!Buffer.isBuffer(uid) || uid.length !== 5) throw new TypeError('uid should be a Buffer with length 5')
+    this._clearRxBufs()
+    const data = new Buffer(17)
+    uid.copy(data, 0)
+    data.writeUInt32BE(0x20206666, 5) // new key
+    data.writeUInt32BE(0x51243648, 9) // old key 1
+    data.writeUInt32BE(0x19920427, 13) // old key 2
+    await this._writeCmd({ cmd: Cmd.WRITE_EM410X_TO_T5577, data }) // cmd = 3001
     await this._readRespTimeout()
   }
 
-  async mf1GetDetectionCount (): Promise<number> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_MF1_DETECTION_COUNT })
-    return (await this._readRespTimeout())?.data.readUInt32LE()
-  }
-
-  async mf1GetDetectionRecords (index: number = 0): Promise<Mf1AuthLog[]> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_MF1_DETECTION_RESULT, data: new Buffer(4).writeUInt32BE(index) })
-    const data = (await this._readRespTimeout())?.data
-    return _.map(data.chunk(18), mf1ParseAuthLog)
-  }
-
-  async mf1EmuSetBlock (blockStart: number = 0, data: Buffer): Promise<void> {
+  async cmdEmuSetMf1Block (blockStart: number = 0, data: Buffer): Promise<void> {
     if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
     this._clearRxBufs()
     await this._writeCmd({
-      cmd: Cmd.LOAD_MF1_EMU_BLOCK_DATA,
+      cmd: Cmd.LOAD_MF1_EMU_BLOCK_DATA, // cmd = 4000
       data: Buffer.concat([Buffer.from([blockStart]), data]),
     })
     await this._readRespTimeout()
   }
 
-  async mf1EmuGetBlock (blockStart: number = 0, blockCount: number = 1): Promise<Buffer> {
-    this._clearRxBufs()
-    const buf = new Buffer(3)
-    buf.writeUInt8(blockStart)
-    buf.writeUInt16LE(blockCount, 1)
-    await this._writeCmd({ cmd: Cmd.READ_MF1_EMU_BLOCK_DATA, data: buf })
-    return (await this._readRespTimeout())?.data
-  }
-
-  async mf1SetAntiColl ({ sak, atqa, uid }: Mf1SetAntiCollArgs): Promise<void> {
+  async cmdEmuSetMf1AntiColl ({ sak, atqa, uid }: CmdEmuSetMf1AntiCollArgs): Promise<void> {
     if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
     if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
     if (!Buffer.isBuffer(uid) || uid.length !== 4) throw new TypeError('uid should be a Buffer with length 4')
     this._clearRxBufs()
     await this._writeCmd({
-      cmd: Cmd.SET_MF1_ANTI_COLLISION_RES,
+      cmd: Cmd.SET_MF1_ANTI_COLLISION_RES, // cmd = 4001
       data: Buffer.concat([sak, atqa, uid]),
     })
     await this._readRespTimeout()
   }
 
-  async mf1EmuGetConfig (): Promise<Mf1EmuConfig> {
+  async cmdSetMf1Detection (enable: boolean = true): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_MF1_EMULATOR_CONFIG })
+    await this._writeCmd({ cmd: Cmd.SET_MF1_DETECTION_ENABLE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4004
+    await this._readRespTimeout()
+  }
+
+  async cmdGetMf1DetectionCount (): Promise<number> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_MF1_DETECTION_COUNT }) // cmd = 4005
+    return (await this._readRespTimeout())?.data.readUInt32LE()
+  }
+
+  async cmdGetMf1Detections (index: number = 0): Promise<Mf1Detection[]> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_MF1_DETECTION_RESULT, data: new Buffer(4).writeUInt32BE(index) }) // cmd = 4006
+    const data = (await this._readRespTimeout())?.data
+    return _.map(data.chunk(18), mf1ParseAuthLog)
+  }
+
+  async cmdEmuGetMf1Block (blockStart: number = 0, blockCount: number = 1): Promise<Buffer> {
+    this._clearRxBufs()
+    const buf = new Buffer(3)
+    buf.writeUInt8(blockStart)
+    buf.writeUInt16LE(blockCount, 1)
+    await this._writeCmd({ cmd: Cmd.READ_MF1_EMU_BLOCK_DATA, data: buf }) // cmd = 4008
+    return (await this._readRespTimeout())?.data
+  }
+
+  async cmdEmuGetMf1Config (): Promise<EmuMf1Config> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_MF1_EMULATOR_CONFIG }) // cmd = 4009
     return mf1ParseEmuConfig((await this._readRespTimeout())?.data)
   }
 
-  async mf1GetGen1aMode (): Promise<boolean> {
+  async cmdEmuGetMf1Gen1aMode (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_MF1_GEN1A_MODE })
+    await this._writeCmd({ cmd: Cmd.GET_MF1_GEN1A_MODE }) // cmd = 4010
     return (await this._readRespTimeout())?.data[0] === 1
   }
 
-  async mf1SetGen1aMode (enable: boolean = false): Promise<void> {
+  async cmdEmuSetMf1Gen1aMode (enable: boolean = false): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_MF1_GEN1A_MODE, data: Buffer.from([enable ? 1 : 0]) })
+    await this._writeCmd({ cmd: Cmd.SET_MF1_GEN1A_MODE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4011
     await this._readRespTimeout()
   }
 
-  async mf1GetGen2Mode (): Promise<boolean> {
+  async cmdEmuGetMf1Gen2Mode (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_MF1_GEN2_MODE })
+    await this._writeCmd({ cmd: Cmd.GET_MF1_GEN2_MODE }) // cmd = 4012
     return (await this._readRespTimeout())?.data[0] === 1
   }
 
-  async mf1SetGen2Mode (enable: boolean = false): Promise<void> {
+  async cmdEmuSetMf1Gen2Mode (enable: boolean = false): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_MF1_GEN2_MODE, data: Buffer.from([enable ? 1 : 0]) })
+    await this._writeCmd({ cmd: Cmd.SET_MF1_GEN2_MODE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4013
     await this._readRespTimeout()
   }
 
-  async mf1GetBlock0AntiCollMode (): Promise<boolean> {
+  async cmdEmuGetMf1AntiCollBlock0Mode (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_MF1_USE_FIRST_BLOCK_COLL })
+    await this._writeCmd({ cmd: Cmd.GET_MF1_USE_FIRST_BLOCK_COLL }) // cmd = 4014
     return (await this._readRespTimeout())?.data[0] === 1
   }
 
-  async mf1SetBlock0AntiCollMode (enable: boolean = false): Promise<void> {
+  async cmdEmuSetMf1AntiCollBlock0Mode (enable: boolean = false): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_MF1_USE_FIRST_BLOCK_COLL, data: Buffer.from([enable ? 1 : 0]) })
+    await this._writeCmd({ cmd: Cmd.SET_MF1_USE_FIRST_BLOCK_COLL, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4015
     await this._readRespTimeout()
   }
 
-  async mf1GetWriteMode (): Promise<Mf1EmuWriteMode> {
+  async cmdEmuGetMf1WriteMode (): Promise<EmuMf1WriteMode> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_MF1_WRITE_MODE })
-    return (await this._readRespTimeout())?.data[0] as Mf1EmuWriteMode
+    await this._writeCmd({ cmd: Cmd.GET_MF1_WRITE_MODE }) // cmd = 4016
+    return (await this._readRespTimeout())?.data[0] as EmuMf1WriteMode
   }
 
-  async mf1SetWriteMode (mode: Mf1EmuWriteMode): Promise<void> {
-    if (!_.isSafeInteger(mode) || !isMf1EmuWriteMode(mode)) throw new TypeError('Invalid emu write mode')
+  async cmdEmuSetMf1WriteMode (mode: EmuMf1WriteMode): Promise<void> {
+    if (!_.isSafeInteger(mode) || !isEmuMf1WriteMode(mode)) throw new TypeError('Invalid emu write mode')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_MF1_WRITE_MODE, data: Buffer.from([mode]) })
+    await this._writeCmd({ cmd: Cmd.SET_MF1_WRITE_MODE, data: Buffer.from([mode]) }) // cmd = 4017
     await this._readRespTimeout()
   }
 
-  async mf1EmuGetCard (): Promise<Buffer> {
-    return new Buffer() // TODO: need get_active_slot and get_slot_info
+  async cmdEmuSetEm410xUid (uid: Buffer): Promise<void> {
+    if (!Buffer.isBuffer(uid) || uid.length !== 5) throw new TypeError('uid should be a Buffer with length 5')
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SET_EM410X_EMU_ID, data: uid }) // cmd = 5000
+    await this._readRespTimeout()
+  }
+
+  async cmdEmuGetEm410xUid (): Promise<Buffer> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_EM410X_EMU_ID }) // cmd = 5001
+    return (await this._readRespTimeout())?.data
   }
 }
 
@@ -877,12 +873,12 @@ export function mf1ParsePicc14aTag (buf: Buffer): Picc14aTag {
   }
 }
 
-export type Mf1PrngAttack = 'static' | 'weak' | 'hard' | 'unknown'
+export type Mf1NtLevel = 'static' | 'weak' | 'hard' | 'unknown'
 
 export interface Hf14aInfoResp {
   tag: Picc14aTag
   mifare?: {
-    prngAttack: Mf1PrngAttack
+    prngAttack: Mf1NtLevel
   }
 }
 
@@ -892,20 +888,20 @@ export enum Mf1KeyType {
 }
 export const isMf1KeyType = createIsEnum(Mf1KeyType)
 
-export interface Mf1ReadBlockArgs {
+export interface CmdReadMf1BlockArgs {
   block?: number
   keyType?: Mf1KeyType
   key?: Buffer
 }
 
-export interface Mf1WriteBlockArgs {
+export interface CmdWriteMf1BlockArgs {
   block?: number
   keyType?: Mf1KeyType
   key?: Buffer
   data?: Buffer
 }
 
-export interface Mf1AuthLog {
+export interface Mf1Detection {
   block: number
   isKeyB: boolean
   isNested: boolean
@@ -915,7 +911,7 @@ export interface Mf1AuthLog {
   ar: Buffer
 }
 
-export function mf1ParseAuthLog (buf: Buffer): Mf1AuthLog {
+export function mf1ParseAuthLog (buf: Buffer): Mf1Detection {
   if (!Buffer.isBuffer(buf) || buf.length !== 18) throw new TypeError('buf should be a Buffer with length 18')
   return {
     block: buf[0],
@@ -928,29 +924,29 @@ export function mf1ParseAuthLog (buf: Buffer): Mf1AuthLog {
   }
 }
 
-export interface Mf1SetAntiCollArgs {
+export interface CmdEmuSetMf1AntiCollArgs {
   sak: Buffer
   atqa: Buffer
   uid: Buffer
 }
 
-export enum Mf1EmuWriteMode {
+export enum EmuMf1WriteMode {
   NORMAL = 0, // Normal write
   DEINED = 1, // Send NACK to write attempts
   DECEIVE = 2, // Acknowledge writes, but don't remember contents
   SHADOW = 3, // Store data to RAM, but not to ROM
 }
-export const isMf1EmuWriteMode = createIsEnum(Mf1EmuWriteMode)
+export const isEmuMf1WriteMode = createIsEnum(EmuMf1WriteMode)
 
-export interface Mf1EmuConfig {
+export interface EmuMf1Config {
   detection: boolean
   gen1a: boolean
   gen2: boolean
   block0AntiColl: boolean
-  write: Mf1EmuWriteMode
+  write: EmuMf1WriteMode
 }
 
-export function mf1ParseEmuConfig (buf: Buffer): Mf1EmuConfig {
+export function mf1ParseEmuConfig (buf: Buffer): EmuMf1Config {
   if (!Buffer.isBuffer(buf) || buf.length !== 5) throw new TypeError('buf should be a Buffer with length 5')
   return {
     detection: buf[0] === 1,
