@@ -59,9 +59,8 @@ export class ChameleonUltra {
 
         // serial.readable pipeTo this.rxSink
         this.rxSink = new ChameleonRxSink()
-        this.rxSink.controller = new AbortController()
         void this.port.readable.pipeTo(new WritableStream(this.rxSink), {
-          signal: this.rxSink.controller.signal,
+          signal: this.rxSink.signal,
         }).catch(err => {
           void this.disconnect()
           throw _.merge(new Error(`Failed to read resp: ${err.message}`), { originalError: err })
@@ -84,7 +83,7 @@ export class ChameleonUltra {
       await this.invokeHook('disconnect', {}, async (ctx, next) => {
         try {
           this.logger.core('disconnected')
-          this.rxSink?.controller?.abort(new Error('disconnected'))
+          this.rxSink?.controller.abort(new Error('disconnected'))
           while (this.port?.readable?.locked === true) await sleep(10)
           delete this.port
         } catch (err) {
@@ -121,7 +120,7 @@ export class ChameleonUltra {
   }
 
   async _writeCmd ({ cmd, status = 0, data = Buffer.allocUnsafe(0) }: WriteCmdArgs): Promise<void> {
-    const buf = Buffer.alloc(data.length + 10)
+    const buf = Buffer.allocUnsafe(data.length + 10)
     START_OF_FRAME.copy(buf, 0) // SOF + SOF LRC Byte
     // head info
     buf.writeUInt16BE(cmd, 2)
@@ -260,6 +259,9 @@ export class ChameleonUltra {
     }
   }
 
+  /**
+   * 這個指令會把 SlotConfig 及目前 slot 的高頻低頻 SlotDataConfig 資料寫入 fds 中，但 Slot 的 name 是另外儲存的。
+   */
   async cmdSaveSlotSettings (): Promise<void> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SLOT_DATA_CONFIG_SAVE }) // cmd = 1009
@@ -295,6 +297,9 @@ export class ChameleonUltra {
     await this._readRespTimeout()
   }
 
+  /**
+   * 這個指令會把 DeviceSettings 資料寫入 fds 中。
+   */
   async cmdSaveSettings (): Promise<void> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SAVE_SETTINGS }) // cmd = 1013
@@ -391,6 +396,22 @@ export class ChameleonUltra {
     data.write(btn, 0)
     data[1] = action
     await this._writeCmd({ cmd: Cmd.SET_LONG_BUTTON_PRESS_CONFIG, data }) // cmd = 1029
+    await this._readRespTimeout()
+  }
+
+  async cmdBleSetConnectKey (key: string): Promise<void> {
+    if (!_.isString(key) || !/^\d{6}$/.test(key)) throw new TypeError('Invalid key, must be 6 digits')
+    await this._writeCmd({ cmd: Cmd.SET_BLE_CONNECT_KEY_CONFIG, data: Buffer.from(key) }) // cmd = 1030
+    await this._readRespTimeout()
+  }
+
+  async cmdBleGetConnectKey (): Promise<string> {
+    await this._writeCmd({ cmd: Cmd.GET_BLE_CONNECT_KEY_CONFIG }) // cmd = 1031
+    return (await this._readRespTimeout())?.data.toString('utf8')
+  }
+
+  async cmdBleDeleteAllBonds (): Promise<void> {
+    await this._writeCmd({ cmd: Cmd.DELETE_ALL_BLE_BONDS }) // cmd = 1031
     await this._readRespTimeout()
   }
 
@@ -544,7 +565,7 @@ export class ChameleonUltra {
     await this._readRespTimeout()
   }
 
-  async cmdEmuSetMf1AntiColl ({ sak, atqa, uid }: CmdEmuSetMf1AntiCollArgs): Promise<void> {
+  async cmdEmuSetMf1AntiColl ({ sak, atqa, uid }: SlotEmuMf1AntiColl): Promise<void> {
     if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
     if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
     if (!Buffer.isBuffer(uid) || uid.length !== 4) throw new TypeError('uid should be a Buffer with length 4')
@@ -701,6 +722,11 @@ export enum Cmd {
 
   GET_LONG_BUTTON_PRESS_CONFIG = 1028,
   SET_LONG_BUTTON_PRESS_CONFIG = 1029,
+
+  SET_BLE_CONNECT_KEY_CONFIG = 1030,
+  GET_BLE_CONNECT_KEY_CONFIG = 1031,
+
+  DELETE_ALL_BLE_BONDS = 1032,
 
   SCAN_14A_TAG = 2000,
   MF1_SUPPORT_DETECT = 2001,
@@ -895,7 +921,13 @@ export interface ChameleonSerialPort<I, O> {
 
 export class ChameleonRxSink implements UnderlyingSink<Buffer> {
   bufs: Buffer[] = []
-  controller?: AbortController
+  controller: AbortController
+
+  constructor () {
+    this.controller = new AbortController()
+  }
+
+  get signal (): AbortSignal { return this.controller.signal }
 
   write (chunk: Buffer): void {
     this.bufs.push(Buffer.from(chunk))
@@ -998,7 +1030,7 @@ export function mf1ParseAuthLog (buf: Buffer): Mf1Detection {
   }
 }
 
-export interface CmdEmuSetMf1AntiCollArgs {
+export interface SlotEmuMf1AntiColl {
   sak: Buffer
   atqa: Buffer
   uid: Buffer
@@ -1146,4 +1178,27 @@ export function mf1ParseDarksideCore (buf: Buffer): Mf1DarksideCore {
     nr: buf.subarray(24, 28),
     ar: buf.subarray(28, 32),
   }
+}
+
+export interface SlotConfig {
+  config: { activated: number }
+  group: Array<{
+    enable: boolean
+    hfTagType: TagType
+    lfTagType: TagType
+  }>
+}
+
+export interface SlotEmuMf1Data {
+  antiColl: SlotEmuMf1AntiColl
+  config: EmuMf1Config
+  body: Buffer
+}
+
+export interface DeviceSettings {
+  version: Buffer
+  animation: number
+  buttonPressAction: ButtonAction[]
+  buttonLongPressAction: ButtonAction[]
+  bleConnectKey: string
 }

@@ -794,8 +794,6 @@ export class Buffer extends Uint8Array {
 
 export type TypedArray = NodeJS.TypedArray | Buffer
 
-export type BufferFromObjectArg = { [Symbol.toPrimitive]: (hint: string) => string } | { valueOf: () => string }
-
 export interface ArrayLike<T> {
   readonly length: number
   readonly [n: number]: T
