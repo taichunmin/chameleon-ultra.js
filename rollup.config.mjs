@@ -24,12 +24,23 @@ const versionInjectorPlugin = versionInjector({
   },
 })
 
+const tsconfig = {
+  "lib": ["es2023"],
+  "module": "ESNext",
+  "target": "ESNext",
+  "strict": true,
+  "esModuleInterop": true,
+  "skipLibCheck": true,
+  "forceConsistentCasingInFileNames": true,
+  "moduleResolution": "bundler"
+}
+
 export default [
   // src/index.ts
   {
     external,
     input: 'src/index.ts',
-    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills(), versionInjectorPlugin],
+    plugins: [typescript(tsconfig), nodeResolve({ browser: true }), commonjs(), versionInjectorPlugin],
     output: [
       { file: 'dist/es/index.mjs', format: 'es' },
       { file: 'dist/cjs/index.cjs', format: 'cjs' },
@@ -42,7 +53,7 @@ export default [
   {
     external,
     input: 'src/buffer.ts',
-    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
+    plugins: [typescript(tsconfig), nodeResolve({ browser: true }), commonjs()],
     output: [
       { file: 'dist/es/buffer.mjs', format: 'es' },
       { file: 'dist/cjs/buffer.cjs', format: 'cjs' },
@@ -55,7 +66,7 @@ export default [
   {
     external,
     input: 'src/Crypto1.ts',
-    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
+    plugins: [typescript(tsconfig), nodeResolve({ browser: true }), commonjs()],
     output: [
       { file: 'dist/es/Crypto1.mjs', format: 'es' },
       { file: 'dist/cjs/Crypto1.cjs', format: 'cjs' },
@@ -68,7 +79,7 @@ export default [
   {
     external,
     input: `src/plugin/SerialPortAdapter.ts`,
-    plugins: [typescript()],
+    plugins: [typescript(tsconfig), nodeResolve({ browser: true }), commonjs()],
     output: [
       { file: `dist/cjs/plugin/SerialPortAdapter.cjs`, format: 'cjs' },
       { file: `dist/es/plugin/SerialPortAdapter.mjs`, format: 'es' },
@@ -79,7 +90,7 @@ export default [
   {
     external,
     input: `src/plugin/WebbleAdapter.ts`,
-    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
+    plugins: [typescript(tsconfig), nodeResolve({ browser: true }), commonjs()],
     output: [
       { file: `dist/es/plugin/WebbleAdapter.mjs`, format: 'es' },
       { file: 'dist/iife/plugin/WebbleAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebbleAdapter' },
@@ -91,7 +102,7 @@ export default [
   {
     external,
     input: `src/plugin/WebserialAdapter.ts`,
-    plugins: [typescript(), nodeResolve({ browser: true }), commonjs(), nodePolyfills()],
+    plugins: [typescript(tsconfig), nodeResolve({ browser: true }), commonjs()],
     output: [
       { file: `dist/es/plugin/WebserialAdapter.mjs`, format: 'es' },
       { file: 'dist/iife/plugin/WebserialAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter' },
