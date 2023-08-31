@@ -55,7 +55,7 @@ export async function build (): Promise<void> {
       await fsPromises.mkdir(path.dirname(dist), { recursive: true })
       await fsPromises.writeFile(dist, html)
       sitemapUrls.push(getSiteurl(`pug/${file.replace(/\.pug$/, '.html').replace(/index\.html$/, '')}`))
-    } catch (err) {
+    } catch (err: any) {
       _.set(err, 'data.src', `./src/${file}`)
       console.log(`Failed to render pug, err = ${inspect(errToJson(err), { depth: 100, sorted: true })}`)
       pugErrors++
