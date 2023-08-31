@@ -220,11 +220,11 @@ export class ChameleonUltra {
     await this._readRespTimeout()
   }
 
-  async cmdSlotResetData (slot: Slot, rfidType: RfidType): Promise<void> {
+  async cmdSlotResetData (slot: Slot, tagType: TagType): Promise<void> {
     if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!_.isSafeInteger(rfidType) || !isRfidType(rfidType)) throw new TypeError('Invalid rfid')
+    if (!_.isSafeInteger(tagType) || !isTagType(tagType)) throw new TypeError('Invalid tagType')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_SLOT_DATA_DEFAULT, data: Buffer.from([slot, rfidType]) }) // cmd = 1005
+    await this._writeCmd({ cmd: Cmd.SET_SLOT_DATA_DEFAULT, data: Buffer.from([slot, tagType]) }) // cmd = 1005
     await this._readRespTimeout()
   }
 
@@ -489,6 +489,7 @@ export class ChameleonUltra {
 
   async cmdCheckMf1BlockKey ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdCheckMf1BlockKeyArgs = {}): Promise<boolean> {
     try {
+      if (!_.isSafeInteger(keyType) || !isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
       if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
       this._clearRxBufs()
       await this._writeCmd({
