@@ -12,9 +12,9 @@ module.exports = {
   globals: {
     _: 'readonly',
     axios: 'readonly',
-    ChameleonJS: 'readonly',
-    ChameleonWebbleAdapter: 'readonly',
-    ChameleonWebserialAdapter: 'readonly',
+    Buffer: 'readonly',
+    ChameleonUltraJS: 'readonly',
+    Crypto1: 'readonly',
     CryptoJS: 'readonly',
     dayjs: 'readonly',
     joi: 'readonly',
@@ -30,10 +30,7 @@ module.exports = {
     program: null,
   },
   rules: {
-    'eol-last': [
-      'error',
-      'never',
-    ],
+    'eol-last': 0,
     'multiline-ternary': 0,
     'no-return-await': 0,
     'spaced-comment': [
