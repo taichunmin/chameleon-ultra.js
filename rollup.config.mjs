@@ -35,6 +35,12 @@ const tsconfig = {
   "moduleResolution": "bundler"
 }
 
+const terserConfig = {
+  mangle: {
+    reserved: ['Buffer'],
+  }
+}
+
 export default [
   // src/index.ts
   {
@@ -45,7 +51,7 @@ export default [
       { file: 'dist/es/index.mjs', format: 'es' },
       { file: 'dist/cjs/index.cjs', format: 'cjs' },
       { file: 'dist/iife/index.js', format: 'iife', globals, name: 'ChameleonUltraJS' },
-      { file: 'dist/iife/index.min.js', format: 'iife', globals, name: 'ChameleonUltraJS', plugins: [terser()] },
+      { file: 'dist/iife/index.min.js', format: 'iife', globals, name: 'ChameleonUltraJS', plugins: [terser(terserConfig)] },
     ],
   },
 
@@ -58,7 +64,7 @@ export default [
       { file: 'dist/es/buffer.mjs', format: 'es' },
       { file: 'dist/cjs/buffer.cjs', format: 'cjs' },
       { file: 'dist/iife/buffer.js', format: 'iife', globals, name: 'Buffer' },
-      { file: 'dist/iife/buffer.min.js', format: 'iife', globals, name: 'Buffer', plugins: [terser()] },
+      { file: 'dist/iife/buffer.min.js', format: 'iife', globals, name: 'Buffer', plugins: [terser(terserConfig)] },
     ],
   },
 
@@ -71,7 +77,7 @@ export default [
       { file: 'dist/es/Crypto1.mjs', format: 'es' },
       { file: 'dist/cjs/Crypto1.cjs', format: 'cjs' },
       { file: 'dist/iife/Crypto1.js', format: 'iife', globals, name: 'Crypto1' },
-      { file: 'dist/iife/Crypto1.min.js', format: 'iife', globals, name: 'Crypto1', plugins: [terser()] },
+      { file: 'dist/iife/Crypto1.min.js', format: 'iife', globals, name: 'Crypto1', plugins: [terser(terserConfig)] },
     ],
   },
 
@@ -94,7 +100,7 @@ export default [
     output: [
       { file: `dist/es/plugin/WebbleAdapter.mjs`, format: 'es' },
       { file: 'dist/iife/plugin/WebbleAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebbleAdapter' },
-      { file: 'dist/iife/plugin/WebbleAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebbleAdapter', plugins: [terser()] },
+      { file: 'dist/iife/plugin/WebbleAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebbleAdapter', plugins: [terser(terserConfig)] },
     ]
   },
 
@@ -106,7 +112,7 @@ export default [
     output: [
       { file: `dist/es/plugin/WebserialAdapter.mjs`, format: 'es' },
       { file: 'dist/iife/plugin/WebserialAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter' },
-      { file: 'dist/iife/plugin/WebserialAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter', plugins: [terser()] },
+      { file: 'dist/iife/plugin/WebserialAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter', plugins: [terser(terserConfig)] },
     ]
   },
 ]
