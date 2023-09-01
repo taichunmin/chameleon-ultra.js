@@ -106,7 +106,7 @@ block content
 
 block script
   script.
-    const { Buffer, ChameleonUltra, DeviceMode, Mf1KeyType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
+    const { Buffer, ChameleonUltra, DeviceMode, Mf1KeyType, RfidType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
     const ultraUsb = new ChameleonUltra(true)
     ultraUsb.use(new WebserialAdapter())
     const ultraBle = new ChameleonUltra(true)
@@ -146,7 +146,7 @@ block script
       methods: {
         async btnScanTag () {
           try {
-            this.showLoading('Scanning tag...')
+            this.showLoading({ text: 'Scanning tag...' })
             const { ultra } = this
             await this.setDeviceMode('reader')
             const slot = await ultra.cmdGetActiveSlot()
@@ -172,7 +172,8 @@ block script
             const { ultra } = this
             const { atqa, sak, slot, tagType, uid } = this.h
             console.log({ atqa, sak, slot, tagType, uid })
-            const msg1 = `The hf data of slot ${slot + 1} will be REPLACE! Continue?`
+            const slotName = await ultra.cmdGetSlotTagName(slot, RfidType.HF) ?? '(no name)'
+            const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             await this.setDeviceMode('tag')
             // reset slot
@@ -207,21 +208,21 @@ block script
               progressSteps: ['1', '2', '3'],
               currentProgressStep: 0,
             }
-            this.showLoading(null, null, swalCfg)
+            this.showLoading(swalCfg)
             const { ultra } = this
             const logCnt = await ultra.cmdGetMf1DetectionCount()
 
             // retrive logs
             let logs = []
             while (logs.length < logCnt) {
-              this.showLoading(null, null, _.merge(swalCfg, {
+              this.showLoading(_.merge(swalCfg, {
                 currentProgressStep: 1,
                 text: `Retrive logs: ${logs.length} / ${logCnt}`,
               }))
               const tmp = await ultra.cmdGetMf1Detections(logs.length)
               logs.push(...tmp)
             }
-            this.showLoading(null, null, _.merge(swalCfg, {
+            this.showLoading(_.merge(swalCfg, {
               currentProgressStep: 1,
               text: `Retrive logs: ${logs.length} / ${logCnt}`,
             }))
@@ -238,7 +239,7 @@ block script
               for (let i = 0; i < grp.length; i++) {
                 const r0 = grp[i]
                 for (let j = i + 1; j < grp.length; j++) {
-                  this.showLoading(null, null, _.merge(swalCfg, {
+                  this.showLoading(_.merge(swalCfg, {
                     currentProgressStep: 2,
                     text: `Recover key: ${recoverCnt} / ${recoverMax}`,
                   }))
@@ -261,7 +262,7 @@ block script
         },
         async btnCheck () {
           try {
-            this.showLoading('Checking key...')
+            this.showLoading({ text: 'Checking key...' })
             const { ultra } = this
             const { block, keyType, key } = this.h
             await this.setDeviceMode('reader')
@@ -291,7 +292,7 @@ block script
         },
         async btnReset () {
           if (!await this.confirm('Reset web page data to default?', 'Yes', 'Cancel')) return
-          this.showLoading('Reseting...', 'Web page will reload after reset.')
+          this.showLoading({ text: 'Web page will reload after reset.' })
           localStorage.removeItem(location.pathname)
           location.reload()
           return await new Promise(resolve => {})
@@ -304,6 +305,7 @@ block script
             confirmButtonText,
             focusCancel: true,
             icon: 'warning',
+            reverseButtons: true,
             showCancelButton: true,
             text,
           }
@@ -334,10 +336,8 @@ block script
         blockToSector (block = 0) {
           return block < 128 ? block >>> 2 : 24 + (block >>> 4)
         },
-        showLoading (title, text, opts = {}) {
+        showLoading (opts = {}) {
           opts = {
-            title,
-            text,
             allowOutsideClick: false,
             showConfirmButton: false,
             ...opts,
