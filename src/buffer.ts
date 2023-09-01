@@ -526,27 +526,19 @@ export class Buffer extends Uint8Array {
 
   swap16 (): this {
     if ((this.length & 0x1) > 0) throw new RangeError('Buffer size must be a multiple of 16-bits')
-    for (let i = 0; i < this.length; i += 2) [this[i], this[i + 1]] = [this[i + 1], this[i]]
+    for (let i = 0; i < this.length; i += 2) this.writeUInt16LE(this.readUInt16BE(i), i)
     return this
   }
 
   swap32 (): this {
     if ((this.length & 0x3) > 0) throw new RangeError('Buffer size must be a multiple of 32-bits')
-    for (let i = 0; i < this.length; i += 4) {
-      ;[this[i], this[i + 3]] = [this[i + 3], this[i]]
-      ;[this[i + 1], this[i + 2]] = [this[i + 2], this[i + 1]]
-    }
+    for (let i = 0; i < this.length; i += 4) this.writeUInt32LE(this.readUInt32BE(i), i)
     return this
   }
 
   swap64 (): this {
     if ((this.length & 0x7) > 0) throw new RangeError('Buffer size must be a multiple of 64-bits')
-    for (let i = 0; i < this.length; i += 8) {
-      ;[this[i], this[i + 7]] = [this[i + 7], this[i]]
-      ;[this[i + 1], this[i + 6]] = [this[i + 6], this[i + 1]]
-      ;[this[i + 2], this[i + 5]] = [this[i + 5], this[i + 2]]
-      ;[this[i + 3], this[i + 4]] = [this[i + 4], this[i + 3]]
-    }
+    for (let i = 0; i < this.length; i += 8) this.writeBigUInt64LE(this.readBigUInt64BE(i), i)
     return this
   }
 

@@ -1,0 +1,363 @@
+extends /include/bootstrapV4
+
+block beforehtml
+  - const title = 'Detect Mifare Key'
+
+block style
+  meta(property="og:description", content="A tool to Detect Mifare Key with ChameleonUltra.")
+  meta(property="og:locale", content="zh_TW")
+  meta(property="og:title", content=title)
+  meta(property="og:type", content="website")
+  meta(property="og:url", content=`${baseurl}/pug/mifare-key-detect.html`)
+  style
+    :sass
+      [v-cloak]
+        display: none
+      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
+        font-family: 'Noto Sans TC', sans-serif
+      .letter-spacing-n1px
+        letter-spacing: -1px
+      .input-group-prepend > .input-group-text
+        width: 85px
+
+block content
+  #app.my-3.container.text-monospace(v-cloak)
+    h4.mb-3.text-center= title
+    .form-group
+      label Connect method:
+      .input-group.input-group-sm.mb-3
+        select.form-control(v-model="h.adapter")
+          option(value="ble") BLE (PC &amp; Android, bond is required)
+          option(value="usb") USB Serial (PC only)
+        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
+    .card.mb-3
+      .card-header.letter-spacing-n1px #[i.fa.fa-fw.fa-id-card] Scan UID / Simulate Tag
+      .card-body
+        .input-group.input-group-sm.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center Slot
+          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="h.slot")
+            option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
+        .input-group.input-group-sm.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center TagType
+          select.form-control.form-control-sm.letter-spacing-n1px(v-model="h.tagType")
+            option(value="0") Mifare 1k
+            option(value="1") Mifare 4k
+        .input-group.input-group-sm.mb-2.was-validated
+          .input-group-prepend: span.input-group-text.justify-content-center UID
+          input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", placeholder="Hex format of UID", required, v-model="h.uid")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.uid = ''") #[i.fa.fa-fw.fa-times]
+        .input-group.input-group-sm.mb-2.was-validated
+          .input-group-prepend: span.input-group-text.justify-content-center ATQA
+          input.form-control(pattern="[\\dA-Fa-f]{4}", placeholder="Hex format of ATQA", required, v-model="h.atqa")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.atqa = ''") #[i.fa.fa-fw.fa-times]
+        .input-group.input-group-sm.mb-2.was-validated
+          .input-group-prepend: span.input-group-text.justify-content-center SAK
+          input.form-control(pattern="[\\dA-Fa-f]{2}", placeholder="Hex format of SAK", required, v-model="h.sak")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.sak = ''") #[i.fa.fa-fw.fa-times]
+        .row.mx-n1
+          .col.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnScanTag") #[i.fa.fa-fw.fa-sign-out] Scan UID
+          .col.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnSimulateTag") #[i.fa.fa-fw.fa-sign-in] Simulate
+    .card.mb-3
+      .card-header.letter-spacing-n1px #[i.fa.fa-fw.fa-lock] Key recover / Check key
+      .card-body
+        .input-group.input-group-sm.mb-2.was-validated
+          .input-group-prepend: span.input-group-text.justify-content-center Block
+          input.form-control(type="number", min="0", max="63", required, v-model.number="h.block")
+          .input-group-append: span.input-group-text Sector {{ blockToSector(h?.block ?? 0) }}
+        .input-group.input-group-sm.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center KeyType
+          select.form-control.form-control-sm(v-model.number="h.keyType")
+            option(value="0") Key A
+            option(value="1") Key B
+        .input-group.input-group-sm.mb-2.was-validated
+          .input-group-prepend: span.input-group-text.justify-content-center KEY
+          input.form-control(type="text", required, pattern="[\\dA-Fa-f]{12}", v-model="h.key")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.key") #[i.fa.fa-fw.fa-clipboard]
+        .row.mx-n1
+          .col.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnRecover") #[i.fa.fa-fw.fa-key] Recover
+          .col.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnCheck") #[i.fa.fa-fw.fa-unlock-alt] Check
+      .table-responsive.letter-spacing-n1px(style="font-size: .85rem")
+        table.mb-0.table.table-striped.table-bordered.table-sm.text-center
+          thead: tr
+            th Sector
+            th KeyType
+            th Key
+            th &nbsp;
+          tbody
+            tr(v-if="!h.detects.length")
+              td.text-left.px-4.py-3(colspan="4")
+                strong Usage:
+                ol.mb-0
+                  li Connect your ChameleonUltra via USB or BLE (default BLE password: #[code 123456]).
+                  li (Optional) Put your tag in front of ChameleonUltra then click "Scan UID."
+                  li Select which slot you want to simulate. The hf data in the slot will be #[strong.text-danger REPLACE]!
+                  li Edit the tag information: TagType, UID, ATQA, SAK.
+                  li Click "Simulate" to enable detection and #[strong.text-danger REPLACE] the hf data in the slot.
+                  li Let reader read ChameleonUltra more than 2 times to collect data.
+                  li Click "Recover" button to recover key. It may take a long time.
+                  li Put your tag in front of ChameleonUltra then click "Test" button to check if the key is correct.
+            tr(
+              v-for="d in h.detects",
+              :key="`${d.block}-${d.keyType}-${d.key}`",
+            )
+              td(@click="btnCopy(blockToSector(d.block))") {{ blockToSector(d.block) }}
+              td(@click="btnCopy('AB'[d.keyType])") {{ 'AB'[d.keyType] }}
+              td(@click="btnCopy(d.key)") {{ d.key }}
+              td(@click="btnSetTestFromDetect(d)"): a.badge.badge-primary.mr-1(href="javascript:void(0)") Test
+    button.btn.btn-block.btn-danger(@click="btnReset") #[i.fa.mr-2.fa-repeat] Reset to default
+
+block script
+  script.
+    const { Buffer, ChameleonUltra, DeviceMode, Mf1KeyType, RfidType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
+    const ultraUsb = new ChameleonUltra(true)
+    ultraUsb.use(new WebserialAdapter())
+    const ultraBle = new ChameleonUltra(true)
+    ultraBle.use(new WebbleAdapter())
+
+    window.vm = new Vue({
+      el: '#app',
+      data: {
+        h: {
+          adapter: 'ble',
+          atqa: '0004',
+          block: 0,
+          detects: [],
+          keyType: 0,
+          key: 'FFFFFFFFFFFF',
+          sak: '08',
+          slot: 0,
+          tagType: 0,
+          uid: 'DEADBEEF',
+        },
+      },
+      async mounted () {
+        // 自動儲存功能
+        try {
+          const saved = JSON5.parse(localStorage.getItem(location.pathname))
+          if (saved) this.$set(this, 'h', { ...this.h, ...saved })
+        } catch (err) {}
+        this.$watch('h', () => {
+          localStorage.setItem(location.pathname, JSON5.stringify(this.h))
+        }, { deep: true })
+      },
+      computed: {
+        ultra () {
+          return this.h.adapter === 'usb' ? ultraUsb : ultraBle
+        },
+      },
+      methods: {
+        async btnAdapterTips () {
+          await Swal.fire({
+            title: 'Browser & OS',
+            html: '#[strong.text-primary BLE] is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70).#[hr]#[strong.text-primary USB] is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
+          })
+        },
+        async btnScanTag () {
+          try {
+            this.showLoading({ text: 'Scanning tag...' })
+            const { ultra } = this
+            await this.setDeviceMode('reader')
+            const slot = await ultra.cmdGetActiveSlot()
+            const tag1 = await ultra.cmdScan14aTag()
+            await this.setDeviceMode('tag')
+            const tag2 = {
+              atqa: _.toUpper(tag1.atqa.reverse().toString('hex')),
+              sak: _.toUpper(tag1.sak.toString('hex')),
+              slot,
+              uid: _.toUpper(tag1.uid.toString('hex')),
+            }
+            tag2.tagType = (tag2.atqa === '0002' && tag2.sak === '18') ? 1 : 0
+            console.log(tag2)
+            _.merge(this.h, tag2)
+            Swal.close()
+          } catch (err) {
+            console.error(err)
+            await Swal.fire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
+          }
+        },
+        async btnSimulateTag () {
+          try {
+            const { ultra } = this
+            const { atqa, sak, slot, tagType, uid } = this.h
+            console.log({ atqa, sak, slot, tagType, uid })
+            const slotName = await ultra.cmdGetSlotTagName(slot, RfidType.HF) ?? '(no name)'
+            const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
+            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            await this.setDeviceMode('tag')
+            // reset slot
+            await ultra.cmdSlotSetEnable(slot, true)
+            await ultra.cmdSetActiveSlot(slot)
+            await ultra.cmdSlotSetTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
+            await ultra.cmdSlotResetData(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
+            // set anti-coll
+            const tag = {
+              atqa: Buffer.from(atqa, 'hex').reverse(),
+              sak: Buffer.from(sak, 'hex'),
+              uid: Buffer.from(uid, 'hex').slice(-4),
+            }
+            await ultra.cmdEmuSetMf1AntiColl(tag)
+            await ultra.cmdSetMf1Detection(true) // enable detection
+            const block0 = Buffer.allocUnsafe(16)
+            tag.uid.copy(block0) // copy uid
+            block0[tag.uid.length] = tag.uid.xor() // bcc for magic card
+            block0[tag.uid.length + 1] = tag.sak[0] // sak
+            tag.atqa.copy(block0, tag.uid.length + 2) // atqa
+            console.log(`block0 = ${block0.toString('hex')}`)
+            await ultra.cmdEmuSetMf1Block(0, block0) // set block0
+            await ultra.cmdSaveSlotSettings()
+            await Swal.fire({ icon: 'success', title: 'Simulate successfully!' })
+          } catch (err) {
+            console.error(err)
+            await Swal.fire({ icon: 'error', title: 'Failed to simulate tag.', text: err.message })
+          }
+        },
+        async btnRecover () {
+          try {
+            const swalCfg = {
+              text: 'Connecting device...',
+              progressSteps: ['1', '2', '3'],
+              currentProgressStep: 0,
+            }
+            this.showLoading(swalCfg)
+            const { ultra } = this
+            const logCnt = await ultra.cmdGetMf1DetectionCount()
+
+            // retrive logs
+            let logs = []
+            while (logs.length < logCnt) {
+              this.showLoading(_.merge(swalCfg, {
+                currentProgressStep: 1,
+                text: `Retrive logs: ${logs.length} / ${logCnt}`,
+              }))
+              const tmp = await ultra.cmdGetMf1Detections(logs.length)
+              logs.push(...tmp)
+            }
+            this.showLoading(_.merge(swalCfg, {
+              currentProgressStep: 1,
+              text: `Retrive logs: ${logs.length} / ${logCnt}`,
+            }))
+            await this.sleep(0) // 等待 UI 更新
+            console.log(logs)
+
+            // calc how many mfkey32v2 need to be run
+            logs = _.values(_.groupBy(logs, log => `${log.uid.toString('hex')}-${log.block}-${log.isKeyB ? 1 : 0}`))
+            console.log(logs)
+            const recoverMax = _.sumBy(logs, arr => arr.length * (arr.length - 1) / 2)
+            this.$set(this.h, 'detects', [])
+            let recoverCnt = 0
+            for (const grp of logs) {
+              for (let i = 0; i < grp.length; i++) {
+                const r0 = grp[i]
+                for (let j = i + 1; j < grp.length; j++) {
+                  this.showLoading(_.merge(swalCfg, {
+                    currentProgressStep: 2,
+                    text: `Recover key: ${recoverCnt} / ${recoverMax}`,
+                  }))
+                  const r1 = grp[j]
+                  try {
+                    this.$set(this.h, 'detects', _.unionWith(this.h.detects, [{
+                      block: r0.block,
+                      keyType: r0.isKeyb ? 1 : 0,
+                      key: this.mfkey32v2(r0.uid, r0, r1),
+                    }], _.isEqual))
+                  } catch (err) {
+                    console.log(err)
+                  }
+                  recoverCnt++
+                  await this.sleep(0) // 等待 UI 更新
+                }
+              }
+            }
+            await Swal.fire({ icon: 'success', title: 'Recover successfully!' })
+          } catch (err) {
+            console.error(err)
+            await Swal.fire({ icon: 'error', title: 'Failed to recover key.', text: err.message })
+          }
+        },
+        async btnCheck () {
+          try {
+            this.showLoading({ text: 'Checking key...' })
+            const { ultra } = this
+            const { block, keyType, key } = this.h
+            await this.setDeviceMode('reader')
+            const isCorrect = await ultra.cmdCheckMf1BlockKey({
+              block,
+              keyType: [Mf1KeyType.KEY_A, Mf1KeyType.KEY_B][keyType],
+              key: Buffer.from(key, 'hex'),
+            })
+            await this.setDeviceMode('tag')
+            if (!isCorrect) return await Swal.fire({ icon: 'error', title: 'Key is incorrect!' })
+            await Swal.fire({ icon: 'success', title: 'Key is correct!' })
+          } catch (err) {
+            console.error(err)
+            await Swal.fire({ icon: 'error', title: 'Failed to check key.', text: err.message })
+          }
+        },
+        async btnCopy (text, container = null) {
+          if (!container) container = document.body
+          const dom = document.createElement('textarea')
+          dom.value = text
+          container.appendChild(dom)
+          dom.select()
+          dom.setSelectionRange(0, 1e6) // For mobile devices
+          document.execCommand('copy')
+          container.removeChild(dom)
+          await Swal.fire({ icon: 'success', title: '複製成功' })
+        },
+        async btnReset () {
+          if (!await this.confirm('Reset web page data to default?', 'Yes', 'Cancel')) return
+          this.showLoading({ text: 'Web page will reload after reset.' })
+          localStorage.removeItem(location.pathname)
+          location.reload()
+          return await new Promise(resolve => {})
+        },
+        async confirm (text, confirmButtonText, cancelButtonText) {
+          const args = {
+            cancelButtonColor: '#3085d6',
+            cancelButtonText,
+            confirmButtonColor: '#d33',
+            confirmButtonText,
+            focusCancel: true,
+            icon: 'warning',
+            reverseButtons: true,
+            showCancelButton: true,
+            text,
+          }
+          return (await Swal.fire(args))?.isConfirmed
+        },
+        async setDeviceMode (target1 = 'tag') {
+          const target2 = _.toLower(target1) === 'reader' ? DeviceMode.READER : DeviceMode.TAG
+          const deviceMode = await this.ultra.cmdGetDeviceMode()
+          if (deviceMode !== target2) await this.ultra.cmdSetDeviceMode(target2)
+        },
+        async sleep (t) {
+          await new Promise(resolve => setTimeout(resolve, t))
+        },
+        mfkey32v2 (uid, r0, r1) {
+          return Crypto1.mfkey32v2({
+            uid,
+            nt0: r0.nt,
+            nr0: r0.nr,
+            ar0: r0.ar,
+            nt1: r1.nt,
+            nr1: r1.nr,
+            ar1: r1.ar,
+          }).toString('hex')
+        },
+        btnSetTestFromDetect (detect) {
+          _.merge(this.h, _.pick(detect, ['block', 'keyType', 'key']))
+        },
+        blockToSector (block = 0) {
+          return block < 128 ? block >>> 2 : 24 + (block >>> 4)
+        },
+        showLoading (opts = {}) {
+          opts = {
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            ...opts,
+          }
+          if (Swal.isVisible()) return Swal.update(opts)
+          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
+        },
+      },
+    })
