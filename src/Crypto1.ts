@@ -716,10 +716,9 @@ export default class Crypto1 {
 }
 
 function castToInteger (x: number | Buffer | string): number {
-  if (Buffer.isBuffer(x)) return x.readUInt32BE(0)
-  if (_.isString(x)) return _.parseInt(x, 16)
-  if (_.isSafeInteger(x)) return x
-  throw new TypeError(`Failed to cast to integer: ${x}`)
+  if (_.isSafeInteger(x)) return x as number
+  if (_.isString(x)) return Buffer.from(x, 'hex').readUInt32BE(0)
+  return Buffer.from(x as any).readUInt32BE(0)
 }
 
 export interface RecoverContext {
