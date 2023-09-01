@@ -82,7 +82,18 @@ block content
             th Key
             th &nbsp;
           tbody
-            tr(v-if="!h.detects.length"): td.text-center(colspan="4") Please simulate tag and let reader read ChameleonUltra more than 2 times to collect data, then click "Recover" button.
+            tr(v-if="!h.detects.length")
+              td.text-left.px-3(colspan="4")
+                strong Usage:
+                ol
+                  li Connect your ChameleonUltra via USB or BLE (default BLE password: #[code 123456]).
+                  li (Optional) Put your tag in front of ChameleonUltra then click "Scan UID."
+                  li Select which slot you want to simulate. The hf data in the slot will be #[strong.text-danger REPLACE]!
+                  li Edit the tag information: TagType, UID, ATQA, SAK.
+                  li Click "Simulate" to enable detection and #[strong.text-danger REPLACE] the hf data in the slot.
+                  li Let reader read ChameleonUltra more than 2 times to collect data.
+                  li Click "Recover" button to recover key. It may take a long time.
+                  li Put your tag in front of ChameleonUltra then click "Test" button to check if the key is correct.
             tr(
               v-for="d in h.detects",
               :key="`${d.block}-${d.keyType}-${d.key}`",
