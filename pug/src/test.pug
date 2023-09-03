@@ -1,0 +1,64 @@
+extends /include/bootstrapV4
+
+block beforehtml
+  - const title = 'ChameleonUltra Test'
+
+block style
+  style
+    :sass
+      [v-cloak]
+        display: none
+      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
+        font-family: 'Noto Sans TC', sans-serif
+
+block content
+  #app.my-3.container(v-cloak)
+    h4.text-center= title
+    .form-group.mt-3
+      label Choose connection method:
+      select.form-control.form-control-sm(v-model="h.adapter")
+        option(value="ble") via BLE (PC &amp; Android, bond is required)
+        option(value="usb") via USB Serial (PC only)
+
+block script
+  script.
+    const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
+    const ultraUsb = new ChameleonUltra(true)
+    ultraUsb.use(new WebserialAdapter())
+    const ultraBle = new ChameleonUltra(true)
+    ultraBle.use(new WebbleAdapter())
+
+    window.vm = new Vue({
+      el: '#app',
+      data: {
+        h: {
+          adapter: 'ble',
+        },
+      },
+      async mounted () {
+        // 自動儲存功能
+        try {
+          const saved = JSON5.parse(localStorage.getItem(location.pathname))
+          if (saved) this.$set(this, 'h', { ...this.h, ...saved })
+        } catch (err) {}
+        this.$watch('h', () => {
+          localStorage.setItem(location.pathname, JSON5.stringify(this.h))
+        }, { deep: true })
+      },
+      computed: {
+        ultra () {
+          return this.h.adapter === 'usb' ? ultraUsb : ultraBle
+        },
+      },
+      methods: {
+        showLoading (title, text) {
+          Swal.fire({
+            title,
+            text,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => { Swal.showLoading() },
+          })
+        },
+      },
+    })
