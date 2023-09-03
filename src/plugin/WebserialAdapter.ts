@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { serial, type SerialPort } from 'web-serial-polyfill'
+import { serial, type SerialPort } from './WebSerialPolyfill'
 import { sleep } from '../helper'
 import { type Buffer } from '../buffer'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext, type Logger } from '../ChameleonUltra'
@@ -28,7 +28,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
 
       try {
         if (adapter.isSupported() !== true) throw new Error('WebSerial not supported')
-        this.port = await serial.requestPort({ filters: WEBSERIAL_FILTERS }) as any
+        this.port = await serial.requestPort({ filters: WEBSERIAL_FILTERS })
         if (_.isNil(this.port)) throw new Error('user canceled')
 
         // port.open

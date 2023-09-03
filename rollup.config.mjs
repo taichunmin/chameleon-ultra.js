@@ -2,17 +2,19 @@ import _ from 'lodash'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import nodePolyfills from 'rollup-plugin-polyfill-node'
-import pkg from './package.json' assert { type: 'json' }
 import terser from '@rollup/plugin-terser'
 import typescript from '@rollup/plugin-typescript'
 import versionInjector from 'rollup-plugin-version-injector'
 
 const external = [
-  ..._.keys(pkg.dependencies),
+  'lodash',
+  'serialport',
   'stream',
+  'web-streams-polyfill',
+  'webbluetooth',
 ]
+
 const globals = {
-  'web-serial-polyfill': 'window.navigator',
   'web-streams-polyfill': 'window',
   'webbluetooth': 'window.navigator',
   lodash: '_',

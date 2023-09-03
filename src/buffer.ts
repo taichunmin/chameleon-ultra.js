@@ -43,10 +43,10 @@ export const EncodingConst = {
 
 export type Encoding = keyof typeof EncodingConst
 
+const isEncoding = createIsEnum(EncodingConst)
+
 export class Buffer extends Uint8Array {
-  static readonly poolSize = 8192
-  static isEncoding = createIsEnum(EncodingConst)
-  dv: DataView
+  protected readonly dv: DataView
 
   constructor ()
   constructor (length: number)
@@ -260,6 +260,10 @@ export class Buffer extends Uint8Array {
 
   static isBuffer (obj: any): obj is Buffer {
     return isInstance(obj, Buffer)
+  }
+
+  static isEncoding (encoding: any): encoding is Encoding {
+    return isEncoding(encoding)
   }
 
   compare (target: any, targetStart: number = 0, targetEnd: number = target.length, sourceStart: number = 0, sourceEnd: number = this.length): number {
