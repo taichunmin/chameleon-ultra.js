@@ -11,7 +11,7 @@ import pug from 'pug'
 import UglifyJS from 'uglify-js'
 
 const srcDir = path.resolve(__dirname, './src/')
-const distDir = path.resolve(__dirname, '../dist/pug/')
+const distDir = path.resolve(__dirname, '../dist/')
 
 export async function build (): Promise<void> {
   const sitemapUrls = []
