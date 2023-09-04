@@ -26,6 +26,9 @@ function isSharedArrayBuffer (val: any): val is SharedArrayBuffer {
   return typeof SharedArrayBuffer !== 'undefined' && (isInstance(val, SharedArrayBuffer) || isInstance(val?.buffer, SharedArrayBuffer))
 }
 
+/**
+ * @enum
+ */
 export const EncodingConst = {
   'ucs-2': 'ucs-2',
   'utf-16le': 'utf-16le',

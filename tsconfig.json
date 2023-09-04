@@ -1,14 +1,13 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
+  "exclude": ["./dist/**/*", "./node_modules/**/*", "./**/*.d.ts"],
   "extends": "@tsconfig/node-lts/tsconfig.json",
   "include": ["./**/*.js", "./**/*.cjs", "./**/*.mjs", "./**/*.ts"],
-  "exclude": ["./dist/**/*", "./node_modules/**/*", "./**/*.d.ts"],
   "compilerOptions": {
     "useUnknownInCatchVariables": false
   },
   "ts-node": {
     "compilerOptions": {
-      "module": "CommonJS",
+      "module": "CommonJS"
     }
   },
   "typedocOptions": {
@@ -29,6 +28,18 @@
       "src/plugin/SerialPortAdapter.ts",
       "src/plugin/WebbleAdapter.ts",
       "src/plugin/WebserialAdapter.ts"
+    ],
+    "groupOrder": [
+      "Constructors",
+      "Properties",
+      "Methods related to device",
+      "Commands related to device",
+      "Commands related to slot",
+      "Commands related to device mode: READER",
+      "Commands related to device mode: TAG",
+      "Methods related to plugin",
+      "Methods",
+      "*"
     ]
   }
 }
