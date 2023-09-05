@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import { bluetooth } from 'webbluetooth'
+import { Buffer } from '../buffer'
 import { sleep } from '../helper'
-import { type Buffer } from '../buffer'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext, type Logger } from '../ChameleonUltra'
 import {
   ReadableStream,
@@ -166,10 +166,13 @@ class ChameleonWebbleAdapterTxSink implements UnderlyingSink<Buffer> {
 
     // 20 bytes are left for the attribute data
     // https://stackoverflow.com/questions/38913743/maximum-packet-length-for-bluetooth-le
+    let buf1: Buffer | null = null
     for (let i = 0; i < chunk.length; i += 20) {
-      const buf = chunk.subarray(i, i + 20)
-      this.adapter.logger.webble(`bleWrite = ${buf.toString('hex')}`)
-      await this.adapter.send?.writeValueWithoutResponse(buf.buffer)
+      const buf2 = chunk.subarray(i, i + 20)
+      if (_.isNil(buf1) || buf1.length !== buf2.length) buf1 = new Buffer(buf2.length)
+      buf1.set(buf2)
+      this.adapter.logger.webble(`bleWrite = ${buf1.toString('hex')}`)
+      await this.adapter.send?.writeValueWithoutResponse(buf1.buffer)
     }
   }
 }

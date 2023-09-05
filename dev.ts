@@ -42,7 +42,7 @@ async function main (): Promise<void> {
     const match = name.match(/^pug[/]src[/](.+)\.pug$/)
     await build()
     if (match == null) console.log(`"${name}" changed.`)
-    else console.log(getSiteurl(`./pug/${match[1].replace(/\\/g, '/')}.html`))
+    else console.log(getSiteurl(`./${match[1].replace(/\\/g, '/')}.html`))
     livereloadServer.refresh('')
   })
 }
