@@ -1,7 +1,6 @@
 /**
- * @module pn532.js/Crypto1
  * @example
- * import Crypto1 from 'pn532.js/Crypto1'
+ * import Crypto1 from 'chameleon-ultra.js/Crypto1'
  */
 import _ from 'lodash'
 import { Buffer } from './buffer'
@@ -48,7 +47,7 @@ const C1 = [0x00846B5, 0x0004235A, 0x000211AD]
 const C2 = [0x1A822E0, 0x21A822E0, 0x21A822E0]
 
 /**
- * JavaScript implementation of the Crypto1 cipher. This script should be load after the PN532 Core script.
+ * JavaScript implementation of the Crypto1 cipher.
  * @param {object} [args={}] args
  * @param {number} args.even The even bits of lfsr.
  * @param {number} args.odd The odd bits of lfsr.
@@ -88,7 +87,7 @@ export default class Crypto1 {
    * @param {Buffer} key The key to set the internal lfsr.
    * @returns {this} `this`
    * @example
-   * const { Crypto1, Pn532: { Buffer } } = window
+   * const { Buffer, Crypto1 } = window
    *
    * const state1 = new Crypto1()
    * state1.setLfsr(new Buffer('FFFFFFFFFFFF'))
@@ -109,7 +108,7 @@ export default class Crypto1 {
    * Get the internal lfsr.
    * @returns {Buffer} The internal lfsr.
    * @example
-   * const { Crypto1, Pn532: { Buffer } } = window
+   * const { Buffer, Crypto1 } = window
    *
    * const state1 = new Crypto1()
    * console.log(state1.setLfsr(new Buffer('FFFFFFFFFFFF')).getLfsr().hex) // 'FFFFFFFFFFFF'
@@ -590,7 +589,7 @@ export default class Crypto1 {
    * @param {number|Buffer|string} args.ar1 The random challenge from reader in the second authentication attempt.
    * @returns {Buffer} The recovered key.
    * @example
-   * const { Crypto1, Pn532: { Buffer } } = window
+   * const { Buffer, Crypto1 } = window
    *
    * console.log(Crypto1.mfkey32v2({
    *   uid: 0x65535D33,
@@ -649,7 +648,7 @@ export default class Crypto1 {
    * @param {number|Buffer|string} args.at The calculated response of `args.ar` from tag in the authentication.
    * @returns {Buffer} The recovered key.
    * @example
-   * const { Crypto1, Pn532: { Buffer } } = window
+   * const { Buffer, Crypto1 } = window
    *
    * console.log(Crypto1.mfkey32v2({
    *   uid: 0x65535D33,

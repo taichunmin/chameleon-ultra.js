@@ -2,7 +2,7 @@ import _ from 'lodash'
 import { Buffer } from './buffer'
 import { createIsEnum, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
-import { type ReadableStream, type UnderlyingSink, WritableStream } from 'web-streams-polyfill'
+import { type ReadableStream, type UnderlyingSink, WritableStream } from './WebStream'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
@@ -117,7 +117,7 @@ export class ChameleonUltra {
 
   /**
    * @internal
-   * @group Internal
+   * @group Plugin Related
    */
   createDebugger (name: string): Logger {
     if (!this.debug) return (...args: any[]) => {}
@@ -128,7 +128,7 @@ export class ChameleonUltra {
    * Register a plugin.
    * @param plugin The plugin to register.
    * @param option The option to pass to plugin.install().
-   * @group Methods related to plugin
+   * @group Plugin Related
    */
   async use (plugin: ChameleonPlugin, option?: any): Promise<this> {
     const pluginId = `$${plugin.name}`
@@ -141,7 +141,7 @@ export class ChameleonUltra {
    * Register a hook.
    * @param hook The hook name.
    * @param fn The function to register.
-   * @group Methods related to plugin
+   * @group Plugin Related
    */
   addHook (hook: string, fn: MiddlewareComposeFn): this {
     if (!_.isArray(this.hooks[hook])) this.hooks[hook] = []
@@ -155,7 +155,7 @@ export class ChameleonUltra {
    * @param ctx The context will be passed to every middleware.
    * @param next The next middleware function.
    * @returns The return value depent on the middlewares
-   * @group Methods related to plugin
+   * @group Plugin Related
    */
   async invokeHook (hook: string, ctx: any = {}, next: MiddlewareComposeFn): Promise<unknown> {
     ctx.me = this
@@ -173,7 +173,7 @@ export class ChameleonUltra {
 
         // serial.readable pipeTo this.rxSink
         this.rxSink = new ChameleonRxSink()
-        void this.port.readable.pipeTo(new WritableStream(this.rxSink), {
+        void this.port.readable.pipeTo(new WritableStream(this.rxSink) as any, {
           signal: this.rxSink.signal,
         }).catch(err => {
           void this.disconnect()
@@ -242,7 +242,7 @@ export class ChameleonUltra {
         if (!Buffer.isBuffer(ctx.buf)) throw new TypeError('buf should be a Buffer')
         if (!this.isConnected()) await this.connect()
         this.logger.send(frameToString(ctx.buf))
-        const writer = this.port?.writable?.getWriter()
+        const writer = (this.port?.writable as any)?.getWriter()
         if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
         await writer.write(ctx.buf)
         writer.releaseLock()
@@ -1148,6 +1148,10 @@ export class ChameleonUltra {
   }
 }
 
+/**
+ * @internal
+ * @group Internal
+ */
 export type Logger = Debugger | ((...args: any[]) => void)
 
 /**
@@ -1405,10 +1409,10 @@ export const isButtonAction = createIsEnum(ButtonAction)
 export interface ChameleonSerialPort<I, O> {
   isOpen?: () => boolean
   readable: ReadableStream<I>
-  writable: WritableStream<O>
+  writable: typeof WritableStream<O>
 }
 
-export class ChameleonRxSink implements UnderlyingSink<Buffer> {
+class ChameleonRxSink implements UnderlyingSink<Buffer> {
   bufs: Buffer[] = []
   controller: AbortController
 
@@ -1423,11 +1427,19 @@ export class ChameleonRxSink implements UnderlyingSink<Buffer> {
   }
 }
 
+/**
+ * @internal
+ * @group Plugin Related
+ */
 export interface PluginInstallContext {
   Buffer: typeof Buffer
   ultra: ChameleonUltra
 }
 
+/**
+ * @internal
+ * @group Plugin Related
+ */
 export interface ChameleonPlugin {
   name: string
   install: <T extends PluginInstallContext>(context: T, pluginOption: any) => Promise<unknown>
