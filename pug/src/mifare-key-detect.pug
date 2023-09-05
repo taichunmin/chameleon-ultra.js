@@ -114,6 +114,12 @@ block script
     const ultraBle = new ChameleonUltra(true)
     ultraBle.use(new WebbleAdapter())
 
+    function createResolvable () {
+      const tmp = {}
+      const promise = new Promise((resolve, reject) => { _.merge(tmp, { resolve, reject }) })
+      return _.merge(promise, tmp)
+    }
+
     window.vm = new Vue({
       el: '#app',
       data: {
@@ -183,6 +189,7 @@ block script
             const slotName = await ultra.cmdGetSlotTagName(slot, RfidType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            this.showLoading({ text: 'Simulating tag...' })
             await this.setDeviceMode('tag')
             // reset slot
             await ultra.cmdSlotSetEnable(slot, true)
@@ -312,18 +319,22 @@ block script
           return await new Promise(resolve => {})
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
+          const isDestroy = createResolvable()
           const args = {
             cancelButtonColor: '#3085d6',
             cancelButtonText,
             confirmButtonColor: '#d33',
             confirmButtonText,
+            didDestroy: isDestroy.resolve,
             focusCancel: true,
             icon: 'warning',
             reverseButtons: true,
             showCancelButton: true,
             text,
           }
-          return (await Swal.fire(args))?.isConfirmed
+          const res = (await Swal.fire(args))?.isConfirmed
+          await isDestroy
+          return res
         },
         async setDeviceMode (target1 = 'tag') {
           const target2 = _.toLower(target1) === 'reader' ? DeviceMode.READER : DeviceMode.TAG
