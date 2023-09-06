@@ -1,6 +1,6 @@
 import { getPort, getSiteurl } from './pug/dotenv'
 
-import { build } from './pug/build'
+import _ from 'lodash'
 import { promises as fsPromises } from 'fs'
 import finalhandler from 'finalhandler'
 import https from 'https'
@@ -12,8 +12,8 @@ import watch from 'node-watch'
 async function readMkcert (): Promise<any> {
   try {
     const [cert, key] = await Promise.all([
-      fsPromises.readFile(path.resolve(__dirname, 'mkcert/cert.pem')),
-      fsPromises.readFile(path.resolve(__dirname, 'mkcert/key.pem')),
+      fsPromises.readFile(path.resolve(__dirname, './mkcert/cert.pem')),
+      fsPromises.readFile(path.resolve(__dirname, './mkcert/key.pem')),
     ])
     return { cert, key }
   } catch (err) {
@@ -22,28 +22,28 @@ async function readMkcert (): Promise<any> {
 }
 
 async function main (): Promise<void> {
-  const publicDir = path.resolve(__dirname, 'dist')
-  const baseUrl = getSiteurl()
-  await build()
-  console.log(`build finish. Visit: ${baseUrl}`)
+  const publicDir = path.resolve(__dirname, './dist')
+
+  const httpsServer = https.createServer(await readMkcert(), (req, res) => {
+    serveStatic(publicDir, {
+      index: ['index.html', 'index.htm'],
+    })(req, res, finalhandler(req, res))
+  })
 
   const livereloadServer = livereload.createServer({
     delay: 1000,
     port: getPort(),
-    server: https.createServer(await readMkcert(), (req, res) => {
-      serveStatic(publicDir, {
-        index: ['index.html', 'index.htm'],
-      })(req, res, finalhandler(req, res))
-    }),
+    server: httpsServer,
   })
 
-  watch(['./pug', './src'], { recursive: true }, async (e, name) => {
+  livereloadServer.watch(publicDir)
+  console.log(`build finish. Visit: ${getSiteurl()}`)
+
+  watch(['./pug'], { recursive: true }, async (e, name) => {
     if (e !== 'update') return
     const match = name.match(/^pug[/]src[/](.+)\.pug$/)
-    await build()
-    if (match == null) console.log(`"${name}" changed.`)
-    else console.log(getSiteurl(`./${match[1].replace(/\\/g, '/')}.html`))
-    livereloadServer.refresh('')
+    if (_.isNil(match)) return
+    console.log(getSiteurl(`./${match[1].replace(/\\/g, '/')}.html`))
   })
 }
 
