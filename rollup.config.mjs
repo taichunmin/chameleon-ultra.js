@@ -15,7 +15,7 @@ const external = [
 ]
 
 const globals = {
-  'web-streams-polyfill': 'window',
+  'node:stream/web': 'window',
   'webbluetooth': 'window.navigator',
   lodash: '_',
 }

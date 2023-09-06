@@ -3,13 +3,7 @@ import { bluetooth } from 'webbluetooth'
 import { Buffer } from '../buffer'
 import { sleep } from '../helper'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext, type Logger } from '../ChameleonUltra'
-import {
-  ReadableStream,
-  type ReadableStreamDefaultController,
-  type UnderlyingSink,
-  type UnderlyingSource,
-  WritableStream,
-} from 'web-streams-polyfill'
+import { ReadableStream, type ReadableStreamDefaultController, type UnderlyingSink, type UnderlyingSource, WritableStream } from 'node:stream/web'
 
 const BLESERIAL_FILTERS = [
   { name: 'ChameleonUltra' },
@@ -149,7 +143,7 @@ class ChameleonWebbleAdapterRxSource implements UnderlyingSource<Buffer> {
   start (controller: ReadableStreamDefaultController<Buffer>): void { this.controller = controller }
 
   onNotify (event: any): void {
-    const buf = this.adapter.Buffer?.from(event?.target?.value?.buffer) as Buffer
+    const buf = this.adapter.Buffer?.from(event?.target?.value) as Buffer
     this.adapter.logger.webble(`onNotify = ${buf.toString('hex')}`)
     this.controller?.enqueue(buf)
   }
