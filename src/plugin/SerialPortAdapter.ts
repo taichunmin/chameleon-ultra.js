@@ -34,7 +34,7 @@ export default class SerialPortAdapter implements ChameleonPlugin {
         })
         this.port?.once('close', () => { void ultra.disconnect() })
         this.logger.serial(`port connected, path = ${pluginOption.path}, baudRate = ${pluginOption.baudRate as number}`)
-        const ultraPort = Duplex.toWeb(this.port) as Partial<ChameleonSerialPort<Buffer, Buffer>>
+        const ultraPort = Duplex.toWeb(this.port) as unknown as Partial<ChameleonSerialPort<Buffer, Buffer>>
         ultraPort.isOpen = () => { return this.port?.isOpen ?? false }
         ultra.port = ultraPort as any satisfies ChameleonSerialPort<Buffer, Buffer>
         return await next()

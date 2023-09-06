@@ -791,11 +791,11 @@ export class Buffer extends Uint8Array {
   }
 }
 
-export type TypedArray = NodeJS.TypedArray | Buffer
+type TypedArray = NodeJS.TypedArray | Buffer
 
-export interface ArrayLike<T> {
+interface ArrayLike<T> {
   readonly length: number
   readonly [n: number]: T
 }
 
-export type WithImplicitCoercion<T> = T | { valueOf: () => T }
+type WithImplicitCoercion<T> = T | { valueOf: () => T }
