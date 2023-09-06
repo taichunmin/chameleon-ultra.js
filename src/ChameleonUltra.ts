@@ -2,7 +2,7 @@ import _ from 'lodash'
 import { Buffer } from './buffer'
 import { createIsEnum, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
-import { type ReadableStream, type UnderlyingSink, WritableStream } from './WebStream'
+import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
@@ -173,7 +173,7 @@ export class ChameleonUltra {
 
         // serial.readable pipeTo this.rxSink
         this.rxSink = new ChameleonRxSink()
-        void this.port.readable.pipeTo(new WritableStream(this.rxSink) as any, {
+        void this.port.readable.pipeTo(new WritableStream(this.rxSink), {
           signal: this.rxSink.signal,
         }).catch(err => {
           void this.disconnect()
@@ -1409,7 +1409,7 @@ export const isButtonAction = createIsEnum(ButtonAction)
 export interface ChameleonSerialPort<I, O> {
   isOpen?: () => boolean
   readable: ReadableStream<I>
-  writable: typeof WritableStream<O>
+  writable: WritableStream<O>
 }
 
 class ChameleonRxSink implements UnderlyingSink<Buffer> {

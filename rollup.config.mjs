@@ -15,12 +15,13 @@ const external = [
 ]
 
 const globals = {
-  'web-streams-polyfill': 'window',
+  'node:stream/web': 'window',
   'webbluetooth': 'window.navigator',
   lodash: '_',
 }
 
 const versionInjectorPlugin = versionInjector({
+  logLevel: 'error',
   injectInTags: {
     fileRegexp: /\.(js|mjs|cjs|html|css)$/,
   },

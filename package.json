@@ -10,7 +10,6 @@
     "lodash": "^4.17.21",
     "serialport": "^12.0.0",
     "web-serial-polyfill": "^1.0.14",
-    "web-streams-polyfill": "^3.2.1",
     "webbluetooth": "^3.1.0"
   },
   "devDependencies": {
@@ -31,6 +30,7 @@
     "@types/uglify-js": "^3.17.2",
     "@types/web-bluetooth": "^0.0.17",
     "@typescript-eslint/eslint-plugin": "^6.5.0",
+    "concurrently": "^8.2.1",
     "dayjs": "^1.11.9",
     "dotenv": "^16.3.1",
     "eslint": "^8.48.0",
@@ -45,6 +45,7 @@
     "jstransformer-sass": "^1.0.0",
     "livereload": "^0.9.3",
     "node-watch": "^0.7.4",
+    "nodemon": "^3.0.1",
     "pug": "^3.0.2",
     "rimraf": "^5.0.1",
     "rollup": "^3.28.1",
@@ -66,9 +67,13 @@
     "**/jstransformer-scss": "^2.0.0"
   },
   "scripts": {
-    "build": "rimraf ./dist && mkdir -p dist && ts-node ./pug/build.ts && rollup --config rollup.config.mjs && yarn docs && touch ./dist/.nojekyll",
-    "dev": "ts-node ./dev.ts",
-    "docs": "yarn typedoc",
+    "build": "rimraf ./dist && mkdir -p dist && ts-node ./pug/build.ts && rollup --config rollup.config.mjs && typedoc && touch ./dist/.nojekyll",
+    "dev:docs": "nodemon --watch src --ext ts,json --exec typedoc",
+    "dev:https": "ts-node ./https.ts",
+    "dev:ts": "nodemon --watch src --ext ts,json --exec \"rollup --config rollup.config.mjs\"",
+    "dev:pug": "nodemon --watch pug --ext ts,json ./pug/build.ts",
+    "dev": "DEBUG_COLORS=1 concurrently --names \"TS,PUG,DOC,HTTPS\" -c \"bgBlue,bgYellow,bgGray,bgGreen\" \"yarn dev:ts\" \"yarn dev:pug\" \"yarn dev:docs\" \"yarn dev:https\"",
+    "docs": "typedoc",
     "lint:ci": "eslint --ext .mjs,.cjs,.js,.ts,.pug .",
     "lint": "yarn lint:ci --fix",
     "mkcert": "mkdir ./mkcert && mkcert -key-file ./mkcert/key.pem -cert-file ./mkcert/cert.pem -ecdsa localhost",
