@@ -69,10 +69,10 @@ export class ChameleonUltra {
    * const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS
    *
    * const ultraUsb = new ChameleonUltra()
-   * ultraUsb.use(WebserialAdapter)
+   * ultraUsb.use(new WebserialAdapter())
    *
    * const ultraBle = new ChameleonUltra()
-   * ultraBle.use(WebbleAdapter)
+   * ultraBle.use(new WebbleAdapter())
    * ```
    *
    * Example usage in CommonJS:
@@ -81,12 +81,16 @@ export class ChameleonUltra {
    * const { Buffer, ChameleonUltra } = require('chameleon-ultra.js')
    * const WebbleAdapter = require('chameleon-ultra.js/plugin/WebbleAdapter')
    * const WebserialAdapter = require('chameleon-ultra.js/plugin/WebserialAdapter')
+   * const SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
    *
    * const ultraUsb = new ChameleonUltra()
-   * ultraUsb.use(WebserialAdapter)
+   * ultraUsb.use(new WebserialAdapter())
    *
    * const ultraBle = new ChameleonUltra()
-   * ultraBle.use(WebbleAdapter)
+   * ultraBle.use(new WebbleAdapter())
+   *
+   * const ultraNode = new ChameleonUltra()
+   * ultraNode.use(new SerialPortAdapter())
    * ```
    *
    * Example usage in ESM:
@@ -95,12 +99,16 @@ export class ChameleonUltra {
    * import { Buffer, ChameleonUltra } from 'chameleon-ultra.js'
    * import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
    * import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+   * import SerialPortAdapter = from 'chameleon-ultra.js/plugin/SerialPortAdapter'
    *
    * const ultraUsb = new ChameleonUltra()
-   * ultraUsb.use(WebserialAdapter)
+   * ultraUsb.use(new WebserialAdapter())
    *
    * const ultraBle = new ChameleonUltra()
-   * ultraBle.use(WebbleAdapter)
+   * ultraBle.use(new WebbleAdapter())
+   *
+   * const ultraNode = new ChameleonUltra()
+   * ultraNode.use(new SerialPortAdapter())
    * ```
    */
   constructor (debug = false) {
