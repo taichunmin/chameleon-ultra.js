@@ -1,9 +1,9 @@
 import _ from 'lodash'
 import { bluetooth } from 'webbluetooth'
 import { Buffer } from '../buffer'
-import { sleep } from '../helper'
-import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext, type Logger } from '../ChameleonUltra'
 import { ReadableStream, type ReadableStreamDefaultController, type UnderlyingSink, type UnderlyingSource, WritableStream } from 'node:stream/web'
+import { sleep } from '../helper'
+import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
 
 const BLESERIAL_FILTERS = [
   { name: 'ChameleonUltra' },
@@ -94,7 +94,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
           isOpen: () => { return this.isOpen },
           readable: new ReadableStream(this.rxSource),
           writable: new WritableStream(this.txSink),
-        } satisfies ChameleonSerialPort<Buffer, Buffer>
+        }
         return await next()
       } catch (err) {
         this.logger.webble(`Failed to connect: ${err.message as string}`)

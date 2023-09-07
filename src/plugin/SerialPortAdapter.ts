@@ -1,8 +1,7 @@
 import _ from 'lodash'
 import { Duplex } from 'stream'
 import { SerialPort } from 'serialport'
-import { type Buffer } from '../buffer'
-import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext, type Logger } from '../ChameleonUltra'
+import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
 
 async function findDevicePath (): Promise<string> {
   const device = _.find(await SerialPort.list(), { vendorId: '6868', productId: '8686' }) // ChameleonUltra
@@ -41,9 +40,9 @@ export default class SerialPortAdapter implements ChameleonPlugin {
         })
         this.duplex?.once('close', () => { void ultra.disconnect() })
         this.logger.serial(`port connected, path = ${path}, baudRate = ${baudRate}`)
-        const ultraPort = Duplex.toWeb(this.duplex) as unknown as Partial<ChameleonSerialPort<Buffer, Buffer>>
-        ultraPort.isOpen = () => { return this.duplex?.isOpen ?? false }
-        ultra.port = ultraPort as any satisfies ChameleonSerialPort<Buffer, Buffer>
+        ultra.port = _.merge(Duplex.toWeb(this.duplex), {
+          isOpen: () => { return this.duplex?.isOpen ?? false },
+        })
         return await next()
       } catch (err) {
         this.logger.serial(err)

@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
+import { ChameleonUltraDecoder as UltraDecoder, type EmuMf1AntiColl, type Hf14aInfoResp } from './ChameleonUltraDecoder'
 import { createIsEnum, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
@@ -587,10 +588,10 @@ export class ChameleonUltra {
    * @returns The slot info of all slots.
    * @group Commands related to slot
    */
-  async cmdGetSlotInfo (): Promise<SlotInfo[]> {
+  async cmdGetSlotInfo (): Promise<ReturnType<typeof UltraDecoder.parseSlotInfo>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_SLOT_INFO }) // cmd = 1019
-    return mf1ParseSlotInfo((await this._readRespTimeout())?.data)
+    return UltraDecoder.parseSlotInfo((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -633,10 +634,10 @@ export class ChameleonUltra {
    * @returns The battery info of device.
    * @group Commands related to device
    */
-  async cmdGetBatteryInfo (): Promise<BatteryInfo> {
+  async cmdGetBatteryInfo (): Promise<ReturnType<typeof UltraDecoder.parseBatteryInfo>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_BATTERY_INFO }) // cmd = 1025
-    return mf1ParseBatteryInfo((await this._readRespTimeout())?.data)
+    return UltraDecoder.parseBatteryInfo((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -706,6 +707,7 @@ export class ChameleonUltra {
    */
   async cmdBleSetConnectKey (key: string): Promise<void> {
     if (!_.isString(key) || !/^\d{6}$/.test(key)) throw new TypeError('Invalid key, must be 6 digits')
+    this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SET_BLE_CONNECT_KEY_CONFIG, data: Buffer.from(key) }) // cmd = 1030
     await this._readRespTimeout()
   }
@@ -716,6 +718,7 @@ export class ChameleonUltra {
    * @group Commands related to device
    */
   async cmdBleGetConnectKey (): Promise<string> {
+    this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_BLE_CONNECT_KEY_CONFIG }) // cmd = 1031
     return (await this._readRespTimeout())?.data.toString('utf8')
   }
@@ -725,7 +728,53 @@ export class ChameleonUltra {
    * @group Commands related to device
    */
   async cmdBleDeleteAllBonds (): Promise<void> {
-    await this._writeCmd({ cmd: Cmd.DELETE_ALL_BLE_BONDS }) // cmd = 1031
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.DELETE_ALL_BLE_BONDS }) // cmd = 1032
+    await this._readRespTimeout()
+  }
+
+  /**
+   * Get the device is ChameleonUltra or ChameleonLite.
+   * @returns `true` if device is ChameleonUltra, `false` if device is ChameleonLite.
+   * @group Commands related to device
+   */
+  async cmdIsUltra (): Promise<boolean> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_DEVICE }) // cmd = 1033
+    const data = (await this._readRespTimeout())?.data
+    return data[0] === 0x01
+  }
+
+  /**
+   * Get the settings of device.
+   * @returns The settings of device.
+   * @group Commands related to device
+   */
+  async cmdGetDeviceSettings (): Promise<ReturnType<typeof UltraDecoder.parseDeviceSettings>> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_SETTINGS }) // cmd = 1034
+    return UltraDecoder.parseDeviceSettings((await this._readRespTimeout())?.data)
+  }
+
+  /**
+   * Get the ble pairing mode of device.
+   * @returns `true` if pairing is required to connect to device, otherwise return `false`.
+   * @group Commands related to device
+   */
+  async cmdBleGetPairingMode (): Promise<boolean> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_BLE_PAIRING_ENABLE }) // cmd = 1036
+    return (await this._readRespTimeout())?.data[0] === 1
+  }
+
+  /**
+   * Set if the ble pairing is required when connecting to device.
+   * @param enable `true` to enable pairing mode, `false` to disable pairing mode.
+   * @group Commands related to device
+   */
+  async cmdBleSetPairingMode (enable: boolean): Promise<void> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.SET_BLE_PAIRING_ENABLE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 1037
     await this._readRespTimeout()
   }
 
@@ -735,15 +784,15 @@ export class ChameleonUltra {
    * @throws This command will throw an error if tag not scanned or any error occured.
    * @group Commands related to device mode: READER
    */
-  async cmdScan14aTag (): Promise<Picc14aTag> {
+  async cmdScan14aTag (): Promise<ReturnType<typeof UltraDecoder.parsePicc14aTag>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SCAN_14A_TAG }) // cmd = 2000
-    return mf1ParsePicc14aTag((await this._readRespTimeout())?.data)
+    return UltraDecoder.parsePicc14aTag((await this._readRespTimeout())?.data)
   }
 
   /**
    * Check if the tag support mifare protocol.
-   * @returns `true` if device support mf1, `false` if device not support mf1.
+   * @returns `true` if device support mf1, otherwise return `false`.
    * @group Commands related to device mode: READER
    */
   async cmdIsSupportMf1 (): Promise<boolean> {
@@ -798,13 +847,13 @@ export class ChameleonUltra {
    * @group Commands related to device mode: READER
    * @alpha
    */
-  async cmdAcquireMf1Darkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax = 15): Promise<Mf1DarksideCore> {
+  async cmdAcquireMf1Darkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax = 15): Promise<ReturnType<typeof UltraDecoder.parseMf1DarksideCore>> {
     this._clearRxBufs()
     await this._writeCmd({
       cmd: Cmd.MF1_DARKSIDE_ACQUIRE, // cmd = 2004
       data: Buffer.from([keyType, block, isFirst ? 1 : 0, syncMax]),
     })
-    return mf1ParseDarksideCore((await this._readRespTimeout({ timeout: (syncMax + 5) * 1000 }))?.data)
+    return UltraDecoder.parseMf1DarksideCore((await this._readRespTimeout({ timeout: (syncMax + 5) * 1000 }))?.data)
   }
 
   /**
@@ -814,7 +863,7 @@ export class ChameleonUltra {
    * @group Commands related to device mode: READER
    * @alpha
    */
-  async cmdTestMf1NtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<Mf1NtDistance> {
+  async cmdTestMf1NtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<ReturnType<typeof UltraDecoder.parseMf1NtDistance>> {
     if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
     if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
     this._clearRxBufs()
@@ -822,7 +871,7 @@ export class ChameleonUltra {
       cmd: Cmd.MF1_NT_DIST_DETECT, // cmd = 2005
       data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey]),
     })
-    return mf1ParseNtDistance((await this._readRespTimeout())?.data)
+    return UltraDecoder.parseMf1NtDistance((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -835,7 +884,7 @@ export class ChameleonUltra {
   async cmdAcquireMf1Nested ({
     src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') },
     dst: { dstBlock = 0, dstKeyType = Mf1KeyType.KEY_A },
-  }: CmdAcquireMf1NestedArgs): Promise<Mf1NestedCore> {
+  }: CmdAcquireMf1NestedArgs): Promise<ReturnType<typeof UltraDecoder.parseMf1NestedCore>> {
     if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
     if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
     if (!_.isSafeInteger(dstKeyType) || !isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dstKeyType')
@@ -844,7 +893,7 @@ export class ChameleonUltra {
       cmd: Cmd.MF1_NESTED_ACQUIRE, // cmd = 2006
       data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey, Buffer.from([dstKeyType, dstBlock])]),
     })
-    return mf1ParseNestedCore((await this._readRespTimeout())?.data)
+    return UltraDecoder.parseMf1NestedCore((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -969,10 +1018,10 @@ export class ChameleonUltra {
    * @param args
    * @group Commands related to device mode: TAG
    */
-  async cmdEmuSetMf1AntiColl ({ sak, atqa, uid }: SlotEmuMf1AntiColl): Promise<void> {
+  async cmdEmuSetMf1AntiColl ({ sak, atqa, uid }: EmuMf1AntiColl): Promise<void> {
     if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
     if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
-    if (!Buffer.isBuffer(uid) || uid.length !== 4) throw new TypeError('uid should be a Buffer with length 4')
+    if (!Buffer.isBuffer(uid) || !_.includes([4, 7, 10], uid.length)) throw new TypeError('uid should be a Buffer with length 4, 7 or 10')
     this._clearRxBufs()
     await this._writeCmd({
       cmd: Cmd.SET_MF1_ANTI_COLLISION_RES, // cmd = 4001
@@ -1009,11 +1058,11 @@ export class ChameleonUltra {
    * @returns The mifare mfkey32v32 detections.
    * @group Commands related to device mode: TAG
    */
-  async cmdGetMf1Detections (index: number = 0): Promise<Mf1Detection[]> {
+  async cmdGetMf1Detections (index: number = 0): Promise<Array<ReturnType<typeof UltraDecoder.parseMf1Detection>>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_MF1_DETECTION_RESULT, data: new Buffer(4).writeUInt32BE(index) }) // cmd = 4006
     const data = (await this._readRespTimeout())?.data
-    return _.map(data.chunk(18), mf1ParseAuthLog)
+    return _.map(data.chunk(18), UltraDecoder.parseMf1Detection)
   }
 
   /**
@@ -1037,10 +1086,10 @@ export class ChameleonUltra {
    * @returns The mifare config of emulator.
    * @group Commands related to device mode: TAG
    */
-  async cmdEmuGetMf1Config (): Promise<EmuMf1Config> {
+  async cmdEmuGetMf1Config (): Promise<ReturnType<typeof UltraDecoder.parseEmuMf1Config>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_MF1_EMULATOR_CONFIG }) // cmd = 4009
-    return mf1ParseEmuConfig((await this._readRespTimeout())?.data)
+    return UltraDecoder.parseEmuMf1Config((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -1130,6 +1179,12 @@ export class ChameleonUltra {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SET_MF1_WRITE_MODE, data: Buffer.from([mode]) }) // cmd = 4017
     await this._readRespTimeout()
+  }
+
+  async cmdEmuGetMf1AntiColl (): Promise<EmuMf1AntiColl> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_MF1_ANTI_COLL_DATA }) // cmd = 4018
+    return UltraDecoder.parseEmuMf1AntiColl((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -1229,6 +1284,12 @@ export enum Cmd {
 
   DELETE_ALL_BLE_BONDS = 1032,
 
+  GET_DEVICE = 1033,
+  GET_SETTINGS = 1034,
+  GET_DEVICE_CAPABILITIES = 1035,
+  GET_BLE_PAIRING_ENABLE = 1036,
+  SET_BLE_PAIRING_ENABLE = 1037,
+
   SCAN_14A_TAG = 2000,
   MF1_SUPPORT_DETECT = 2001,
   MF1_NT_LEVEL_DETECT = 2002,
@@ -1261,6 +1322,7 @@ export enum Cmd {
   SET_MF1_USE_FIRST_BLOCK_COLL = 4015,
   GET_MF1_WRITE_MODE = 4016,
   SET_MF1_WRITE_MODE = 4017,
+  GET_MF1_ANTI_COLL_DATA = 4018,
 
   SET_EM410X_EMU_ID = 5000,
   GET_EM410X_EMU_ID = 5001,
@@ -1465,31 +1527,7 @@ export class ChameleonUltraFrame {
   get data (): Buffer { return this.buf.subarray(9, -1) }
 }
 
-export interface Picc14aTag {
-  uid: Buffer
-  cascade: number
-  sak: Buffer
-  atqa: Buffer
-}
-
-export function mf1ParsePicc14aTag (buf: Buffer): Picc14aTag {
-  if (!Buffer.isBuffer(buf) || buf.length !== 15) throw new TypeError('buf should be a Buffer with length 15')
-  return {
-    uid: buf.subarray(0, buf[10]),
-    cascade: buf[11],
-    sak: buf.subarray(12, 13),
-    atqa: buf.subarray(13, 15),
-  }
-}
-
 export type Mf1NtLevel = 'static' | 'weak' | 'hard' | 'unknown'
-
-export interface Hf14aInfoResp {
-  tag: Picc14aTag
-  mifare?: {
-    prngAttack: Mf1NtLevel
-  }
-}
 
 export enum Mf1KeyType {
   KEY_A = 0x60,
@@ -1516,38 +1554,6 @@ export interface CmdWriteMf1BlockArgs {
   data?: Buffer
 }
 
-export interface Mf1Detection {
-  block: number
-  isKeyB: boolean
-  isNested: boolean
-  uid: Buffer
-  nt: Buffer
-  nr: Buffer
-  ar: Buffer
-}
-
-export function mf1ParseAuthLog (buf: Buffer): Mf1Detection {
-  if (!Buffer.isBuffer(buf) || buf.length !== 18) throw new TypeError('buf should be a Buffer with length 18')
-  return {
-    block: buf[0],
-    isKeyB: buf.subarray(1, 2).readBitLSB(0) === 1,
-    isNested: buf.subarray(1, 2).readBitLSB(1) === 1,
-    uid: buf.subarray(2, 6),
-    nt: buf.subarray(6, 10),
-    nr: buf.subarray(10, 14),
-    ar: buf.subarray(14, 18),
-  }
-}
-
-export interface SlotEmuMf1AntiColl {
-  /** The sak of emulator. */
-  sak: Buffer
-  /** The atqa of emulator. */
-  atqa: Buffer
-  /** The uid of emulator. */
-  uid: Buffer
-}
-
 export enum EmuMf1WriteMode {
   /** Normal write as standard mifare */
   NORMAL = 0,
@@ -1560,57 +1566,12 @@ export enum EmuMf1WriteMode {
 }
 export const isEmuMf1WriteMode = createIsEnum(EmuMf1WriteMode)
 
-export interface EmuMf1Config {
-  detection: boolean
-  gen1a: boolean
-  gen2: boolean
-  block0AntiColl: boolean
-  write: EmuMf1WriteMode
-}
-
-export function mf1ParseEmuConfig (buf: Buffer): EmuMf1Config {
-  if (!Buffer.isBuffer(buf) || buf.length !== 5) throw new TypeError('buf should be a Buffer with length 5')
-  return {
-    detection: buf[0] === 1,
-    gen1a: buf[1] === 1,
-    gen2: buf[2] === 1,
-    block0AntiColl: buf[3] === 1,
-    write: buf[4],
-  }
-}
-
 export enum AnimationMode {
   FULL = 0,
   SHORT = 1,
   NONE = 2,
 }
 export const isAnimationMode = createIsEnum(AnimationMode)
-
-export interface BatteryInfo {
-  voltage: number
-  level: number
-}
-
-export function mf1ParseBatteryInfo (buf: Buffer): BatteryInfo {
-  if (!Buffer.isBuffer(buf) || buf.length !== 3) throw new TypeError('buf should be a Buffer with length 3')
-  return {
-    voltage: buf.readUInt16BE(0),
-    level: buf[2],
-  }
-}
-
-export interface SlotInfo {
-  hfTagType: TagType
-  lfTagType: TagType
-}
-
-export function mf1ParseSlotInfo (buf: Buffer): SlotInfo[] {
-  if (!Buffer.isBuffer(buf) || buf.length !== 16) throw new TypeError('buf should be a Buffer with length 16')
-  return _.times(8, i => ({
-    hfTagType: buf[2 * i],
-    lfTagType: buf[2 * i + 1],
-  }))
-}
 
 export function frameToString (buf: any): string {
   if (!Buffer.isBuffer(buf)) return 'Invalid frame'
@@ -1624,19 +1585,6 @@ export function frameToString (buf: any): string {
     buf.readUInt16LE(6) > 0 ? buf.slice(9, -1).toString('hex') : '(no data)', // data
     buf.slice(-1).toString('hex'), // data lrc
   ].join(' ')
-}
-
-export interface Mf1NtDistance {
-  uid: Buffer
-  distance: Buffer
-}
-
-export function mf1ParseNtDistance (buf: Buffer): Mf1NtDistance {
-  if (!Buffer.isBuffer(buf) || buf.length !== 8) throw new TypeError('buf should be a Buffer with length 8')
-  return {
-    uid: buf.subarray(0, 4),
-    distance: buf.subarray(4, 8),
-  }
 }
 
 export interface CmdTestMf1NtDistanceArgs {
@@ -1657,64 +1605,4 @@ export interface CmdAcquireMf1NestedArgs {
     dstKeyType?: Mf1KeyType
     dstBlock?: number
   }
-}
-
-// Answer the random number parameters required for Nested attack
-export interface Mf1NestedCore {
-  nt1: Buffer // Unblocked explicitly random number
-  nt2: Buffer // Random number of nested verification encryption
-  par: Buffer // The puppet test of the communication process of nested verification encryption, only the "low 3 digits', that is, the right 3
-}
-
-export function mf1ParseNestedCore (buf: Buffer): Mf1NestedCore {
-  if (!Buffer.isBuffer(buf) || buf.length !== 9) throw new TypeError('buf should be a Buffer with length 9')
-  return {
-    nt1: buf.subarray(0, 4),
-    nt2: buf.subarray(4, 8),
-    par: buf.subarray(8, 9),
-  }
-}
-
-export interface Mf1DarksideCore {
-  uid: Buffer
-  nt: Buffer
-  pars: Buffer
-  kses: Buffer
-  nr: Buffer
-  ar: Buffer
-}
-
-export function mf1ParseDarksideCore (buf: Buffer): Mf1DarksideCore {
-  if (!Buffer.isBuffer(buf) || buf.length !== 32) throw new TypeError('buf should be a Buffer with length 32')
-  return {
-    uid: buf.subarray(0, 4),
-    nt: buf.subarray(4, 8),
-    pars: buf.subarray(8, 16),
-    kses: buf.subarray(16, 24),
-    nr: buf.subarray(24, 28),
-    ar: buf.subarray(28, 32),
-  }
-}
-
-export interface SlotConfig {
-  config: { activated: number }
-  group: Array<{
-    enable: boolean
-    hfTagType: TagType
-    lfTagType: TagType
-  }>
-}
-
-export interface SlotEmuMf1Data {
-  antiColl: SlotEmuMf1AntiColl
-  config: EmuMf1Config
-  body: Buffer
-}
-
-export interface DeviceSettings {
-  version: Buffer
-  animation: number
-  buttonPressAction: ButtonAction[]
-  buttonLongPressAction: ButtonAction[]
-  bleConnectKey: string
 }
