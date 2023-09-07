@@ -4,12 +4,18 @@ import { SerialPort } from 'serialport'
 import { type Buffer } from '../buffer'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext, type Logger } from '../ChameleonUltra'
 
+async function findDevicePath (): Promise<string> {
+  const device = _.find(await SerialPort.list(), { vendorId: '6868', productId: '8686' }) // ChameleonUltra
+  if (_.isNil(device)) throw new Error('device not found')
+  return device?.path
+}
+
 export default class SerialPortAdapter implements ChameleonPlugin {
+  duplex?: SerialPort
   logger: Record<string, Logger> = {}
   name = 'adapter'
-  port?: SerialPort
 
-  async install (context: AdapterInstallContext, pluginOption: SerialPortOption): Promise<AdapterInstallResp> {
+  async install (context: AdapterInstallContext, pluginOption: SerialPortOption = {}): Promise<AdapterInstallResp> {
     const { ultra } = context
     this.logger.serial = ultra.createDebugger('serial')
 
@@ -21,21 +27,22 @@ export default class SerialPortAdapter implements ChameleonPlugin {
 
     adapter.isSupported = (): boolean => !_.isNil(SerialPort)
 
-    if (_.isNil(pluginOption?.baudRate)) pluginOption.baudRate = 115200
-
     ultra.addHook('connect', async (ctx: any, next: () => Promise<unknown>) => {
       if (ultra.$adapter !== adapter) return await next() // 代表已經被其他 adapter 接管
 
       try {
         if (adapter.isSupported() !== true) throw new Error('SerialPort not supported')
 
-        this.port = await new Promise<SerialPort>((resolve, reject) => {
-          const port1 = new SerialPort(pluginOption as any, err => { _.isNil(err) ? resolve(port1) : reject(err) })
+        const baudRate = pluginOption?.baudRate ?? 115200
+        const path = pluginOption?.path ?? await findDevicePath()
+
+        this.duplex = await new Promise<SerialPort>((resolve, reject) => {
+          const tmp = new SerialPort({ baudRate, path }, err => { _.isNil(err) ? resolve(tmp) : reject(err) })
         })
-        this.port?.once('close', () => { void ultra.disconnect() })
-        this.logger.serial(`port connected, path = ${pluginOption.path}, baudRate = ${pluginOption.baudRate as number}`)
-        const ultraPort = Duplex.toWeb(this.port) as unknown as Partial<ChameleonSerialPort<Buffer, Buffer>>
-        ultraPort.isOpen = () => { return this.port?.isOpen ?? false }
+        this.duplex?.once('close', () => { void ultra.disconnect() })
+        this.logger.serial(`port connected, path = ${path}, baudRate = ${baudRate}`)
+        const ultraPort = Duplex.toWeb(this.duplex) as unknown as Partial<ChameleonSerialPort<Buffer, Buffer>>
+        ultraPort.isOpen = () => { return this.duplex?.isOpen ?? false }
         ultra.port = ultraPort as any satisfies ChameleonSerialPort<Buffer, Buffer>
         return await next()
       } catch (err) {
@@ -45,11 +52,11 @@ export default class SerialPortAdapter implements ChameleonPlugin {
     })
 
     ultra.addHook('disconnect', async (ctx: any, next: () => Promise<unknown>) => {
-      if (ultra.$adapter !== adapter || _.isNil(this.port)) return await next() // 代表已經被其他 adapter 接管
+      if (ultra.$adapter !== adapter || _.isNil(this.duplex)) return await next() // 代表已經被其他 adapter 接管
 
       await next()
-      await new Promise<void>((resolve, reject) => { this.port?.close(err => { _.isNil(err) ? resolve() : reject(err) }) })
-      delete this.port
+      await new Promise<void>((resolve, reject) => { this.duplex?.close(err => { _.isNil(err) ? resolve() : reject(err) }) })
+      delete this.duplex
     })
 
     return adapter as AdapterInstallResp
@@ -61,7 +68,7 @@ type AdapterInstallContext = PluginInstallContext & {
 }
 
 export interface SerialPortOption {
-  path: string
+  path?: string
   baudRate?: number
 }
 
