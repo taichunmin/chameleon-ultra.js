@@ -2,7 +2,7 @@
   "name": "chameleon-ultra.js",
   "version": "0.1.0",
   "main": "index.js",
-  "repository": "git@github.com:taichunmin/ChameleonUltra.js.git",
+  "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
   "author": "taichunmin <taichunmin@gmail.com>",
   "license": "MIT",
   "dependencies": {

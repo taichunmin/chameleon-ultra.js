@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { ChameleonUltraDecoder as UltraDecoder, type EmuMf1AntiColl, type Hf14aInfoResp } from './ChameleonUltraDecoder'
+import { ResponseDecoder, type EmuMf1AntiColl, type Hf14aInfoResp } from './ResponseDecoder'
 import { createIsEnum, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
@@ -9,7 +9,7 @@ const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
 
 /**
- * The core library of "ChameleonUltra.js". The instance of this class must use exactly one adapter plugin to communication to ChameleonUltra.
+ * The core library of "chameleon-ultra.js". The instance of this class must use exactly one adapter plugin to communication to ChameleonUltra.
  */
 export class ChameleonUltra {
   /**
@@ -100,7 +100,7 @@ export class ChameleonUltra {
    * import { Buffer, ChameleonUltra } from 'chameleon-ultra.js'
    * import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
    * import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
-   * import SerialPortAdapter = from 'chameleon-ultra.js/plugin/SerialPortAdapter'
+   * import SerialPortAdapter from 'chameleon-ultra.js/plugin/SerialPortAdapter'
    *
    * const ultraUsb = new ChameleonUltra()
    * ultraUsb.use(new WebserialAdapter())
@@ -588,10 +588,10 @@ export class ChameleonUltra {
    * @returns The slot info of all slots.
    * @group Commands related to slot
    */
-  async cmdGetSlotInfo (): Promise<ReturnType<typeof UltraDecoder.parseSlotInfo>> {
+  async cmdGetSlotInfo (): Promise<ReturnType<typeof ResponseDecoder.parseSlotInfo>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_SLOT_INFO }) // cmd = 1019
-    return UltraDecoder.parseSlotInfo((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parseSlotInfo((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -634,10 +634,10 @@ export class ChameleonUltra {
    * @returns The battery info of device.
    * @group Commands related to device
    */
-  async cmdGetBatteryInfo (): Promise<ReturnType<typeof UltraDecoder.parseBatteryInfo>> {
+  async cmdGetBatteryInfo (): Promise<ReturnType<typeof ResponseDecoder.parseBatteryInfo>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_BATTERY_INFO }) // cmd = 1025
-    return UltraDecoder.parseBatteryInfo((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parseBatteryInfo((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -750,10 +750,10 @@ export class ChameleonUltra {
    * @returns The settings of device.
    * @group Commands related to device
    */
-  async cmdGetDeviceSettings (): Promise<ReturnType<typeof UltraDecoder.parseDeviceSettings>> {
+  async cmdGetDeviceSettings (): Promise<ReturnType<typeof ResponseDecoder.parseDeviceSettings>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_SETTINGS }) // cmd = 1034
-    return UltraDecoder.parseDeviceSettings((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parseDeviceSettings((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -784,10 +784,10 @@ export class ChameleonUltra {
    * @throws This command will throw an error if tag not scanned or any error occured.
    * @group Commands related to device mode: READER
    */
-  async cmdScan14aTag (): Promise<ReturnType<typeof UltraDecoder.parsePicc14aTag>> {
+  async cmdScan14aTag (): Promise<ReturnType<typeof ResponseDecoder.parsePicc14aTag>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SCAN_14A_TAG }) // cmd = 2000
-    return UltraDecoder.parsePicc14aTag((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parsePicc14aTag((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -847,13 +847,13 @@ export class ChameleonUltra {
    * @group Commands related to device mode: READER
    * @alpha
    */
-  async cmdAcquireMf1Darkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax = 15): Promise<ReturnType<typeof UltraDecoder.parseMf1DarksideCore>> {
+  async cmdAcquireMf1Darkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax = 15): Promise<ReturnType<typeof ResponseDecoder.parseMf1DarksideCore>> {
     this._clearRxBufs()
     await this._writeCmd({
       cmd: Cmd.MF1_DARKSIDE_ACQUIRE, // cmd = 2004
       data: Buffer.from([keyType, block, isFirst ? 1 : 0, syncMax]),
     })
-    return UltraDecoder.parseMf1DarksideCore((await this._readRespTimeout({ timeout: (syncMax + 5) * 1000 }))?.data)
+    return ResponseDecoder.parseMf1DarksideCore((await this._readRespTimeout({ timeout: (syncMax + 5) * 1000 }))?.data)
   }
 
   /**
@@ -863,7 +863,7 @@ export class ChameleonUltra {
    * @group Commands related to device mode: READER
    * @alpha
    */
-  async cmdTestMf1NtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<ReturnType<typeof UltraDecoder.parseMf1NtDistance>> {
+  async cmdTestMf1NtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<ReturnType<typeof ResponseDecoder.parseMf1NtDistance>> {
     if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
     if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
     this._clearRxBufs()
@@ -871,7 +871,7 @@ export class ChameleonUltra {
       cmd: Cmd.MF1_NT_DIST_DETECT, // cmd = 2005
       data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey]),
     })
-    return UltraDecoder.parseMf1NtDistance((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parseMf1NtDistance((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -884,7 +884,7 @@ export class ChameleonUltra {
   async cmdAcquireMf1Nested ({
     src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') },
     dst: { dstBlock = 0, dstKeyType = Mf1KeyType.KEY_A },
-  }: CmdAcquireMf1NestedArgs): Promise<ReturnType<typeof UltraDecoder.parseMf1NestedCore>> {
+  }: CmdAcquireMf1NestedArgs): Promise<ReturnType<typeof ResponseDecoder.parseMf1NestedCore>> {
     if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
     if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
     if (!_.isSafeInteger(dstKeyType) || !isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dstKeyType')
@@ -893,7 +893,7 @@ export class ChameleonUltra {
       cmd: Cmd.MF1_NESTED_ACQUIRE, // cmd = 2006
       data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey, Buffer.from([dstKeyType, dstBlock])]),
     })
-    return UltraDecoder.parseMf1NestedCore((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parseMf1NestedCore((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -1058,11 +1058,11 @@ export class ChameleonUltra {
    * @returns The mifare mfkey32v32 detections.
    * @group Commands related to device mode: TAG
    */
-  async cmdGetMf1Detections (index: number = 0): Promise<Array<ReturnType<typeof UltraDecoder.parseMf1Detection>>> {
+  async cmdGetMf1Detections (index: number = 0): Promise<Array<ReturnType<typeof ResponseDecoder.parseMf1Detection>>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_MF1_DETECTION_RESULT, data: new Buffer(4).writeUInt32BE(index) }) // cmd = 4006
     const data = (await this._readRespTimeout())?.data
-    return _.map(data.chunk(18), UltraDecoder.parseMf1Detection)
+    return _.map(data.chunk(18), ResponseDecoder.parseMf1Detection)
   }
 
   /**
@@ -1086,10 +1086,10 @@ export class ChameleonUltra {
    * @returns The mifare config of emulator.
    * @group Commands related to device mode: TAG
    */
-  async cmdEmuGetMf1Config (): Promise<ReturnType<typeof UltraDecoder.parseEmuMf1Config>> {
+  async cmdEmuGetMf1Config (): Promise<ReturnType<typeof ResponseDecoder.parseEmuMf1Config>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_MF1_EMULATOR_CONFIG }) // cmd = 4009
-    return UltraDecoder.parseEmuMf1Config((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parseEmuMf1Config((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -1184,7 +1184,7 @@ export class ChameleonUltra {
   async cmdEmuGetMf1AntiColl (): Promise<EmuMf1AntiColl> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_MF1_ANTI_COLL_DATA }) // cmd = 4018
-    return UltraDecoder.parseEmuMf1AntiColl((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parseEmuMf1AntiColl((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -1606,3 +1606,5 @@ export interface CmdAcquireMf1NestedArgs {
     dstBlock?: number
   }
 }
+
+export { ResponseDecoder }

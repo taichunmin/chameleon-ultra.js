@@ -720,7 +720,7 @@ function castToInteger (x: number | Buffer | string): number {
   return Buffer.from(x as any).readUInt32BE(0)
 }
 
-export interface RecoverContext {
+interface RecoverContext {
   eks: number
   evens: RecoverContextUint32Array
   input: number
@@ -730,7 +730,7 @@ export interface RecoverContext {
   states: Crypto1[]
 }
 
-export interface RecoverContextUint32Array {
+interface RecoverContextUint32Array {
   s: number
   d: Uint32Array
 }
