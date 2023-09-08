@@ -1,10 +1,25 @@
 {
-  "name": "chameleon-ultra.js",
-  "version": "0.1.0",
-  "main": "index.js",
-  "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
   "author": "taichunmin <taichunmin@gmail.com>",
+  "browser": "dist/iife/index.min.js",
+  "description": "A JavaScript SDK for ChameleonUltra using Web Bluetooth, Web Serial and SerialPort.",
+  "homepage": "https://taichunmin.idv.tw/chameleon-ultra.js/docs/",
+  "jsdelivr": "dist/iife/index.min.js",
   "license": "MIT",
+  "main": "index.js",
+  "name": "chameleon-ultra.js",
+  "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
+  "unpkg": "dist/iife/index.min.js",
+  "version": "0.1.0",
+  "bugs": {
+    "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
+  },
+  "contributors": [
+    {
+      "email": "taichunmin@gmail.com",
+      "name": "Chunmin Tai",
+      "url": "https://taichunmin.idv.tw"
+    }
+  ],
   "dependencies": {
     "debug": "^4.3.4",
     "lodash": "^4.17.21",
@@ -12,6 +27,55 @@
     "web-serial-polyfill": "^1.0.14",
     "webbluetooth": "^3.1.0"
   },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": "./dist/es/index.mjs",
+      "require": "./dist/cjs/index.cjs",
+      "browser": "./dist/iife/index.min.js"
+    },
+    "./buffer": {
+      "import": "./dist/es/buffer.mjs",
+      "require": "./dist/cjs/buffer.cjs",
+      "browser": "./dist/iife/buffer.min.js"
+    },
+    "./Crypto1": {
+      "import": "./dist/es/Crypto1.mjs",
+      "require": "./dist/cjs/Crypto1.cjs",
+      "browser": "./dist/iife/Crypto1.min.js"
+    },
+    "./plugin/SerialPortAdapter": {
+      "import": "./dist/es/plugin/SerialPortAdapter.mjs",
+      "require": "./dist/cjs/plugin/SerialPortAdapter.cjs"
+    },
+    "./plugin/WebbleAdapter": {
+      "import": "./dist/es/plugin/WebbleAdapter.mjs",
+      "require": "./dist/cjs/plugin/WebbleAdapter.cjs",
+      "browser": "./dist/iife/plugin/WebbleAdapter.min.js"
+    },
+    "./plugin/WebserialAdapter": {
+      "import": "./dist/es/plugin/WebserialAdapter.mjs",
+      "require": "./dist/cjs/plugin/WebserialAdapter.cjs",
+      "browser": "./dist/iife/plugin/WebserialAdapter.min.js"
+    }
+  },
+  "keywords": [
+    "browser",
+    "chameleon-ultra",
+    "chrome",
+    "COM",
+    "mifare classic",
+    "nfc",
+    "RFID",
+    "serial port",
+    "serial",
+    "serialport",
+    "UART",
+    "web bluetooth",
+    "web serial",
+    "web-bluetooth-api",
+    "web-serial-api"
+  ],
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.4",
     "@rollup/plugin-node-resolve": "^15.2.1",
@@ -70,13 +134,14 @@
     "build": "rimraf ./dist && mkdir -p dist && ts-node ./pug/build.ts && rollup --config rollup.config.mjs && typedoc && touch ./dist/.nojekyll",
     "dev:docs": "nodemon --watch src --ext ts,json --exec typedoc",
     "dev:https": "ts-node ./https.ts",
-    "dev:ts": "nodemon --watch src --ext ts,json --exec \"rollup --config rollup.config.mjs\"",
     "dev:pug": "nodemon --watch pug --ext ts,json ./pug/build.ts",
+    "dev:ts": "nodemon --watch src --ext ts,json --exec \"rollup --config rollup.config.mjs\"",
     "dev": "DEBUG_COLORS=1 concurrently --names \"TS,PUG,DOC,HTTPS\" -c \"bgBlue,bgYellow,bgGray,bgGreen\" \"yarn dev:ts\" \"yarn dev:pug\" \"yarn dev:docs\" \"yarn dev:https\"",
     "docs": "typedoc",
     "lint:ci": "eslint --ext .mjs,.cjs,.js,.ts,.pug .",
     "lint": "yarn lint:ci --fix",
     "mkcert": "mkdir ./mkcert && mkcert -key-file ./mkcert/key.pem -cert-file ./mkcert/cert.pem -ecdsa localhost",
-    "test": "jest --roots ./src --"
+    "test:publish": "npm publish --dry-run",
+    "test": "jest --roots ./src"
   }
 }
