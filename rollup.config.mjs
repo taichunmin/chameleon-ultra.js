@@ -101,6 +101,7 @@ export default [
     input: `src/plugin/WebbleAdapter.ts`,
     plugins: [typescript(tsconfig), nodeResolve({ browser: true }), commonjs()],
     output: [
+      { file: `dist/cjs/plugin/WebbleAdapter.cjs`, format: 'cjs' },
       { file: `dist/es/plugin/WebbleAdapter.mjs`, format: 'es' },
       { file: 'dist/iife/plugin/WebbleAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebbleAdapter' },
       { file: 'dist/iife/plugin/WebbleAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebbleAdapter', plugins: [terser(terserConfig)] },
@@ -113,6 +114,7 @@ export default [
     input: `src/plugin/WebserialAdapter.ts`,
     plugins: [typescript(tsconfig), nodeResolve({ browser: true }), commonjs()],
     output: [
+      { file: `dist/cjs/plugin/WebserialAdapter.cjs`, format: 'cjs' },
       { file: `dist/es/plugin/WebserialAdapter.mjs`, format: 'es' },
       { file: 'dist/iife/plugin/WebserialAdapter.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter' },
       { file: 'dist/iife/plugin/WebserialAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter', plugins: [terser(terserConfig)] },

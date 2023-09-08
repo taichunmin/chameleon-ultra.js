@@ -1,8 +1,10 @@
-name: github pages
+name: Build docs and mpm publish
 
 on:
   workflow_dispatch:
   push:
+    branches: [ master ]
+  pull_request:
     branches: [ master ]
 
 permissions:
@@ -11,30 +13,50 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'yarn'
+      - name: install, lint, test, build
+        run: |
+          set -ex
+          yarn
+          yarn lint
+          yarn test --coverage
+          yarn build
+          yarn test:publish
   deploy:
+    if: github.ref == 'refs/heads/master'
+    needs: test
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: 18
           cache: 'yarn'
+      - uses: actions/configure-pages@v3
       - name: install and build
         run: |
+          set -ex
           yarn
+          yarn test --coverage
           yarn build
-          yarn test
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
@@ -42,3 +64,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
+      - name: 發布至 npm
+        uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
