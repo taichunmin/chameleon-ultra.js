@@ -137,14 +137,15 @@ out
 *.config.js
 *.config.mjs
 *.html
-*.xml
 *.test.ts
+*.xml
 *.yml
 /.editorconfig
 /.eslintignore
 /.eslintrc.*
 /.gitattributes
 /.github
+/.rollup.cache
 /*.ts
 /dist/docs
 /pages

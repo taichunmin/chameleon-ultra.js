@@ -1,0 +1,11 @@
+{
+  "exclude": ["./dist/**/*", "./node_modules/**/*", "./**/*.d.ts", "./**/*.test.ts"],
+  "extends": "@tsconfig/node-lts/tsconfig.json",
+  "include": ["./src/**/*.js", "./src/**/*.cjs", "./src/**/*.mjs", "./src/**/*.ts"],
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "./dist/types",
+    "rootDir": "./src",
+    "useUnknownInCatchVariables": false
+  }
+}
