@@ -7,7 +7,7 @@ import { type ButtonAction, type TagType, type EmuMf1WriteMode, type Mf1NtLevel 
  * @internal
  * @group Internal
  */
-export class ChameleonUltraDecoder { // eslint-disable-line @typescript-eslint/no-extraneous-class
+export class ResponseDecoder { // eslint-disable-line @typescript-eslint/no-extraneous-class
   static parsePicc14aTag (buf: Buffer): Picc14aTag {
     if (!Buffer.isBuffer(buf) || buf.length !== 15) throw new TypeError('buf should be a Buffer with length 15')
     return {

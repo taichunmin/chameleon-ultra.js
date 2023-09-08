@@ -16,18 +16,16 @@
     "out": "dist/docs",
     "plugin": ["typedoc-plugin-mdn-links", "typedoc-plugin-missing-exports", "typedoc-plugin-rename-defaults"],
     "navigationLinks": {
-      "GitHub": "https://github.com/taichunmin/ChameleonUltra.js"
-    },
-    "sidebarLinks": {
-      "DEMO: Mifare Key Detect": "https://taichunmin.idv.tw/ChameleonUltra.js/mifare-key-detect.html"
+      "Demos": "https://github.com/taichunmin/chameleon-ultra.js/blob/master/pages/demos.md",
+      "GitHub": "https://github.com/taichunmin/chameleon-ultra.js"
     },
     "entryPoints": [
       "src/buffer.ts",
       "src/Crypto1.ts",
-      "src/index.ts",
       "src/plugin/SerialPortAdapter.ts",
       "src/plugin/WebbleAdapter.ts",
-      "src/plugin/WebserialAdapter.ts"
+      "src/plugin/WebserialAdapter.ts",
+      "src/index.ts"
     ],
     "groupOrder": [
       "Constructors",
