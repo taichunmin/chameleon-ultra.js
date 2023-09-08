@@ -151,4 +151,5 @@ out
 /pages
 /pug
 /src/example
+/tsconfig.*.json
 /tsconfig.json

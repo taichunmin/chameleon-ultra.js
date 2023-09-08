@@ -1,5 +1,5 @@
 {
-  "exclude": ["./dist/**/*", "./node_modules/**/*", "./**/*.d.ts", "./**/*.test.ts"],
+  "exclude": ["./dist/**/*", "./node_modules/**/*", "./**/*.d.ts", "./**/*.test.ts", "./src/example/**/*"],
   "extends": "@tsconfig/node-lts/tsconfig.json",
   "include": ["./src/**/*.js", "./src/**/*.cjs", "./src/**/*.mjs", "./src/**/*.ts"],
   "compilerOptions": {

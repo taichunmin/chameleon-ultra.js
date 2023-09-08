@@ -103,7 +103,8 @@ export class ResponseDecoder { // eslint-disable-line @typescript-eslint/no-extr
       animation: buf[1],
       buttonPressAction: [...buf.subarray(2, 4).values()],
       buttonLongPressAction: [...buf.subarray(4, 6).values()],
-      bleConnectKey: buf.subarray(6, 12).toString('utf8'),
+      blePairingMode: buf[6] === 1,
+      blePairingKey: buf.subarray(7, 13).toString('utf8'),
     }
   }
 }
@@ -195,12 +196,13 @@ export interface Mf1DarksideCore {
   ar: Buffer
 }
 
-export interface DeviceSettingsV4 {
+export interface DeviceSettingsV5 {
   version: number
   animation: number
   buttonPressAction: ButtonAction[]
   buttonLongPressAction: ButtonAction[]
-  bleConnectKey: string
+  blePairingMode: boolean
+  blePairingKey: string
 }
 
-export type DeviceSettings = DeviceSettingsV4
+export type DeviceSettings = DeviceSettingsV5
