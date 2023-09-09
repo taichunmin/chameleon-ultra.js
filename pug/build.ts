@@ -1,7 +1,7 @@
 import { getenv, getSiteurl } from './dotenv'
 
 import _ from 'lodash'
-import { errToJson, genSitemap } from './utils'
+import { errToJson } from './utils'
 import { inspect } from 'util'
 import { minify as htmlMinifier } from 'html-minifier'
 import { promises as fsPromises } from 'fs'
@@ -62,8 +62,6 @@ export async function build (): Promise<void> {
     }
   }
   if (pugErrors > 0) throw new Error(`Failed to render ${pugErrors} pug files.`)
-
-  await genSitemap({ baseurl: PUG_OPTIONS.baseurl, dist: path.resolve(__dirname, '../dist/'), urls: sitemapUrls })
 }
 
 if (require.main === module) {

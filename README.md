@@ -4,12 +4,12 @@
 
 <p>A JavaScript SDK for ChameleonUltra using Web Bluetooth, Web Serial and SerialPort.</p>
 
-[API Reference](https://taichunmin.idv.tw/chameleon-ultra.js/docs/) | [Demos](pages/demos.md)
+[API Reference](https://taichunmin.idv.tw/chameleon-ultra.js/docs/) | [Demos]([pages/demos.md](https://github.com/taichunmin/chameleon-ultra.js/blob/master/pages/demos.md))
 
 [![npm version](https://img.shields.io/npm/v/chameleon-ultra.js.svg?logo=npm)](https://www.npmjs.org/package/chameleon-ultra.js)
 [![jsdelivr hits](https://img.shields.io/jsdelivr/npm/hm/chameleon-ultra.js?logo=jsdelivr)](https://www.jsdelivr.com/package/npm/chameleon-ultra.js)
 [![Build status](https://img.shields.io/github/actions/workflow/status/taichunmin/chameleon-ultra.js/ci.yml?branch=master)](https://github.com/taichunmin/chameleon-ultra.js/actions/workflows/ci.yml)
-[![code coverage](https://img.shields.io/coverallsCoverage/github/taichunmin/chameleon-ultra.js)](https://coveralls.io/github/taichunmin/chameleon-ultra.js)
+[![Coverage Status](https://img.shields.io/coverallsCoverage/github/taichunmin/chameleon-ultra.js?branch=master)](https://coveralls.io/github/taichunmin/chameleon-ultra.js?branch=master)
 [![install size](https://img.shields.io/badge/dynamic/json?url=https://packagephobia.com/v2/api.json?p=chameleon-ultra.js&query=$.install.pretty&label=install%20size)](https://packagephobia.now.sh/result?p=chameleon-ultra.js)
 [![npm bundle size](https://img.shields.io/bundlephobia/minzip/chameleon-ultra.js)](https://bundlephobia.com/package/chameleon-ultra.js@latest)
 [![npm downloads](https://img.shields.io/npm/dm/chameleon-ultra.js.svg)](https://npm-stat.com/charts.html?package=chameleon-ultra.js)
