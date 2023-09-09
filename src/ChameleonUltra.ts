@@ -705,7 +705,7 @@ export class ChameleonUltra {
    * @param key The new ble connect key.
    * @group Commands related to device
    */
-  async cmdBleSetConnectKey (key: string): Promise<void> {
+  async cmdBleSetPairingKey (key: string): Promise<void> {
     if (!_.isString(key) || !/^\d{6}$/.test(key)) throw new TypeError('Invalid key, must be 6 digits')
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SET_BLE_CONNECT_KEY_CONFIG, data: Buffer.from(key) }) // cmd = 1030
@@ -717,7 +717,7 @@ export class ChameleonUltra {
    * @returns The ble connect key.
    * @group Commands related to device
    */
-  async cmdBleGetConnectKey (): Promise<string> {
+  async cmdBleGetPairingKey (): Promise<string> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_BLE_CONNECT_KEY_CONFIG }) // cmd = 1031
     return (await this._readRespTimeout())?.data.toString('utf8')
@@ -1074,10 +1074,7 @@ export class ChameleonUltra {
    */
   async cmdEmuGetMf1Block (blockStart: number = 0, blockCount: number = 1): Promise<Buffer> {
     this._clearRxBufs()
-    const buf = new Buffer(3)
-    buf.writeUInt8(blockStart)
-    buf.writeUInt16LE(blockCount, 1)
-    await this._writeCmd({ cmd: Cmd.READ_MF1_EMU_BLOCK_DATA, data: buf }) // cmd = 4008
+    await this._writeCmd({ cmd: Cmd.READ_MF1_EMU_BLOCK_DATA, data: new Buffer([blockStart, blockCount]) }) // cmd = 4008
     return (await this._readRespTimeout())?.data
   }
 

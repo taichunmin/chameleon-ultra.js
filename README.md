@@ -14,7 +14,8 @@
 [![npm bundle size](https://img.shields.io/bundlephobia/minzip/chameleon-ultra.js)](https://bundlephobia.com/package/chameleon-ultra.js@latest)
 [![npm downloads](https://img.shields.io/npm/dm/chameleon-ultra.js.svg)](https://npm-stat.com/charts.html?package=chameleon-ultra.js)
 [![GitHub contributors](https://img.shields.io/github/contributors/taichunmin/chameleon-ultra.js)](https://github.com/taichunmin/chameleon-ultra.js/graphs/contributors)
-[![Known Vulnerabilities](https://snyk.io/test/npm/chameleon-ultra.js/badge.svg)](https://snyk.io/test/npm/chameleon-ultra.js)
+[![Known vulnerabilities](https://snyk.io/test/npm/chameleon-ultra.js/badge.svg)](https://snyk.io/test/npm/chameleon-ultra.js)
+[![MIT License](https://img.shields.io/github/license/taichunmin/chameleon-ultra.js)](https://github.com/taichunmin/chameleon-ultra.js/blob/master/LICENSE)
 
 </div>
 

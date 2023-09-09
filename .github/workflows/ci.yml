@@ -1,4 +1,4 @@
-name: Build docs and mpm publish
+name: Build docs and npm publish
 
 on:
   workflow_dispatch:
