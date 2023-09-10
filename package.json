@@ -27,61 +27,6 @@
     "web-serial-polyfill": "^1.0.14",
     "webbluetooth": "^3.1.0"
   },
-  "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "browser": "./dist/iife/index.min.js",
-      "import": "./dist/es/index.mjs",
-      "require": "./dist/cjs/index.cjs",
-      "types": "./dist/types/index.d.ts"
-    },
-    "./buffer": {
-      "browser": "./dist/iife/buffer.min.js",
-      "import": "./dist/es/buffer.mjs",
-      "require": "./dist/cjs/buffer.cjs",
-      "types": "./dist/types/buffer.d.ts"
-    },
-    "./Crypto1": {
-      "browser": "./dist/iife/Crypto1.min.js",
-      "import": "./dist/es/Crypto1.mjs",
-      "require": "./dist/cjs/Crypto1.cjs",
-      "types": "./dist/types/Crypto1.d.ts"
-    },
-    "./plugin/SerialPortAdapter": {
-      "import": "./dist/es/plugin/SerialPortAdapter.mjs",
-      "require": "./dist/cjs/plugin/SerialPortAdapter.cjs",
-      "types": "./dist/types/plugin/SerialPortAdapter.d.ts"
-    },
-    "./plugin/WebbleAdapter": {
-      "browser": "./dist/iife/plugin/WebbleAdapter.min.js",
-      "import": "./dist/es/plugin/WebbleAdapter.mjs",
-      "require": "./dist/cjs/plugin/WebbleAdapter.cjs",
-      "types": "./dist/types/plugin/WebbleAdapter.d.ts"
-    },
-    "./plugin/WebserialAdapter": {
-      "browser": "./dist/iife/plugin/WebserialAdapter.min.js",
-      "import": "./dist/es/plugin/WebserialAdapter.mjs",
-      "require": "./dist/cjs/plugin/WebserialAdapter.cjs",
-      "types": "./dist/types/plugin/WebserialAdapter.d.ts"
-    }
-  },
-  "keywords": [
-    "browser",
-    "chameleon-ultra",
-    "chrome",
-    "COM",
-    "mifare classic",
-    "nfc",
-    "RFID",
-    "serial port",
-    "serial",
-    "serialport",
-    "UART",
-    "web bluetooth",
-    "web serial",
-    "web-bluetooth-api",
-    "web-serial-api"
-  ],
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.4",
     "@rollup/plugin-node-resolve": "^15.2.1",
@@ -133,22 +78,77 @@
     "uglify-js": "^3.17.4",
     "utility-types": "^3.10.0"
   },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "browser": "./dist/iife/index.min.js",
+      "import": "./dist/es/index.mjs",
+      "require": "./dist/cjs/index.cjs",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./Crypto1": {
+      "browser": "./dist/iife/Crypto1.min.js",
+      "import": "./dist/es/Crypto1.mjs",
+      "require": "./dist/cjs/Crypto1.cjs",
+      "types": "./dist/types/Crypto1.d.ts"
+    },
+    "./buffer": {
+      "browser": "./dist/iife/buffer.min.js",
+      "import": "./dist/es/buffer.mjs",
+      "require": "./dist/cjs/buffer.cjs",
+      "types": "./dist/types/buffer.d.ts"
+    },
+    "./plugin/SerialPortAdapter": {
+      "import": "./dist/es/plugin/SerialPortAdapter.mjs",
+      "require": "./dist/cjs/plugin/SerialPortAdapter.cjs",
+      "types": "./dist/types/plugin/SerialPortAdapter.d.ts"
+    },
+    "./plugin/WebbleAdapter": {
+      "browser": "./dist/iife/plugin/WebbleAdapter.min.js",
+      "import": "./dist/es/plugin/WebbleAdapter.mjs",
+      "require": "./dist/cjs/plugin/WebbleAdapter.cjs",
+      "types": "./dist/types/plugin/WebbleAdapter.d.ts"
+    },
+    "./plugin/WebserialAdapter": {
+      "browser": "./dist/iife/plugin/WebserialAdapter.min.js",
+      "import": "./dist/es/plugin/WebserialAdapter.mjs",
+      "require": "./dist/cjs/plugin/WebserialAdapter.cjs",
+      "types": "./dist/types/plugin/WebserialAdapter.d.ts"
+    }
+  },
+  "keywords": [
+    "browser",
+    "chameleon-ultra",
+    "chrome",
+    "COM",
+    "mifare classic",
+    "nfc",
+    "RFID",
+    "serial port",
+    "serial",
+    "serialport",
+    "UART",
+    "web bluetooth",
+    "web serial",
+    "web-bluetooth-api",
+    "web-serial-api"
+  ],
   "resolutions": {
     "**/jstransformer-scss": "^2.0.0"
   },
   "scripts": {
+    "build": "set -ex && rimraf ./dist && mkdir -p dist && yarn build:dts && ts-node ./pug/build.ts && rollup --config rollup.config.mjs && typedoc && ts-node ./sitemap.ts && touch ./dist/.nojekyll",
     "build:dts": "tsc -p tsconfig.types.json --emitDeclarationOnly",
-    "build": "set -ex && rimraf ./dist && mkdir -p dist && yarn build:dts && ts-node ./pug/build.ts && rollup --config rollup.config.mjs && typedoc && touch ./dist/.nojekyll",
+    "dev": "DEBUG_COLORS=1 concurrently --names \"TS,PUG,DOC,HTTPS\" -c \"bgBlue,bgYellow,bgGray,bgGreen\" \"yarn dev:ts\" \"yarn dev:pug\" \"yarn dev:docs\" \"yarn dev:https\"",
     "dev:docs": "nodemon --watch src --ext ts,json --exec typedoc",
     "dev:https": "ts-node ./https.ts",
     "dev:pug": "nodemon --watch pug --ext ts,json ./pug/build.ts",
     "dev:ts": "nodemon --watch src --ext ts,json --exec \"rollup --config rollup.config.mjs\"",
-    "dev": "DEBUG_COLORS=1 concurrently --names \"TS,PUG,DOC,HTTPS\" -c \"bgBlue,bgYellow,bgGray,bgGreen\" \"yarn dev:ts\" \"yarn dev:pug\" \"yarn dev:docs\" \"yarn dev:https\"",
     "docs": "typedoc",
-    "lint:ci": "eslint --ext .mjs,.cjs,.js,.ts,.pug .",
     "lint": "yarn lint:ci --fix",
+    "lint:ci": "eslint --ext .mjs,.cjs,.js,.ts,.pug .",
     "mkcert": "mkdir ./mkcert && mkcert -key-file ./mkcert/key.pem -cert-file ./mkcert/cert.pem -ecdsa localhost",
-    "test:publish": "npm publish --dry-run",
-    "test": "jest --roots ./src"
+    "test": "jest --roots ./src",
+    "test:publish": "npm publish --dry-run"
   }
 }
