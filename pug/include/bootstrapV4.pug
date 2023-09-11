@@ -1,6 +1,9 @@
 doctype html
 -
   const jsext = NODE_ENV === 'production' ? '.min.js' : '.js'
+  let ogImage = 'https://i.imgur.com/bWJGSGq.png'
+  let ogImageWidth = 1280
+  let ogImageHeight = 640
 block beforehtml
 html(lang="zh-Hant")
   head
@@ -14,6 +17,9 @@ html(lang="zh-Hant")
       function gtag () { dataLayer.push(arguments) } // eslint-disable-line
       gtag('js', new Date())
       gtag('config', 'UA-39556213-3')
+    meta(property="og:image", content=ogImage)
+    meta(property="og:image:width", content=ogImageWidth)
+    meta(property="og:image:height", content=ogImageHeight)
     link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/animate.css@4/animate.min.css")
     link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/css/bootstrap.min.css")
     link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/font-awesome@4/css/font-awesome.min.css")
