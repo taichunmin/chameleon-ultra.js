@@ -142,7 +142,7 @@
     "dev": "DEBUG_COLORS=1 concurrently --names \"TS,PUG,DOC,HTTPS\" -c \"bgBlue,bgYellow,bgGray,bgGreen\" \"yarn dev:ts\" \"yarn dev:pug\" \"yarn dev:docs\" \"yarn dev:https\"",
     "dev:docs": "nodemon --watch src --ext ts,json --exec typedoc",
     "dev:https": "ts-node ./https.ts",
-    "dev:pug": "nodemon --watch pug --ext ts,json ./pug/build.ts",
+    "dev:pug": "nodemon --watch pug --ext pug ./pug/build.ts",
     "dev:ts": "nodemon --watch src --ext ts,json --exec \"rollup --config rollup.config.mjs\"",
     "docs": "typedoc",
     "lint": "yarn lint:ci --fix",
