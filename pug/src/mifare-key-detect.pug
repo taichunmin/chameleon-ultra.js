@@ -202,6 +202,7 @@ block script
               sak: Buffer.from(sak, 'hex'),
               uid: Buffer.from(uid, 'hex').slice(-4),
             }
+            await ultra.cmdMf1SetAntiCollMode(false)
             await ultra.cmdMf1SetAntiCollData(tag)
             await ultra.cmdMf1SetDetectionEnable(true) // enable detection
             const block0 = Buffer.allocUnsafe(16)
