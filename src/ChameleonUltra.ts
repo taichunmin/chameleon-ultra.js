@@ -1031,7 +1031,7 @@ export class ChameleonUltra {
   }
 
   /**
-   * Enable or disable the mifare mfkey32v32 detection and clear the data of detections.
+   * Enable or disable the mifare MFKey32 detection and clear the data of detections.
    * @param enable `true` to enable the detection, `false` to disable the detection.
    * @group Commands related to device mode: TAG
    */
@@ -1042,8 +1042,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the count of mifare mfkey32v32 detections.
-   * @returns The count of mifare mfkey32v32 detections.
+   * Get the count of mifare MFKey32 detections.
+   * @returns The count of mifare MFKey32 detections.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1GetDetectionCount (): Promise<number> {
@@ -1053,9 +1053,9 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the data of mifare mfkey32v32 detections.
+   * Get the data of mifare MFKey32 detections.
    * @param index The start index of detections to be get.
-   * @returns The mifare mfkey32v32 detections.
+   * @returns The mifare MFKey32 detections.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1GetDetectionLogs (index: number = 0): Promise<Array<ReturnType<typeof ResponseDecoder.parseMf1Detection>>> {

@@ -1,14 +1,14 @@
 extends /include/bootstrapV4
 
 block beforehtml
-  - const title = 'Detect Mifare Key'
+  - const title = 'MFKey32 with ChameleonUltra'
 
 block style
-  meta(property="og:description", content="A tool to Detect Mifare Key with ChameleonUltra.")
+  meta(property="og:description", content="A tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32) with ChameleonUltra.")
   meta(property="og:locale", content="zh_TW")
   meta(property="og:title", content=title)
   meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}/pug/mifare-key-detect.html`)
+  meta(property="og:url", content=`${baseurl}/pug/mfkey32.html`)
   style
     :sass
       [v-cloak]
@@ -22,12 +22,12 @@ block style
 
 block content
   #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center= title
+    h4.mb-3.text-center.letter-spacing-n1px= title
     .form-group
       label Connect method:
       .input-group.input-group-sm.mb-3
         select.form-control(v-model="h.adapter")
-          option(value="ble") BLE (PC &amp; Android, bond is required)
+          option(value="ble") BLE (PC &amp; Android)
           option(value="usb") USB Serial (PC only)
         .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
     .card.mb-3
@@ -86,16 +86,17 @@ block content
           tbody
             tr(v-if="!h.detects.length")
               td.text-left.px-4.py-3(colspan="4")
+                p A tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32) with ChameleonUltra.
                 strong Usage:
-                ol.mb-0
-                  li Connect your ChameleonUltra via USB or BLE (default BLE password: #[code 123456]).
+                ol.mb-0.pl-4
+                  li Keep ChameleonUltra awaked and connect your ChameleonUltra via USB or BLE (default BLE pairing key: #[code 123456]).
                   li (Optional) Put your tag in front of ChameleonUltra then click "Scan UID."
                   li Select which slot you want to simulate. The hf data in the slot will be #[strong.text-danger REPLACE]!
                   li Edit the tag information: TagType, UID, ATQA, SAK.
                   li Click "Simulate" to enable detection and #[strong.text-danger REPLACE] the hf data in the slot.
                   li Let reader read ChameleonUltra more than 2 times to collect data.
                   li Click "Recover" button to recover key. It may take a long time.
-                  li Put your tag in front of ChameleonUltra then click "Test" button to check if the key is correct.
+                  li Put your tag in front of ChameleonUltra, click "Test" button to select detected key then click "Check" button to check if the key is correct.
             tr(
               v-for="d in h.detects",
               :key="`${d.block}-${d.keyType}-${d.key}`",
@@ -104,7 +105,7 @@ block content
               td(@click="btnCopy('AB'[d.keyType])") {{ 'AB'[d.keyType] }}
               td(@click="btnCopy(d.key)") {{ d.key }}
               td(@click="btnSetTestFromDetect(d)"): a.badge.badge-primary.mr-1(href="javascript:void(0)") Test
-    button.btn.btn-block.btn-danger(@click="btnReset") #[i.fa.mr-2.fa-repeat] Reset to default
+    button.btn.btn-block.btn-danger.letter-spacing-n1px(@click="btnReset") #[i.fa.mr-2.fa-repeat] Reset to default
 
 block script
   script.
