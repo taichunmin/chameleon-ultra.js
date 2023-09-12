@@ -8,7 +8,7 @@ import { type ButtonAction, type TagType, type EmuMf1WriteMode, type Mf1NtLevel 
  * @group Internal
  */
 export class ResponseDecoder { // eslint-disable-line @typescript-eslint/no-extraneous-class
-  static parsePicc14aTag (buf: Buffer): Picc14aTag {
+  static parseHf14aTag (buf: Buffer): Hf14aTag {
     if (!Buffer.isBuffer(buf) || buf.length !== 15) throw new TypeError('buf should be a Buffer with length 15')
     return {
       uid: buf.subarray(0, buf[10]),
@@ -110,13 +110,13 @@ export class ResponseDecoder { // eslint-disable-line @typescript-eslint/no-extr
 }
 
 export interface Hf14aInfoResp {
-  tag: Picc14aTag
+  tag: Hf14aTag
   mifare?: {
     prngAttack: Mf1NtLevel
   }
 }
 
-export interface Picc14aTag {
+export interface Hf14aTag {
   uid: Buffer
   cascade: number
   sak: Buffer

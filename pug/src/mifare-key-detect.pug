@@ -108,7 +108,7 @@ block content
 
 block script
   script.
-    const { Buffer, ChameleonUltra, DeviceMode, Mf1KeyType, RfidType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
+    const { Buffer, ChameleonUltra, DeviceMode, FreqType, Mf1KeyType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
     const ultraUsb = new ChameleonUltra(true)
     ultraUsb.use(new WebserialAdapter())
     const ultraBle = new ChameleonUltra(true)
@@ -164,7 +164,7 @@ block script
             const { ultra } = this
             await this.setDeviceMode('reader')
             const slot = await ultra.cmdGetActiveSlot()
-            const tag1 = await ultra.cmdScan14aTag()
+            const tag1 = await ultra.cmdScanHf14a()
             await this.setDeviceMode('tag')
             const tag2 = {
               atqa: _.toUpper(tag1.atqa.reverse().toString('hex')),
@@ -186,32 +186,32 @@ block script
             const { ultra } = this
             const { atqa, sak, slot, tagType, uid } = this.h
             console.log({ atqa, sak, slot, tagType, uid })
-            const slotName = await ultra.cmdGetSlotTagName(slot, RfidType.HF) ?? '(no name)'
+            const slotName = await ultra.cmdGetSlotTagName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Simulating tag...' })
             await this.setDeviceMode('tag')
             // reset slot
-            await ultra.cmdSlotSetEnable(slot, true)
+            await ultra.cmdSetSlotEnable(slot, true)
             await ultra.cmdSetActiveSlot(slot)
-            await ultra.cmdSlotSetTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
-            await ultra.cmdSlotResetData(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
+            await ultra.cmdSetSlotTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
+            await ultra.cmdResetSlotData(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
             // set anti-coll
             const tag = {
               atqa: Buffer.from(atqa, 'hex').reverse(),
               sak: Buffer.from(sak, 'hex'),
               uid: Buffer.from(uid, 'hex').slice(-4),
             }
-            await ultra.cmdEmuSetMf1AntiColl(tag)
-            await ultra.cmdSetMf1Detection(true) // enable detection
+            await ultra.cmdMf1SetAntiCollData(tag)
+            await ultra.cmdMf1SetDetectionEnable(true) // enable detection
             const block0 = Buffer.allocUnsafe(16)
             tag.uid.copy(block0) // copy uid
             block0[tag.uid.length] = tag.uid.xor() // bcc for magic card
             block0[tag.uid.length + 1] = tag.sak[0] // sak
             tag.atqa.copy(block0, tag.uid.length + 2) // atqa
             console.log(`block0 = ${block0.toString('hex')}`)
-            await ultra.cmdEmuSetMf1Block(0, block0) // set block0
-            await ultra.cmdSaveSlotSettings()
+            await ultra.cmdMf1WriteEmuBlock(0, block0) // set block0
+            await ultra.cmdSaveSlotConfig()
             await Swal.fire({ icon: 'success', title: 'Simulate successfully!' })
           } catch (err) {
             console.error(err)
@@ -227,7 +227,7 @@ block script
             }
             this.showLoading(swalCfg)
             const { ultra } = this
-            const logCnt = await ultra.cmdGetMf1DetectionCount()
+            const logCnt = await ultra.cmdMf1GetDetectionCount()
 
             // retrive logs
             let logs = []
@@ -236,7 +236,7 @@ block script
                 currentProgressStep: 1,
                 text: `Retrive logs: ${logs.length} / ${logCnt}`,
               }))
-              const tmp = await ultra.cmdGetMf1Detections(logs.length)
+              const tmp = await ultra.cmdMf1GetDetectionLogs(logs.length)
               logs.push(...tmp)
             }
             this.showLoading(_.merge(swalCfg, {
@@ -287,7 +287,7 @@ block script
             const { ultra } = this
             const { block, keyType, key } = this.h
             await this.setDeviceMode('reader')
-            const isCorrect = await ultra.cmdCheckMf1BlockKey({
+            const isCorrect = await ultra.cmdMf1CheckBlockKey({
               block,
               keyType: [Mf1KeyType.KEY_A, Mf1KeyType.KEY_B][keyType],
               key: Buffer.from(key, 'hex'),
@@ -338,8 +338,7 @@ block script
         },
         async setDeviceMode (target1 = 'tag') {
           const target2 = _.toLower(target1) === 'reader' ? DeviceMode.READER : DeviceMode.TAG
-          const deviceMode = await this.ultra.cmdGetDeviceMode()
-          if (deviceMode !== target2) await this.ultra.cmdSetDeviceMode(target2)
+          await this.ultra.cmdChangeDeviceMode(target2)
         },
         async sleep (t) {
           await new Promise(resolve => setTimeout(resolve, t))
