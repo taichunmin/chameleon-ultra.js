@@ -19,6 +19,8 @@
 
 </div>
 
+![](https://i.imgur.com/bWJGSGq.png)
+
 ## Browser & OS compatibility
 
 ### SerialPort (Node.js)
@@ -109,3 +111,9 @@ ultraBle.use(new WebbleAdapter())
 ## Getting Started
 
 TBD
+
+## Related links
+
+- [GitHub RfidResearchGroup/ChameleonUltra](https://github.com/RfidResearchGroup/ChameleonUltra)
+- [Chameleon Ultra Guide](https://chameleonultra.com/docs)
+- [Chameleon Ultra GUI Documentation](https://docs.chameleonultragui.dev/)
