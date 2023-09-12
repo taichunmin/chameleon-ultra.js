@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { DarksideStatus, type AnimationMode, type ButtonAction, type EmuMf1WriteMode, type Mf1PrngType, type TagType } from './ChameleonUltra'
+import { type AnimationMode, type ButtonAction, type DarksideStatus, type EmuMf1WriteMode, type Mf1PrngType, type TagType } from './ChameleonUltra'
 
 export class SlotInfo {
   hfTagType: TagType
@@ -12,11 +12,25 @@ export class SlotInfo {
   }
 
   static fromCmd1019 (buf: Buffer): SlotInfo[] {
-    if (!Buffer.isBuffer(buf) || buf.length < 8) throw new TypeError('buf should be a Buffer with length 8')
+    if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('buf should be a Buffer with length 16')
     return _.times(8, i => new SlotInfo(
-      buf[i * 2], // hfTagType
-      buf[i * 2 + 1], // lfTagType
+      buf.readUInt16BE(i * 4), // hfTagType
+      buf.readUInt16BE(i * 4 + 2), // lfTagType
     ))
+  }
+}
+
+export class SlotFreqIsEnable {
+  hf: boolean
+  lf: boolean
+
+  constructor (hf: boolean, lf: boolean) {
+    ;[this.hf, this.lf] = [hf, lf]
+  }
+
+  static fromCmd1023 (buf: Buffer): SlotFreqIsEnable[] {
+    if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('buf should be a Buffer with length 16')
+    return _.times(8, i => new SlotFreqIsEnable(buf[i << 1] === 1, buf[(i << 1) + 1] === 1))
   }
 }
 
@@ -87,21 +101,48 @@ export class Hf14aAntiColl {
     ;[this.uid, this.atqa, this.sak, this.ats] = [uid, atqa, sak, ats]
   }
 
-  static fromCmd2000 (buf: Buffer): Hf14aAntiColl {
-    if (!Buffer.isBuffer(buf) || buf.length !== 15) throw new TypeError('buf should be a Buffer with length 15')
+  static fromBuffer (buf: Buffer): Hf14aAntiColl {
+    // uidlen[1]|uid[uidlen]|atqa[2]|sak[1]|atslen[1]|ats[atslen]
+    const uidLen = buf[0]
+    if (buf.length < uidLen + 4) throw new Error('invalid length of uid')
+    const atsLen = buf[uidLen + 4]
+    if (buf.length < uidLen + atsLen + 5) throw new Error('invalid invalid length of ats')
     return new Hf14aAntiColl(
-      buf.subarray(0, buf[10]), // uid
-      buf.subarray(13, 15), // atqa
-      buf.subarray(12, 13), // sak
+      buf.subarray(1, uidLen + 1),
+      buf.subarray(uidLen + 1, uidLen + 3),
+      buf.subarray(uidLen + 3, uidLen + 4),
+      buf.subarray(uidLen + 5, uidLen + atsLen + 5),
     )
   }
 
-  static fromCmd4018 (buf: Buffer): Hf14aAntiColl {
-    if (!Buffer.isBuffer(buf) || buf.length !== 16) throw new TypeError('buf should be a Buffer with length 16')
-    return new Hf14aAntiColl(
-      buf.subarray(0, buf[10]), // uid
-      buf.subarray(13, 15), // atqa
-      buf.subarray(12, 13), // sak
+  static fromCmd2000 (buf: Buffer): Hf14aAntiColl[] {
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
+    const tags: Hf14aAntiColl[] = []
+    while (buf.length > 0) {
+      const tag = Hf14aAntiColl.fromBuffer(buf)
+      buf = buf.subarray(tag.uid.length + tag.ats.length + 5)
+      tags.push(tag)
+    }
+    return tags
+  }
+}
+
+export class Mf1StaticNestedArgs {
+  uid: Buffer
+  nts: Array<{ nt: Buffer, ntEnc: Buffer }>
+
+  constructor (uid: Buffer, nts: Array<{ nt: Buffer, ntEnc: Buffer }>) {
+    ;[this.uid, this.nts] = [uid, nts]
+  }
+
+  static fromCmd2003 (buf: Buffer): Mf1StaticNestedArgs {
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
+    return new Mf1StaticNestedArgs(
+      buf.subarray(0, 4), // uid
+      _.map(buf.subarray(4).chunk(8), chunk => ({
+        nt: buf.subarray(0, 4),
+        ntEnc: buf.subarray(4, 8),
+      })), // nts
     )
   }
 }
@@ -134,15 +175,16 @@ export class Mf1DarksideArgs {
   }
 
   static fromCmd2004 (buf: Buffer): Mf1DarksideArgs {
-    if (!Buffer.isBuffer(buf) || buf.length !== 32) throw new TypeError('buf should be a Buffer with length 32')
+    if (!Buffer.isBuffer(buf) || !_.includes([1, 33], buf.length)) throw new TypeError('buf should be a Buffer with length 1 or 33')
+    if (buf.length === 1) return new Mf1DarksideArgs(buf[0])
     return new Mf1DarksideArgs(
-      DarksideStatus.OK, // status
-      buf.subarray(0, 4), // uid
-      buf.subarray(4, 8), // nt1
-      buf.subarray(8, 16), // par
-      buf.subarray(16, 24), // ks1
-      buf.subarray(24, 28), // nr
-      buf.subarray(28, 32), // ar
+      buf[0], // status
+      buf.subarray(1, 5), // uid
+      buf.subarray(5, 9), // nt1
+      buf.subarray(9, 17), // par
+      buf.subarray(17, 25), // ks1
+      buf.subarray(25, 29), // nr
+      buf.subarray(29, 33), // ar
     )
   }
 }
@@ -273,8 +315,9 @@ export interface Mf1EmuData {
 export interface SlotSettings {
   config: { activated: number }
   group: Array<{
-    enable: boolean
+    hfIsEnable: boolean
     hfTagType: TagType
+    lfIsEnable: boolean
     lfTagType: TagType
   }>
 }

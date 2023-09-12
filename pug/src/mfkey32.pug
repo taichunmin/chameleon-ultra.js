@@ -94,7 +94,7 @@ block content
                   li Select which slot you want to emulate. The hf data in the slot will be #[strong.text-danger REPLACE]!
                   li Edit the tag information: TagType, UID, ATQA, SAK.
                   li Click "Emulate" to enable detection and #[strong.text-danger REPLACE] the hf data in the slot.
-                  li Let reader read ChameleonUltra more than 2 times to collect data.
+                  li Let reader to read ChameleonUltra more than 2 times to collect data.
                   li Click "Recover" button to recover key. It may take a long time.
                   li Put your tag in front of ChameleonUltra, click "Test" button to select detected key then click "Check" button to check if the key is correct.
             tr(
@@ -162,7 +162,7 @@ block script
             const { ultra } = this
             await this.setDeviceMode('reader')
             const slot = await ultra.cmdSlotGetActive()
-            const tag1 = await ultra.cmdHf14aScan()
+            const tag1 = _.first(await ultra.cmdHf14aScan())
             await this.setDeviceMode('tag')
             const tag2 = {
               atqa: _.toUpper(tag1.atqa.reverse().toString('hex')),
@@ -227,6 +227,7 @@ block script
             this.showLoading(swalCfg)
             const { ultra } = this
             const logCnt = await ultra.cmdMf1GetDetectionCount()
+            if (logCnt < 2) throw new Error('Please let reader to read ChameleonUltra more than 2 times to collect data.')
 
             // retrive logs
             let logs = []

@@ -92,7 +92,7 @@ block content
           span {{ ss?.chipId ?? '?' }}
         li.list-group-item.d-flex.justify-content-between.align-items-center
           span.text-muted model
-          span {{ ['ChameleonLite', 'ChameleonUltra']?.[ss?.model] ?? '?' }}
+          span {{ ['ChameleonUltra', 'ChameleonLite']?.[ss?.model] ?? '?' }}
       .card-body.py-3(v-else) Click "Load" button to load device info.
     .card.mb-2
       h6.card-header.text-white.bg-danger #[i.fa.fa-exclamation-triangle.mr-1] Danger Zone
