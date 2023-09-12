@@ -9,7 +9,7 @@
   "name": "chameleon-ultra.js",
   "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
   "unpkg": "dist/iife/index.min.js",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
