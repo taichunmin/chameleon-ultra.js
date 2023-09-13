@@ -2,7 +2,7 @@
 
 ## [MFkey32 with ChameleonUltra](https://taichunmin.idv.tw/chameleon-ultra.js/mfkey32.html)
 
-A tool to detect the mifare key that reader is authenticating (a.k.a. Mfkey32) with ChameleonUltra.
+A tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32) with ChameleonUltra.
 
 ### Related links
 

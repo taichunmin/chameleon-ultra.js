@@ -165,7 +165,7 @@ block script
             const { ultra } = this
             await this.setDeviceMode('reader')
             const slot = await ultra.cmdGetActiveSlot()
-            const tag1 = await ultra.cmdScanHf14a()
+            const tag1 = await ultra.cmdHf14aScan()
             await this.setDeviceMode('tag')
             const tag2 = {
               atqa: _.toUpper(tag1.atqa.reverse().toString('hex')),
@@ -203,8 +203,8 @@ block script
               sak: Buffer.from(sak, 'hex'),
               uid: Buffer.from(uid, 'hex').slice(-4),
             }
-            await ultra.cmdMf1SetAntiCollMode(false)
-            await ultra.cmdMf1SetAntiCollData(tag)
+            await ultra.cmdHf14aSetAntiCollMode(false)
+            await ultra.cmdHf14aSetAntiCollData(tag)
             await ultra.cmdMf1SetDetectionEnable(true) // enable detection
             const block0 = Buffer.allocUnsafe(16)
             tag.uid.copy(block0) // copy uid
