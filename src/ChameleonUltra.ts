@@ -250,7 +250,7 @@ export class ChameleonUltra {
       try {
         if (!Buffer.isBuffer(ctx.buf)) throw new TypeError('buf should be a Buffer')
         if (!this.isConnected()) await this.connect()
-        this.logger.send(frameToString(ctx.buf))
+        this.logger.send(ChameleonUltraFrame.inspect(ctx.buf))
         const writer = (this.port?.writable as any)?.getWriter()
         if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
         await writer.write(ctx.buf)
@@ -337,10 +337,10 @@ export class ChameleonUltra {
       }
       if (RespStatusFail.has(ctx.resp.status)) {
         const status = ctx.resp.status
-        this.logger.respError(frameToString(ctx.resp.buf))
+        this.logger.respError(ctx.resp.inspect)
         throw _.merge(new Error(RespStatusMsg.get(status)), { status, data: { resp: ctx.resp } })
       }
-      this.logger.resp(frameToString(ctx.resp.buf))
+      this.logger.resp(ctx.resp.inspect)
       return ctx.resp
     }) as ChameleonUltraFrame
   }
@@ -784,7 +784,7 @@ export class ChameleonUltra {
    * @throws This command will throw an error if tag not scanned or any error occured.
    * @group Commands related to device mode: READER
    */
-  async cmdScanHf14a (): Promise<ReturnType<typeof ResponseDecoder.parseHf14aTag>> {
+  async cmdHf14aScan (): Promise<ReturnType<typeof ResponseDecoder.parseHf14aTag>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.HF14A_SCAN }) // cmd = 2000
     return ResponseDecoder.parseHf14aTag((await this._readRespTimeout())?.data)
@@ -952,14 +952,14 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the info composed of `cmdScanHf14a()` and `cmdMf1TestNtLevel()`.
+   * Get the info composed of `cmdHf14aScan()` and `cmdMf1TestNtLevel()`.
    * @returns The info about 14a tag and mifare protocol.
    * @group Commands related to device mode: READER
    */
   async hf14aInfo (): Promise<Hf14aInfoResp> {
     if (await this.cmdGetDeviceMode() !== DeviceMode.READER) await this.cmdChangeDeviceMode(DeviceMode.READER)
     const resp: Hf14aInfoResp = {
-      tag: await this.cmdScanHf14a(),
+      tag: await this.cmdHf14aScan(),
     }
     if (await this.cmdMf1IsSupport()) {
       resp.mifare = {
@@ -1018,13 +1018,13 @@ export class ChameleonUltra {
    * @param args
    * @group Commands related to device mode: TAG
    */
-  async cmdMf1SetAntiCollData ({ sak, atqa, uid }: EmuMf1AntiColl): Promise<void> {
+  async cmdHf14aSetAntiCollData ({ sak, atqa, uid }: EmuMf1AntiColl): Promise<void> {
     if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
     if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
     if (!Buffer.isBuffer(uid) || !_.includes([4, 7, 10], uid.length)) throw new TypeError('uid should be a Buffer with length 4, 7 or 10')
     this._clearRxBufs()
     await this._writeCmd({
-      cmd: Cmd.MF1_SET_ANTI_COLLISION_RES, // cmd = 4001
+      cmd: Cmd.HF14A_SET_ANTI_COLL_DATA, // cmd = 4001
       data: Buffer.concat([sak, atqa, uid]),
     })
     await this._readRespTimeout()
@@ -1138,9 +1138,9 @@ export class ChameleonUltra {
    * @returns The mode of emulator that using anti-collision data from block 0 for 4 byte UID tags.
    * @group Commands related to device mode: TAG
    */
-  async cmdMf1GetAntiCollMode (): Promise<boolean> {
+  async cmdHf14aGetAntiCollMode (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_GET_BLOCK_ANTI_COLL_MODE }) // cmd = 4014
+    await this._writeCmd({ cmd: Cmd.HF14A_GET_BLOCK_ANTI_COLL_MODE }) // cmd = 4014
     return (await this._readRespTimeout())?.data[0] === 1
   }
 
@@ -1149,9 +1149,9 @@ export class ChameleonUltra {
    * @param enable `true` to enable the mode, `false` to disable the mode.
    * @group Commands related to device mode: TAG
    */
-  async cmdMf1SetAntiCollMode (enable: boolean = false): Promise<void> {
+  async cmdHf14aSetAntiCollMode (enable: boolean = false): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_SET_BLOCK_ANTI_COLL_MODE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4015
+    await this._writeCmd({ cmd: Cmd.HF14A_SET_BLOCK_ANTI_COLL_MODE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4015
     await this._readRespTimeout()
   }
 
@@ -1178,9 +1178,14 @@ export class ChameleonUltra {
     await this._readRespTimeout()
   }
 
-  async cmdMf1GetAntiCollData (): Promise<EmuMf1AntiColl> {
+  /**
+   * Get the mifare anti-collision data of emulator.
+   * @returns The mifare anti-collision data of emulator.
+   * @group Commands related to device mode: TAG
+   */
+  async cmdHf14aGetAntiCollData (): Promise<EmuMf1AntiColl> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_GET_ANTI_COLL_DATA }) // cmd = 4018
+    await this._writeCmd({ cmd: Cmd.HF14A_GET_ANTI_COLL_DATA }) // cmd = 4018
     return ResponseDecoder.parseEmuMf1AntiColl((await this._readRespTimeout())?.data)
   }
 
@@ -1302,7 +1307,7 @@ export enum Cmd {
   EM410X_WRITE_TO_T55XX = 3001,
 
   MF1_WRITE_EMU_BLOCK_DATA = 4000,
-  MF1_SET_ANTI_COLLISION_RES = 4001,
+  HF14A_SET_ANTI_COLL_DATA = 4001,
   MF1_SET_ANTI_COLLISION_INFO = 4002,
   MF1_SET_ATS_RESOURCE = 4003,
   MF1_SET_DETECTION_ENABLE = 4004,
@@ -1316,11 +1321,11 @@ export enum Cmd {
   MF1_SET_GEN1A_MODE = 4011,
   MF1_GET_GEN2_MODE = 4012,
   MF1_SET_GEN2_MODE = 4013,
-  MF1_GET_BLOCK_ANTI_COLL_MODE = 4014,
-  MF1_SET_BLOCK_ANTI_COLL_MODE = 4015,
+  HF14A_GET_BLOCK_ANTI_COLL_MODE = 4014,
+  HF14A_SET_BLOCK_ANTI_COLL_MODE = 4015,
   MF1_GET_WRITE_MODE = 4016,
   MF1_SET_WRITE_MODE = 4017,
-  MF1_GET_ANTI_COLL_DATA = 4018,
+  HF14A_GET_ANTI_COLL_DATA = 4018,
 
   EM410X_SET_EMU_ID = 5000,
   EM410X_GET_EMU_ID = 5001,
@@ -1520,9 +1525,24 @@ export class ChameleonUltraFrame {
     this.buf = buf
   }
 
+  static inspect (buf: any): string {
+    if (!Buffer.isBuffer(buf)) return 'Invalid frame'
+    // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
+    return [
+      buf.slice(0, 2).toString('hex'), // sof + sof lrc
+      buf.slice(2, 4).toString('hex'), // cmd
+      buf.slice(4, 6).toString('hex'), // status
+      buf.slice(6, 8).toString('hex'), // data len
+      buf.slice(8, 9).toString('hex'), // head lrc
+      buf.readUInt16LE(6) > 0 ? buf.slice(9, -1).toString('hex') : '(no data)', // data
+      buf.slice(-1).toString('hex'), // data lrc
+    ].join(' ')
+  }
+
   get cmd (): Cmd { return this.buf.readUInt16BE(2) }
-  get status (): number { return this.buf.readUInt16BE(4) }
   get data (): Buffer { return this.buf.subarray(9, -1) }
+  get inspect (): string { return ChameleonUltraFrame.inspect(this.buf) }
+  get status (): number { return this.buf.readUInt16BE(4) }
 }
 
 export type Mf1NtLevel = 'static' | 'weak' | 'hard' | 'unknown'
@@ -1575,20 +1595,6 @@ export enum AnimationMode {
   NONE = 2,
 }
 export const isAnimationMode = createIsEnum(AnimationMode)
-
-export function frameToString (buf: any): string {
-  if (!Buffer.isBuffer(buf)) return 'Invalid frame'
-  // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
-  return [
-    buf.slice(0, 2).toString('hex'), // sof + sof lrc
-    buf.slice(2, 4).toString('hex'), // cmd
-    buf.slice(4, 6).toString('hex'), // status
-    buf.slice(6, 8).toString('hex'), // data len
-    buf.slice(8, 9).toString('hex'), // head lrc
-    buf.readUInt16LE(6) > 0 ? buf.slice(9, -1).toString('hex') : '(no data)', // data
-    buf.slice(-1).toString('hex'), // data lrc
-  ].join(' ')
-}
 
 export interface CmdTestMf1NtDistanceArgs {
   src: {

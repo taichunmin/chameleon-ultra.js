@@ -2,7 +2,7 @@
 
 <h1>chameleon-ultra.js</h1>
 
-<p>A JavaScript SDK for ChameleonUltra using Web Bluetooth, Web Serial and SerialPort.</p>
+<p>A JavaScript SDK for ChameleonUltra support Web Bluetooth API, Web Serial API and Node.js.</p>
 
 [API Reference](https://taichunmin.idv.tw/chameleon-ultra.js/docs/) | [Demos](https://github.com/taichunmin/chameleon-ultra.js/blob/master/pages/demos.md)
 
