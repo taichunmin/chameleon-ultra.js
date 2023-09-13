@@ -46,7 +46,7 @@ export class ResponseDecoder { // eslint-disable-line @typescript-eslint/no-extr
       detection: buf[0] === 1,
       gen1a: buf[1] === 1,
       gen2: buf[2] === 1,
-      block0AntiColl: buf[3] === 1,
+      blockAntiColl: buf[3] === 1,
       write: buf[4],
     }
   }
@@ -146,7 +146,7 @@ export interface EmuMf1Config {
   detection: boolean
   gen1a: boolean
   gen2: boolean
-  block0AntiColl: boolean
+  blockAntiColl: boolean
   write: EmuMf1WriteMode
 }
 

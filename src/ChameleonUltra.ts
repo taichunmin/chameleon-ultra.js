@@ -1138,7 +1138,7 @@ export class ChameleonUltra {
    * @returns The mode of emulator that using anti-collision data from block 0 for 4 byte UID tags.
    * @group Commands related to device mode: TAG
    */
-  async cmdHf14aGetAntiCollMode (): Promise<boolean> {
+  async cmdMf1GetBlockAntiCollMode (): Promise<boolean> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.HF14A_GET_BLOCK_ANTI_COLL_MODE }) // cmd = 4014
     return (await this._readRespTimeout())?.data[0] === 1
@@ -1149,7 +1149,7 @@ export class ChameleonUltra {
    * @param enable `true` to enable the mode, `false` to disable the mode.
    * @group Commands related to device mode: TAG
    */
-  async cmdHf14aSetAntiCollMode (enable: boolean = false): Promise<void> {
+  async cmdMf1SetBlockAntiCollMode (enable: boolean = false): Promise<void> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.HF14A_SET_BLOCK_ANTI_COLL_MODE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4015
     await this._readRespTimeout()
