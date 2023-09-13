@@ -31,7 +31,6 @@ async function main (): Promise<void> {
   })
 
   const livereloadServer = livereload.createServer({
-    delay: 1000,
     port: getPort(),
     server: httpsServer,
   })
