@@ -472,10 +472,10 @@ export class ChameleonUltra {
   }
 
   /**
-   * The SlotConfig, hf tag data and lf tag data will be written to persistent storage. But the slot nickname is not affected by this command.
+   * The SlotSettings, hf tag data and lf tag data will be written to persistent storage. But the slot nickname is not affected by this command.
    * @group Commands related to slot
    */
-  async cmdSaveSlotConfig (): Promise<void> {
+  async cmdSaveSlotSettings (): Promise<void> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SLOT_DATA_CONFIG_SAVE }) // cmd = 1009
     await this._readRespTimeout()
@@ -1079,19 +1079,19 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the mifare config of emulator.
-   * @returns The mifare config of emulator.
+   * Get the mifare settings of emulator.
+   * @returns The mifare settings of emulator.
    * @group Commands related to device mode: TAG
    */
-  async cmdMf1GetEmuConfig (): Promise<ReturnType<typeof ResponseDecoder.parseEmuMf1Config>> {
+  async cmdMf1GetEmuSettings (): Promise<ReturnType<typeof ResponseDecoder.parseEmuMf1Settings>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.MF1_GET_EMULATOR_CONFIG }) // cmd = 4009
-    return ResponseDecoder.parseEmuMf1Config((await this._readRespTimeout())?.data)
+    return ResponseDecoder.parseEmuMf1Settings((await this._readRespTimeout())?.data)
   }
 
   /**
    * Set the mifare gen1a mode of emulator.
-   * @param config The mifare config of emulator.
+   * @returns The mifare gen1a mode of emulator.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1GetGen1aMode (): Promise<boolean> {
