@@ -1,0 +1,269 @@
+extends /include/bootstrapV4
+
+block beforehtml
+  - const title = 'Device Config'
+
+block style
+  meta(property="og:description", content="A tool to management the device config of ChameleonUltra.")
+  meta(property="og:locale", content="zh_TW")
+  meta(property="og:title", content=title)
+  meta(property="og:type", content="website")
+  meta(property="og:url", content=`${baseurl}/pug/device-config.html`)
+  style
+    :sass
+      [v-cloak]
+        display: none
+      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
+        font-family: 'Noto Sans TC', sans-serif
+      .input-group-prepend > .input-group-text
+        width: 140px
+      .letter-spacing-n1px, .letter-spacing-n1px .btn
+        letter-spacing: -1px
+      .text-sm
+        font-size: 0.875rem
+
+block content
+  #app.my-3.container.text-monospace(v-cloak)
+    h4.mb-3.text-center.letter-spacing-n1px= title
+    .form-group
+      label Connect method:
+      .input-group.input-group-sm.mb-3
+        select.form-control(v-model="h.adapter")
+          option(value="ble") BLE (PC &amp; Android)
+          option(value="usb") USB Serial (PC only)
+        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
+    .row.mx-n1.mb-2
+      .col-6.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnLoadDevice") #[i.fa.fa-upload] Load
+      .col-6.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnSaveDevice") #[i.fa.fa-floppy-o] Save
+    .card.mb-2
+      h6.card-header.text-white.bg-secondary #[i.fa.fa-cog.mr-1] Device Config
+      .card-body.px-3.pt-3.pb-2
+        .input-group.input-group-sm.letter-spacing-n1px.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center animationMode
+          select.form-control.form-control-sm(v-model.number="device.animationMode")
+            option(value="0") Full
+            option(value="1") Short
+            option(value="2") None
+        .input-group.input-group-sm.letter-spacing-n1px.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center blePairingMode
+          select.form-control.form-control-sm(v-model.number="device.blePairingMode")
+            option(value="0") Disable
+            option(value="1") Enable
+        .input-group.input-group-sm.letter-spacing-n1px.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center blePairingKey
+          input.form-control.form-control-sm(v-model="device.blePairingKey", :type="blePairingKeyVisible ? 'text' : 'password'")
+          .input-group-append
+            button.btn.btn-outline-secondary(v-if="blePairingKeyVisible", type="button", @click="blePairingKeyVisible = false"): i.fa.fa-eye
+            button.btn.btn-outline-secondary(v-else, type="button", @click="blePairingKeyVisible = true"): i.fa.fa-eye-slash
+        .input-group.input-group-sm.letter-spacing-n1px.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center mode
+          select.form-control.form-control-sm(v-model.number="device.mode")
+            option(value="0") TAG
+            option(value="1") READER
+        template(v-for="k in ['pressBtnA', 'pressBtnB', 'longPressBtnA', 'longPressBtnB']")
+          .input-group.input-group-sm.letter-spacing-n1px.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center {{ k }}
+            select.form-control.form-control-sm(v-model.number="device[k]")
+              option(value="0") DISABLE
+              option(value="1") CYCLE_SLOT_INC
+              option(value="2") CYCLE_SLOT_DEC
+              option(value="3") CLONE_IC_UID
+    .card.mb-2.text-sm
+      h6.card-header.text-white.bg-info #[i.fa.fa-info-circle.mr-1] Device Info
+      ul.list-group.list-group-flush.letter-spacing-n1px(v-if="device.bleAddress")
+        li.list-group-item.d-flex.justify-content-between.align-items-center
+          span.text-muted appVersion
+          span {{ device?.appVersion ?? '?' }}
+        li.list-group-item.d-flex.justify-content-between.align-items-center
+          span.text-muted gitVersion
+          span {{ device?.gitVersion ?? '?' }}
+        li.list-group-item.d-flex.justify-content-between.align-items-center
+          span.text-muted bleAddress
+          span {{ device?.bleAddress ?? '?' }}
+        li.list-group-item.d-flex.justify-content-between.align-items-center
+          span.text-muted batteryLevel
+          span {{ device?.batteryLevel ?? '?' }} %
+        li.list-group-item.d-flex.justify-content-between.align-items-center
+          span.text-muted batteryVoltage
+          span {{ device?.batteryVoltage ?? '?' }} mV
+        li.list-group-item.d-flex.justify-content-between.align-items-center
+          span.text-muted chipId
+          span {{ device?.chipId ?? '?' }}
+        li.list-group-item.d-flex.justify-content-between.align-items-center
+          span.text-muted model
+          span {{ ['ChameleonLite', 'ChameleonUltra']?.[device?.model] ?? '?' }}
+      .card-body.py-3(v-else) Click "Load" button to load device info.
+    .card.mb-2
+      h6.card-header.text-white.bg-danger #[i.fa.fa-exclamation-triangle.mr-1] Danger Zone
+      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
+        button.btn.btn-sm.btn-block.btn-outline-primary.mb-2(@click="btnEnterBootloader") #[i.fa.mr-1.fa-microchip] Enter bootloader
+        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnResetSettings") #[i.fa.mr-1.fa-cogs] Reset to default config
+        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnBleDeleteAllBonds") #[i.fa.mr-1.fa-bluetooth] Delete ALL BLE bonds
+        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnWipeFds") #[i.fa.mr-1.fa-industry] Factory reset
+
+block script
+  script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/joi@17/dist/joi-browser.min.js")
+  script.
+    const { ChameleonUltra, DeviceMode, WebbleAdapter, WebserialAdapter, AnimationMode, ButtonAction } = ChameleonUltraJS // eslint-disable-line
+    const ultraUsb = new ChameleonUltra(true)
+    ultraUsb.use(new WebserialAdapter())
+    const ultraBle = new ChameleonUltra(true)
+    ultraBle.use(new WebbleAdapter())
+
+    const { joi: Joi } = window
+    const enumValues = e => _.filter(_.values(e), _.isNumber)
+    const ButtonActionValues = enumValues(ButtonAction)
+    const joiDeviceConfig = Joi.object({
+      animationMode: Joi.valid(...enumValues(AnimationMode)).required(),
+      blePairingKey: Joi.string().length(6).regex(/^\d{6}$/).required(),
+      blePairingMode: Joi.boolean().truthy(1).falsy(0).required(),
+      longPressBtnA: Joi.valid(...ButtonActionValues).required(),
+      longPressBtnB: Joi.valid(...ButtonActionValues).required(),
+      mode: Joi.valid(...enumValues(DeviceMode)).required(),
+      pressBtnA: Joi.valid(...ButtonActionValues).required(),
+      pressBtnB: Joi.valid(...ButtonActionValues).required(),
+    })
+
+    window.vm = new Vue({
+      el: '#app',
+      data: {
+        h: {
+          adapter: 'ble',
+        },
+        blePairingKeyVisible: false,
+        device: {
+          animationMode: null,
+          appVersion: null,
+          batteryLevel: null,
+          batteryVoltage: null,
+          bleAddress: null,
+          blePairingKey: null,
+          blePairingMode: null,
+          chipId: null,
+          gitVersion: null,
+          longPressBtnA: null,
+          longPressBtnB: null,
+          mode: null,
+          model: null,
+          pressBtnA: null,
+          pressBtnB: null,
+        },
+      },
+      async mounted () {
+        // 自動儲存功能
+        try {
+          const saved = JSON5.parse(localStorage.getItem(location.pathname))
+          if (saved) this.$set(this, 'h', { ...this.h, ...saved })
+        } catch (err) {}
+        this.$watch('h', () => {
+          localStorage.setItem(location.pathname, JSON5.stringify(this.h))
+        }, { deep: true })
+      },
+      computed: {
+        ultra () {
+          return this.h.adapter === 'usb' ? ultraUsb : ultraBle
+        },
+      },
+      methods: {
+        async btnLoadDevice () {
+          try {
+            this.showLoading({ text: 'Loading config...' })
+            const { ultra } = this
+            const batteryInfo = await ultra.cmdGetBatteryInfo()
+            const device = {
+              animationMode: await ultra.cmdGetAnimationMode(),
+              appVersion: await ultra.cmdGetAppVersion(),
+              batteryLevel: batteryInfo.level,
+              batteryVoltage: batteryInfo.voltage,
+              bleAddress: await ultra.cmdBleGetAddress(),
+              blePairingKey: await ultra.cmdBleGetPairingKey(),
+              blePairingMode: await ultra.cmdBleGetPairingMode() ? 1 : 0,
+              chipId: await ultra.cmdGetDeviceChipId(),
+              gitVersion: await ultra.cmdGetGitVersion(),
+              mode: await ultra.cmdGetDeviceMode(),
+              model: await ultra.cmdGetDeviceModel(),
+            }
+            for (const btn of ['A', 'B']) {
+              device[`pressBtn${btn}`] = await ultra.cmdGetButtonPressAction(btn)
+              device[`longPressBtn${btn}`] = await ultra.cmdGetButtonLongPressAction(btn)
+            }
+            //- console.log(JSON.stringify(device, null, 2))
+            this.$set(this, 'device', device)
+            this.blePairingKeyVisible = false
+            Swal.close()
+          } catch (err) {
+            console.error(err)
+            await Swal.fire({ icon: 'error', text: err.message })
+          }
+        },
+        async btnSaveDevice () {
+          try {
+            this.showLoading({ text: 'Saving config...' })
+            const { ultra } = this
+            const device = await joiDeviceConfig.validateAsync(this.device, { stripUnknown: true })
+            await ultra.cmdSetAnimationMode(device.animationMode)
+            await ultra.cmdBleSetPairingMode(device.blePairingMode)
+            await ultra.cmdBleSetPairingKey(device.blePairingKey)
+            await ultra.cmdChangeDeviceMode(device.mode)
+            for (const btn of ['A', 'B']) {
+              await ultra.cmdSetButtonPressAction(btn, device[`pressBtn${btn}`])
+              await ultra.cmdSetButtonLongPressAction(btn, device[`longPressBtn${btn}`])
+            }
+            await ultra.cmdSaveSettings()
+            await Swal.fire({ icon: 'success', text: 'Config save successfully!' })
+          } catch (err) {
+            console.error(err)
+            await Swal.fire({ icon: 'error', text: err.message })
+          }
+        },
+        async btnEnterBootloader () {
+          if (!await this.confirm('Enter bootloader?', 'Yes', 'Cancel')) return
+          await this.ultra.cmdEnterBootloader().catch(console.error)
+        },
+        async btnResetSettings () {
+          if (!await this.confirm('Reset to default config?', 'Yes', 'Cancel')) return
+          await this.ultra.cmdResetSettings().catch(console.error)
+        },
+        async btnBleDeleteAllBonds () {
+          if (!await this.confirm('Delete ALL BLE bonds?', 'Yes', 'Cancel')) return
+          await this.ultra.cmdBleDeleteAllBonds().catch(console.error)
+        },
+        async btnWipeFds () {
+          if (!await this.confirm('Factory reset?', 'Yes', 'Cancel')) return
+          await this.ultra.cmdWipeFds().catch(console.error)
+        },
+        async btnAdapterTips () {
+          await Swal.fire({
+            title: 'Browser & OS',
+            html: '<strong class="text-primary">BLE</strong> is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70).<hr><strong class="text-primary">USB</strong> is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
+          })
+        },
+        async confirm (text, confirmButtonText, cancelButtonText) {
+          return await new Promise((resolve, reject) => {
+            let isConfirmed = false
+            const args = {
+              cancelButtonColor: '#3085d6',
+              cancelButtonText,
+              confirmButtonColor: '#d33',
+              confirmButtonText,
+              didDestroy: () => { resolve(isConfirmed) },
+              focusCancel: true,
+              icon: 'warning',
+              reverseButtons: true,
+              showCancelButton: true,
+              text,
+            }
+            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
+          })
+        },
+        showLoading (opts = {}) {
+          opts = {
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            ...opts,
+          }
+          if (Swal.isVisible()) return Swal.update(opts)
+          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
+        },
+      },
+    })

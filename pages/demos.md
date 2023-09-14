@@ -1,5 +1,9 @@
 # Demos
 
+## [Device Config for ChameleonUltra](https://taichunmin.idv.tw/chameleon-ultra.js/device-config.html)
+
+A tool to management the device config of ChameleonUltra.
+
 ## [MFkey32 with ChameleonUltra](https://taichunmin.idv.tw/chameleon-ultra.js/mfkey32.html)
 
 A tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32) with ChameleonUltra.

@@ -115,12 +115,6 @@ block script
     const ultraBle = new ChameleonUltra(true)
     ultraBle.use(new WebbleAdapter())
 
-    function createResolvable () {
-      const tmp = {}
-      const promise = new Promise((resolve, reject) => { _.merge(tmp, { resolve, reject }) })
-      return _.merge(promise, tmp)
-    }
-
     window.vm = new Vue({
       el: '#app',
       data: {
@@ -156,7 +150,7 @@ block script
         async btnAdapterTips () {
           await Swal.fire({
             title: 'Browser & OS',
-            html: '<string class="text-primary">BLE</strong> is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70).<hr><string class="text-primary">USB</strong> is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
+            html: '<strong class="text-primary">BLE</strong> is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70).<hr><strong class="text-primary">USB</strong> is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
           })
         },
         async btnScanTag () {
@@ -321,22 +315,22 @@ block script
           return await new Promise(resolve => {})
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
-          const isDestroy = createResolvable()
-          const args = {
-            cancelButtonColor: '#3085d6',
-            cancelButtonText,
-            confirmButtonColor: '#d33',
-            confirmButtonText,
-            didDestroy: isDestroy.resolve,
-            focusCancel: true,
-            icon: 'warning',
-            reverseButtons: true,
-            showCancelButton: true,
-            text,
-          }
-          const res = (await Swal.fire(args))?.isConfirmed
-          await isDestroy
-          return res
+          return await new Promise((resolve, reject) => {
+            let isConfirmed = false
+            const args = {
+              cancelButtonColor: '#3085d6',
+              cancelButtonText,
+              confirmButtonColor: '#d33',
+              confirmButtonText,
+              didDestroy: () => { resolve(isConfirmed) },
+              focusCancel: true,
+              icon: 'warning',
+              reverseButtons: true,
+              showCancelButton: true,
+              text,
+            }
+            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
+          })
         },
         async setDeviceMode (target1 = 'tag') {
           const target2 = _.toLower(target1) === 'reader' ? DeviceMode.READER : DeviceMode.TAG

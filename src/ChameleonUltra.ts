@@ -496,7 +496,7 @@ export class ChameleonUltra {
    * @returns Chipset id of device in hex format.
    * @group Commands related to device
    */
-  async cmdGetDeivceChipId (): Promise<string> {
+  async cmdGetDeviceChipId (): Promise<string> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_DEVICE_CHIP_ID }) // cmd = 1011
     const data = (await this._readRespTimeout())?.data
