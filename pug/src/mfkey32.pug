@@ -207,7 +207,7 @@ block script
             tag.atqa.copy(block0, tag.uid.length + 2) // atqa
             console.log(`block0 = ${block0.toString('hex')}`)
             await ultra.cmdMf1WriteEmuBlock(0, block0) // set block0
-            await ultra.cmdSaveSlotConfig()
+            await ultra.cmdSaveSlotSettings()
             await Swal.fire({ icon: 'success', title: 'Simulate successfully!' })
           } catch (err) {
             console.error(err)

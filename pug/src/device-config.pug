@@ -1,14 +1,14 @@
 extends /include/bootstrapV4
 
 block beforehtml
-  - const title = 'Device Config'
+  - const title = 'Device Settings'
 
 block style
-  meta(property="og:description", content="A tool to management the device config of ChameleonUltra.")
+  meta(property="og:description", content="A tool to management the settings of ChameleonUltra.")
   meta(property="og:locale", content="zh_TW")
   meta(property="og:title", content=title)
   meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}/pug/device-config.html`)
+  meta(property="og:url", content=`${baseurl}/pug/device-settings.html`)
   style
     :sass
       [v-cloak]
@@ -36,7 +36,7 @@ block content
       .col-6.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnLoadDevice") #[i.fa.fa-upload] Load
       .col-6.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnSaveDevice") #[i.fa.fa-floppy-o] Save
     .card.mb-2
-      h6.card-header.text-white.bg-secondary #[i.fa.fa-cog.mr-1] Device Config
+      h6.card-header.text-white.bg-secondary #[i.fa.fa-cog.mr-1] Device Settings
       .card-body.px-3.pt-3.pb-2
         .input-group.input-group-sm.letter-spacing-n1px.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center animationMode
@@ -97,7 +97,7 @@ block content
       h6.card-header.text-white.bg-danger #[i.fa.fa-exclamation-triangle.mr-1] Danger Zone
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
         button.btn.btn-sm.btn-block.btn-outline-primary.mb-2(@click="btnEnterBootloader") #[i.fa.mr-1.fa-microchip] Enter bootloader
-        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnResetSettings") #[i.fa.mr-1.fa-cogs] Reset to default config
+        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnResetSettings") #[i.fa.mr-1.fa-cogs] Reset to default settings
         button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnBleDeleteAllBonds") #[i.fa.mr-1.fa-bluetooth] Delete ALL BLE bonds
         button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnWipeFds") #[i.fa.mr-1.fa-industry] Factory reset
 
@@ -113,7 +113,7 @@ block script
     const { joi: Joi } = window
     const enumValues = e => _.filter(_.values(e), _.isNumber)
     const ButtonActionValues = enumValues(ButtonAction)
-    const joiDeviceConfig = Joi.object({
+    const joiDeviceSettings = Joi.object({
       animationMode: Joi.valid(...enumValues(AnimationMode)).required(),
       blePairingKey: Joi.string().length(6).regex(/^\d{6}$/).required(),
       blePairingMode: Joi.boolean().truthy(1).falsy(0).required(),
@@ -167,7 +167,7 @@ block script
       methods: {
         async btnLoadDevice () {
           try {
-            this.showLoading({ text: 'Loading config...' })
+            this.showLoading({ text: 'Loading settings...' })
             const { ultra } = this
             const batteryInfo = await ultra.cmdGetBatteryInfo()
             const device = {
@@ -198,9 +198,9 @@ block script
         },
         async btnSaveDevice () {
           try {
-            this.showLoading({ text: 'Saving config...' })
+            this.showLoading({ text: 'Saving settings...' })
             const { ultra } = this
-            const device = await joiDeviceConfig.validateAsync(this.device, { stripUnknown: true })
+            const device = await joiDeviceSettings.validateAsync(this.device, { stripUnknown: true })
             await ultra.cmdSetAnimationMode(device.animationMode)
             await ultra.cmdBleSetPairingMode(device.blePairingMode)
             await ultra.cmdBleSetPairingKey(device.blePairingKey)
@@ -210,7 +210,7 @@ block script
               await ultra.cmdSetButtonLongPressAction(btn, device[`longPressBtn${btn}`])
             }
             await ultra.cmdSaveSettings()
-            await Swal.fire({ icon: 'success', text: 'Config save successfully!' })
+            await Swal.fire({ icon: 'success', text: 'Settings save successfully!' })
           } catch (err) {
             console.error(err)
             await Swal.fire({ icon: 'error', text: err.message })
@@ -221,7 +221,7 @@ block script
           await this.ultra.cmdEnterBootloader().catch(console.error)
         },
         async btnResetSettings () {
-          if (!await this.confirm('Reset to default config?', 'Yes', 'Cancel')) return
+          if (!await this.confirm('Reset to default settings?', 'Yes', 'Cancel')) return
           await this.ultra.cmdResetSettings().catch(console.error)
         },
         async btnBleDeleteAllBonds () {

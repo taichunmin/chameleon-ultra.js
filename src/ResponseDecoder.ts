@@ -40,7 +40,7 @@ export class ResponseDecoder { // eslint-disable-line @typescript-eslint/no-extr
     }
   }
 
-  static parseEmuMf1Config (buf: Buffer): EmuMf1Config {
+  static parseEmuMf1Settings (buf: Buffer): EmuMf1Settings {
     if (!Buffer.isBuffer(buf) || buf.length !== 5) throw new TypeError('buf should be a Buffer with length 5')
     return {
       detection: buf[0] === 1,
@@ -142,7 +142,7 @@ export interface EmuMf1AntiColl {
   uid: Buffer
 }
 
-export interface EmuMf1Config {
+export interface EmuMf1Settings {
   detection: boolean
   gen1a: boolean
   gen2: boolean
@@ -152,11 +152,11 @@ export interface EmuMf1Config {
 
 export interface EmuMf1Data {
   antiColl: EmuMf1AntiColl
-  config: EmuMf1Config
+  settings: EmuMf1Settings
   body: Buffer
 }
 
-export interface SlotConfig {
+export interface SlotSettings {
   config: { activated: number }
   group: Array<{
     enable: boolean
