@@ -34,7 +34,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
     this.Buffer = Buffer
     this.logger.webble = ultra.createDebugger('webble')
 
-    if (!_.isNil(ultra.$adapter)) await ultra.disconnect()
+    if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))
     const adapter: any = {}
 
     const _isSupported = await bluetooth?.getAvailability() ?? false
@@ -88,7 +88,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
           await sleep(100)
         }
         if (!this.isOpen) throw new Error('Failed to connect gatt')
-        this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect() })
+        this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect(new Error('Webble gattserverdisconnected')) })
 
         ultra.port = {
           isOpen: () => { return this.isOpen },

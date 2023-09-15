@@ -49,3 +49,53 @@ export function createIsEnum<T extends readonly any[] | ArrayLike<any> | Record<
   const s = new Set(_.values(e))
   return (val: any): val is ValuesType<T> => s.has(val)
 }
+
+const ERROR_KEYS = [
+  'address',
+  'args',
+  'code',
+  'data',
+  'dest',
+  'errno',
+  'info',
+  'message',
+  'name',
+  'path',
+  'port',
+  'positions',
+  'reason',
+  'response.data',
+  'response.headers',
+  'response.status',
+  'source',
+  'stack',
+  'status',
+  'statusCode',
+  'statusMessage',
+  'syscall',
+] as const
+
+export function errToJson<T extends Error & { originalError?: any, stack?: any }> (err: T): Partial<T> {
+  const tmp: any = {
+    ..._.pick(err, ERROR_KEYS),
+    ...(_.isNil(err.originalError) ? {} : { originalError: errToJson(err.originalError) }),
+  }
+  return tmp
+}
+
+export function jsonStringify (obj: object, space?: number): string {
+  try {
+    const preventCircular = new Set()
+    return JSON.stringify(obj, (key, value) => {
+      if (value instanceof Map) return _.fromPairs([...value.entries()])
+      if (value instanceof Set) return [...value.values()]
+      if (_.isObject(value) && !_.isEmpty(value)) {
+        if (preventCircular.has(value)) return '[Circular]'
+        preventCircular.add(value)
+      }
+      return value
+    }, space)
+  } catch (err) {
+    return `[UnexpectedJSONParseError]: ${err.message as string}`
+  }
+}
