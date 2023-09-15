@@ -17,7 +17,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
     const { ultra } = context
     this.logger.webserial = ultra.createDebugger('webserial')
 
-    if (!_.isNil(ultra.$adapter)) await ultra.disconnect()
+    if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))
     const adapter: any = {}
 
     adapter.isSupported = (): boolean => !_.isNil(serial)
@@ -37,7 +37,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
 
         const info = await this.port.getInfo() as { usbVendorId: number, usbProductId: number }
         this.logger.webserial(`port selected, usbVendorId = ${info.usbVendorId}, usbProductId = ${info.usbProductId}`)
-        this.port.addEventListener?.('disconnect', () => { void ultra.disconnect() })
+        this.port.addEventListener?.('disconnect', () => { void ultra.disconnect(new Error('Webserial disconnect')) })
         ultra.port = _.merge(this.port, {
           isOpen: () => { return this.isOpen },
         })

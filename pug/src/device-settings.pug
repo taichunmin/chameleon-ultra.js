@@ -56,7 +56,7 @@ block content
             button.btn.btn-outline-secondary(v-if="blePairingKeyVisible", type="button", @click="blePairingKeyVisible = false"): i.fa.fa-eye
             button.btn.btn-outline-secondary(v-else, type="button", @click="blePairingKeyVisible = true"): i.fa.fa-eye-slash
         .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center mode
+          .input-group-prepend: span.input-group-text.justify-content-center deviceMode
           select.form-control.form-control-sm(v-model.number="device.mode")
             option(value="0") TAG
             option(value="1") READER

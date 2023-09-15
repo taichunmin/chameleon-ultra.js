@@ -31,7 +31,7 @@ block content
           option(value="usb") USB Serial (PC only)
         .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
     .card.mb-3
-      .card-header.letter-spacing-n1px #[i.fa.fa-fw.fa-id-card] Scan UID / Simulate Tag
+      .card-header.letter-spacing-n1px #[i.fa.fa-fw.fa-id-card] Scan UID / Emulate Tag
       .card-body
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center Slot
@@ -56,7 +56,7 @@ block content
           .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.sak = ''") #[i.fa.fa-fw.fa-times]
         .row.mx-n1
           .col.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnScanTag") #[i.fa.fa-fw.fa-sign-out] Scan UID
-          .col.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnSimulateTag") #[i.fa.fa-fw.fa-sign-in] Simulate
+          .col.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnEmulateTag") #[i.fa.fa-fw.fa-sign-in] Emulate
     .card.mb-3
       .card-header.letter-spacing-n1px #[i.fa.fa-fw.fa-lock] Key recover / Check key
       .card-body
@@ -91,9 +91,9 @@ block content
                 ol.mb-0.pl-4
                   li Keep ChameleonUltra awaked and connect your ChameleonUltra via USB or BLE (default BLE pairing key: #[code 123456]).
                   li (Optional) Put your tag in front of ChameleonUltra then click "Scan UID."
-                  li Select which slot you want to simulate. The hf data in the slot will be #[strong.text-danger REPLACE]!
+                  li Select which slot you want to emulate. The hf data in the slot will be #[strong.text-danger REPLACE]!
                   li Edit the tag information: TagType, UID, ATQA, SAK.
-                  li Click "Simulate" to enable detection and #[strong.text-danger REPLACE] the hf data in the slot.
+                  li Click "Emulate" to enable detection and #[strong.text-danger REPLACE] the hf data in the slot.
                   li Let reader read ChameleonUltra more than 2 times to collect data.
                   li Click "Recover" button to recover key. It may take a long time.
                   li Put your tag in front of ChameleonUltra, click "Test" button to select detected key then click "Check" button to check if the key is correct.
@@ -176,7 +176,7 @@ block script
             await Swal.fire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
           }
         },
-        async btnSimulateTag () {
+        async btnEmulateTag () {
           try {
             const { ultra } = this
             const { atqa, sak, slot, tagType, uid } = this.h
@@ -184,7 +184,7 @@ block script
             const slotName = await ultra.cmdGetSlotTagName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Simulating tag...' })
+            this.showLoading({ text: 'Emulating tag...' })
             await this.setDeviceMode('tag')
             // reset slot
             await ultra.cmdSetSlotEnable(slot, true)
@@ -208,10 +208,10 @@ block script
             console.log(`block0 = ${block0.toString('hex')}`)
             await ultra.cmdMf1WriteEmuBlock(0, block0) // set block0
             await ultra.cmdSaveSlotSettings()
-            await Swal.fire({ icon: 'success', title: 'Simulate successfully!' })
+            await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
             console.error(err)
-            await Swal.fire({ icon: 'error', title: 'Failed to simulate tag.', text: err.message })
+            await Swal.fire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
           }
         },
         async btnRecover () {

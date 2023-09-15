@@ -19,7 +19,7 @@ export default class SerialPortAdapter implements ChameleonPlugin {
     this.logger.serial = ultra.createDebugger('serial')
 
     if (!_.isNil(ultra.$adapter)) {
-      await ultra.disconnect()
+      await ultra.disconnect(new Error('adapter replaced'))
     }
 
     const adapter: any = {}
@@ -38,7 +38,7 @@ export default class SerialPortAdapter implements ChameleonPlugin {
         this.duplex = await new Promise<SerialPort>((resolve, reject) => {
           const tmp = new SerialPort({ baudRate, path }, err => { _.isNil(err) ? resolve(tmp) : reject(err) })
         })
-        this.duplex?.once('close', () => { void ultra.disconnect() })
+        this.duplex?.once('close', () => { void ultra.disconnect(new Error('SerialPort closed')) })
         this.logger.serial(`port connected, path = ${path}, baudRate = ${baudRate}`)
         ultra.port = _.merge(Duplex.toWeb(this.duplex), {
           isOpen: () => { return this.duplex?.isOpen ?? false },

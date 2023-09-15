@@ -1,8 +1,8 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { ResponseDecoder, type EmuMf1AntiColl, type Hf14aInfoResp } from './ResponseDecoder'
-import { createIsEnum, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
+import { createIsEnum, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
+import { ResponseDecoder, type EmuMf1AntiColl, type Hf14aInfoResp } from './ResponseDecoder'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
 
 const READ_DEFAULT_TIMEOUT = 5e3
@@ -184,16 +184,16 @@ export class ChameleonUltra {
         this.rxSink = new ChameleonRxSink()
         void this.port.readable.pipeTo(new WritableStream(this.rxSink), {
           signal: this.rxSink.signal,
-        }).catch(err => {
-          void this.disconnect()
-          throw _.merge(new Error(`Failed to read resp: ${err.message}`), { originalError: err })
+        }).catch(async err => {
+          if (err.message === 'disconnect()') return // disconnected by invoke disconnect()
+          await this.disconnect(_.merge(new Error(`Failed to read resp: ${err.message}`), { originalError: err }))
         })
 
         this.versionString = `${await this.cmdGetAppVersion()} (${await this.cmdGetGitVersion()})`
         this.logger.core(`connected, version = ${this.versionString}`)
       } catch (err) {
         this.logger.core(`Failed to connect: ${err.message as string}`)
-        if (this.isConnected()) await this.disconnect()
+        if (this.isConnected()) await this.disconnect(err)
         throw _.merge(new Error(err.message ?? 'Failed to connect'), { originalError: err })
       }
     })
@@ -203,14 +203,14 @@ export class ChameleonUltra {
    * Disconnect ChameleonUltra.
    * @group Methods related to device
    */
-  async disconnect (): Promise<void> {
+  async disconnect (err: Error = new Error('disconnect()')): Promise<void> {
     try {
       if (this.isDisconnecting) return
+      this.logger.core('%s %O', err.message, errToJson(err))
       this.isDisconnecting = true // 避免重複執行
-      await this.invokeHook('disconnect', {}, async (ctx, next) => {
+      await this.invokeHook('disconnect', { err }, async (ctx, next) => {
         try {
-          this.logger.core('disconnected')
-          this.rxSink?.controller.abort(new Error('disconnected'))
+          this.rxSink?.controller.abort(err)
           while (this.port?.readable?.locked === true) await sleep(10)
           delete this.port
         } catch (err) {
