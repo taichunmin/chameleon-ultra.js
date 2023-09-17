@@ -38,36 +38,37 @@ block content
     .card.mb-2
       h6.card-header.text-white.bg-secondary #[i.fa.fa-cog.mr-1] Device Settings
       .card-body.px-3.pt-3.pb-2
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center animationMode
-          select.form-control.form-control-sm(v-model.number="device.animationMode")
-            option(value="0") Full
-            option(value="1") Short
-            option(value="2") None
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center blePairingMode
-          select.form-control.form-control-sm(v-model.number="device.blePairingMode")
-            option(value="0") Disable
-            option(value="1") Enable
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center blePairingKey
-          input.form-control.form-control-sm(v-model="device.blePairingKey", :type="blePairingKeyVisible ? 'text' : 'password'")
-          .input-group-append
-            button.btn.btn-outline-secondary(v-if="blePairingKeyVisible", type="button", @click="blePairingKeyVisible = false"): i.fa.fa-eye
-            button.btn.btn-outline-secondary(v-else, type="button", @click="blePairingKeyVisible = true"): i.fa.fa-eye-slash
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center deviceMode
-          select.form-control.form-control-sm(v-model.number="device.mode")
-            option(value="0") TAG
-            option(value="1") READER
-        template(v-for="k in ['pressBtnA', 'pressBtnB', 'longPressBtnA', 'longPressBtnB']")
+        form(@submit.prevent)
           .input-group.input-group-sm.letter-spacing-n1px.mb-2
-            .input-group-prepend: span.input-group-text.justify-content-center {{ k }}
-            select.form-control.form-control-sm(v-model.number="device[k]")
-              option(value="0") DISABLE
-              option(value="1") CYCLE_SLOT_INC
-              option(value="2") CYCLE_SLOT_DEC
-              option(value="3") CLONE_IC_UID
+            .input-group-prepend: span.input-group-text.justify-content-center animationMode
+            select.form-control.form-control-sm(v-model.number="device.animationMode")
+              option(value="0") Full
+              option(value="1") Short
+              option(value="2") None
+          .input-group.input-group-sm.letter-spacing-n1px.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center blePairingMode
+            select.form-control.form-control-sm(v-model.number="device.blePairingMode")
+              option(value="0") Disable
+              option(value="1") Enable
+          .input-group.input-group-sm.letter-spacing-n1px.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center blePairingKey
+            input.form-control.form-control-sm(v-model="device.blePairingKey", autocomplete="off", :type="blePairingKeyVisible ? 'text' : 'password'")
+            .input-group-append
+              button.btn.btn-outline-secondary(v-if="blePairingKeyVisible", type="button", @click="blePairingKeyVisible = false"): i.fa.fa-eye
+              button.btn.btn-outline-secondary(v-else, type="button", @click="blePairingKeyVisible = true"): i.fa.fa-eye-slash
+          .input-group.input-group-sm.letter-spacing-n1px.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center deviceMode
+            select.form-control.form-control-sm(v-model.number="device.mode")
+              option(value="0") TAG
+              option(value="1") READER
+          template(v-for="k in ['pressBtnA', 'pressBtnB', 'longPressBtnA', 'longPressBtnB']")
+            .input-group.input-group-sm.letter-spacing-n1px.mb-2
+              .input-group-prepend: span.input-group-text.justify-content-center {{ k }}
+              select.form-control.form-control-sm(v-model.number="device[k]")
+                option(value="0") DISABLE
+                option(value="1") CYCLE_SLOT_INC
+                option(value="2") CYCLE_SLOT_DEC
+                option(value="3") CLONE_IC_UID
     .card.mb-2.text-sm
       h6.card-header.text-white.bg-info #[i.fa.fa-info-circle.mr-1] Device Info
       ul.list-group.list-group-flush.letter-spacing-n1px(v-if="device.bleAddress")

@@ -54,8 +54,11 @@ export class ChameleonUltra {
    */
   rxSink?: ChameleonRxSink
 
-  /** The firmware version of ChameleonUltra */
-  versionString: string = ''
+  /**
+   * @internal
+   * @group Internal
+   */
+  supportedCmds: Set<Cmd> = new Set<Cmd>()
 
   /**
    * Create a new instance of ChameleonUltra.
@@ -189,8 +192,7 @@ export class ChameleonUltra {
           await this.disconnect(_.merge(new Error(`Failed to read resp: ${err.message}`), { originalError: err }))
         })
 
-        this.versionString = `${await this.cmdGetAppVersion()} (${await this.cmdGetGitVersion()})`
-        this.logger.core(`connected, version = ${this.versionString}`)
+        this.logger.core('chameleon connected')
       } catch (err) {
         this.logger.core(`Failed to connect: ${err.message as string}`)
         if (this.isConnected()) await this.disconnect(err)
@@ -210,6 +212,7 @@ export class ChameleonUltra {
       this.isDisconnecting = true // 避免重複執行
       await this.invokeHook('disconnect', { err }, async (ctx, next) => {
         try {
+          this.supportedCmds = new Set()
           this.rxSink?.controller.abort(err)
           while (this.port?.readable?.locked === true) await sleep(10)
           delete this.port
@@ -761,13 +764,23 @@ export class ChameleonUltra {
    * @returns The cmds supported by device.
    * @group Commands related to device
    */
-  async cmdGetCapabilities (): Promise<Set<Cmd>> {
+  async cmdGetSupportedCmds (): Promise<Set<Cmd>> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_DEVICE_CAPABILITIES }) // cmd = 1035
     const data = (await this._readRespTimeout())?.data
     const cmds = new Set<Cmd>()
     for (let i = 0; i < data.length; i += 2) cmds.add(data.readUInt16LE(i))
     return cmds
+  }
+
+  /**
+   * To check if the specified cmd is supported by device.
+   * @returns `true` if the specified cmd is supported by device, otherwise return `false`.
+   * @group Commands related to device
+   */
+  async isCmdSupported (cmd: Cmd): Promise<boolean> {
+    if (this.supportedCmds.size === 0) this.supportedCmds = await this.cmdGetSupportedCmds()
+    return this.supportedCmds.has(cmd)
   }
 
   /**
@@ -1012,8 +1025,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the mifare block data of emulator.
-   * @param blockStart The start block of emulator.
+   * Set the mifare block data of actived slot.
+   * @param blockStart The start block of actived slot.
    * @param data The data to be set. the length of data should be multiples of 16.
    * @group Commands related to device mode: TAG
    */
@@ -1028,7 +1041,7 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the mifare anti-collision data of emulator.
+   * Set the mifare anti-collision data of actived slot.
    * @param args
    * @group Commands related to device mode: TAG
    */
@@ -1080,10 +1093,10 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the mifare block data of emulator.
-   * @param blockStart The start block of emulator.
+   * Get the mifare block data of actived slot.
+   * @param blockStart The start block of actived slot.
    * @param blockCount The count of blocks to be get.
-   * @returns The mifare block data of emulator.
+   * @returns The mifare block data of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1ReadEmuBlock (blockStart: number = 0, blockCount: number = 1): Promise<Buffer> {
@@ -1093,8 +1106,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the mifare settings of emulator.
-   * @returns The mifare settings of emulator.
+   * Get the mifare settings of actived slot.
+   * @returns The mifare settings of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1GetEmuSettings (): Promise<ReturnType<typeof ResponseDecoder.parseEmuMf1Settings>> {
@@ -1104,8 +1117,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the mifare gen1a mode of emulator.
-   * @returns The mifare gen1a mode of emulator.
+   * Set the mifare gen1a mode of actived slot.
+   * @returns The mifare gen1a mode of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1GetGen1aMode (): Promise<boolean> {
@@ -1115,7 +1128,7 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the mifare gen1a mode of emulator.
+   * Set the mifare gen1a mode of actived slot.
    * @param enable `true` to enable the gen1a mode, `false` to disable the gen1a mode.
    * @group Commands related to device mode: TAG
    */
@@ -1126,8 +1139,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the mifare gen2 mode of emulator.
-   * @returns The mifare gen2 mode of emulator.
+   * Get the mifare gen2 mode of actived slot.
+   * @returns The mifare gen2 mode of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1GetGen2Mode (): Promise<boolean> {
@@ -1137,7 +1150,7 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the mifare gen2 mode of emulator.
+   * Set the mifare gen2 mode of actived slot.
    * @param enable `true` to enable the gen2 mode, `false` to disable the gen2 mode.
    * @group Commands related to device mode: TAG
    */
@@ -1148,8 +1161,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the mode of emulator that using anti-collision data from block 0 for 4 byte UID tags.
-   * @returns The mode of emulator that using anti-collision data from block 0 for 4 byte UID tags.
+   * Get the mode of actived slot that using anti-collision data from block 0 for 4 byte UID tags or not.
+   * @returns The mode of actived slot that using anti-collision data from block 0 for 4 byte UID tags or not.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1GetBlockAntiCollMode (): Promise<boolean> {
@@ -1159,7 +1172,7 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the mode of emulator that using anti-collision data from block 0 for 4 byte UID tags.
+   * Set the mode of actived slot that using anti-collision data from block 0 for 4 byte UID tags or not.
    * @param enable `true` to enable the mode, `false` to disable the mode.
    * @group Commands related to device mode: TAG
    */
@@ -1170,8 +1183,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the mifare write mode of emulator.
-   * @returns The mifare write mode of emulator.
+   * Get the mifare write mode of actived slot.
+   * @returns The mifare write mode of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1GetWriteMode (): Promise<EmuMf1WriteMode> {
@@ -1181,8 +1194,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the mifare write mode of emulator.
-   * @param mode The mifare write mode of emulator.
+   * Set the mifare write mode of actived slot.
+   * @param mode The mifare write mode of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdMf1SetWriteMode (mode: EmuMf1WriteMode): Promise<void> {
@@ -1193,8 +1206,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the mifare anti-collision data of emulator.
-   * @returns The mifare anti-collision data of emulator.
+   * Get the mifare anti-collision data of actived slot.
+   * @returns The mifare anti-collision data of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdHf14aGetAntiCollData (): Promise<EmuMf1AntiColl> {
@@ -1204,8 +1217,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the em410x id of emulator.
-   * @param id The em410x id of emulator.
+   * Set the em410x id of actived slot.
+   * @param id The em410x id of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
@@ -1216,8 +1229,8 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the em410x id of emulator.
-   * @returns The em410x id of emulator.
+   * Get the em410x id of actived slot.
+   * @returns The em410x id of actived slot.
    * @group Commands related to device mode: TAG
    */
   async cmdEm410xGetEmuId (): Promise<Buffer> {
