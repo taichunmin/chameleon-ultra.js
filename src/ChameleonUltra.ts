@@ -757,6 +757,20 @@ export class ChameleonUltra {
   }
 
   /**
+   * Get the cmds supported by device.
+   * @returns The cmds supported by device.
+   * @group Commands related to device
+   */
+  async cmdGetCapabilities (): Promise<Set<Cmd>> {
+    this._clearRxBufs()
+    await this._writeCmd({ cmd: Cmd.GET_DEVICE_CAPABILITIES }) // cmd = 1035
+    const data = (await this._readRespTimeout())?.data
+    const cmds = new Set<Cmd>()
+    for (let i = 0; i < data.length; i += 2) cmds.add(data.readUInt16LE(i))
+    return cmds
+  }
+
+  /**
    * Get the ble pairing mode of device.
    * @returns `true` if pairing is required to connect to device, otherwise return `false`.
    * @group Commands related to device

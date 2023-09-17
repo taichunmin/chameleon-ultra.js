@@ -9,7 +9,7 @@
   "name": "chameleon-ultra.js",
   "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
   "unpkg": "dist/iife/index.min.js",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -67,6 +67,7 @@
     "rollup-plugin-polyfill-node": "^0.12.0",
     "rollup-plugin-version-injector": "^1.3.3",
     "serve-static": "^1.15.0",
+    "supports-color": "^9.4.0",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
     "tslib": "^2.6.2",
