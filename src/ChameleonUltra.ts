@@ -212,7 +212,7 @@ export class ChameleonUltra {
       this.isDisconnecting = true // 避免重複執行
       await this.invokeHook('disconnect', { err }, async (ctx, next) => {
         try {
-          this.supportedCmds = new Set()
+          this.supportedCmds.clear() // clear supportedCmds
           this.rxSink?.controller.abort(err)
           while (this.port?.readable?.locked === true) await sleep(10)
           delete this.port
@@ -1561,7 +1561,7 @@ export class ChameleonUltraFrame {
       buf.slice(4, 6).toString('hex'), // status
       buf.slice(6, 8).toString('hex'), // data len
       buf.slice(8, 9).toString('hex'), // head lrc
-      buf.readUInt16LE(6) > 0 ? buf.slice(9, -1).toString('hex') : '(no data)', // data
+      buf.readUInt16BE(6) > 0 ? buf.slice(9, -1).toString('hex') : '(no data)', // data
       buf.slice(-1).toString('hex'), // data lrc
     ].join(' ')
   }
