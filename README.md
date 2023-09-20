@@ -21,6 +21,22 @@
 
 ![](https://i.imgur.com/bWJGSGq.png)
 
+## TOC
+
+- [TOC](#toc)
+- [Browser \& OS compatibility](#browser--os-compatibility)
+  - [SerialPort (Node.js)](#serialport-nodejs)
+  - [Web Bluetooth API](#web-bluetooth-api)
+  - [Web Serial API](#web-serial-api)
+  - [Web Serial API Polyfill](#web-serial-api-polyfill)
+- [Installing](#installing)
+  - [Package manager](#package-manager)
+  - [CDN](#cdn)
+- [Getting Started](#getting-started)
+  - [Slot Enable and Emulation Mifare 1K](#slot-enable-and-emulation-mifare-1k)
+  - [Set new BLE Pairing Key and Enable BLE Pairing](#set-new-ble-pairing-key-and-enable-ble-pairing)
+- [Related links](#related-links)
+
 ## Browser & OS compatibility
 
 ### SerialPort (Node.js)
@@ -102,15 +118,62 @@ After the `script` tag, you can use the `chameleon-ultra.js` as following:
 ```js
 const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
 
-const ultraUsb = new ChameleonUltra(true)
+const ultraUsb = new ChameleonUltra()
 ultraUsb.use(new WebserialAdapter())
-const ultraBle = new ChameleonUltra(true)
+const ultraBle = new ChameleonUltra()
 ultraBle.use(new WebbleAdapter())
 ```
 
 ## Getting Started
 
-TBD
+### Slot Enable and Emulation Mifare 1K
+
+```js
+const { Buffer, ChameleonUltra, DeviceMode, Slot, TagType, WebserialAdapter } = window.ChameleonUltraJS
+
+const ultraUsb = new ChameleonUltra()
+ultraUsb.use(new WebserialAdapter())
+
+async function run (ultra) {
+  // set slot tag type and reset data
+  await ultra.cmdSlotChangeTagType(Slot.SLOT_8, TagType.MIFARE_1024)
+  await ultra.cmdSlotResetTagType(Slot.SLOT_8, TagType.MIFARE_1024)
+  // enable slot
+  await ultra.cmdSlotSetEnable(Slot.SLOT_8, true)
+  // set active slot
+  await ultra.cmdSlotSetActive(Slot.SLOT_8)
+  // set anti-collision and write emu block
+  await ultra.cmdHf14aSetAntiCollData({
+    uid: Buffer.from('11223344', 'hex'), 
+    atqa: Buffer.from('0400', 'hex'), 
+    sak: Buffer.from('08', 'hex'),
+  })
+  await ultra.cmdMf1WriteEmuBlock(0, Buffer.from('11223344440804000000000000000000', 'hex'))
+  // save slot settings
+  await ultra.cmdSlotSaveSettings()
+  // set device mode
+  await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+}
+
+run(ultraUsb)
+```
+
+### Set new BLE Pairing Key and Enable BLE Pairing
+
+```js
+const { Buffer, ChameleonUltra, DeviceMode, Slot, TagType, WebserialAdapter } = window.ChameleonUltraJS
+
+const ultraUsb = new ChameleonUltra()
+ultraUsb.use(new WebserialAdapter())
+
+async function run (ultra) {
+  await ultra.cmdBleSetPairingKey('654321')
+  await ultra.cmdBleDeleteAllBonds() // need to delete all bonds before change pairing mode
+  await ultra.cmdBleSetPairingMode(true)
+}
+
+run(ultraUsb)
+```
 
 ## Related links
 
