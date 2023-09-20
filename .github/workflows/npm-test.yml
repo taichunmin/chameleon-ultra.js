@@ -1,0 +1,32 @@
+name: Test npm
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: node:18
+    steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: install and npm test
+        run: |
+          set -ex
+          mkdir test
+          cd test
+          yarn init -y
+          yarn add chameleon-ultra.js serialport
+
+          echo << EOF > index.cjs
+          const { version } = require('chameleon-ultra.js')
+          console.log(`SDK version = ${version}`)
+          EOF
+          node ./index.cjs
+
+          echo << EOF > index.mjs
+          import { version } from 'chameleon-ultra.js'
+          console.log(`SDK version = ${version}`)
+          EOF
+          node ./index.mjs
