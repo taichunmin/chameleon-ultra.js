@@ -13,13 +13,23 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Print all context
+        run: |
+          echo 'env=${{ toJSON(env) }}'
+          echo 'github=${{ toJSON(github) }}'
+          echo 'inputs=${{ toJSON(inputs) }}'
+          echo 'job=${{ toJSON(job) }}'
+          echo 'runner=${{ toJSON(runner) }}'
+          echo 'secrets=${{ toJSON(secrets) }}'
+          echo 'steps=${{ toJSON(steps) }}'
+          echo 'vars=${{ toJSON(vars) }}'
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:

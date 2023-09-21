@@ -2,8 +2,8 @@ import _ from 'lodash'
 import { Buffer } from './buffer'
 import { createIsEnum, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
-import { ResponseDecoder, type EmuMf1AntiColl, type Hf14aInfoResp } from './ResponseDecoder'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
+import * as Decoder from './ResponseDecoder'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
@@ -64,19 +64,21 @@ export class ChameleonUltra {
    * Create a new instance of ChameleonUltra.
    * @param debug Enable debug mode.
    * @example
-   * Example usage in Browser:
+   * Example usage in Browser (place at the end of body):
    *
-   * ```js
-   * // <script src="./iife/index.min.js"></script>
-   * // <script src="./iife/plugin/WebbleAdapter.min.js"></script>
-   * // <script src="./iife/plugin/WebserialAdapter.min.js"></script>
-   * const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS
+   * ```html
+   * <script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/index.min.js"></script>
+   * <script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebbleAdapter.min.js"></script>
+   * <script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebserialAdapter.min.js"></script>
+   * <script>
+   *   const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS
    *
-   * const ultraUsb = new ChameleonUltra()
-   * ultraUsb.use(new WebserialAdapter())
+   *   const ultraUsb = new ChameleonUltra()
+   *   ultraUsb.use(new WebserialAdapter())
    *
-   * const ultraBle = new ChameleonUltra()
-   * ultraBle.use(new WebbleAdapter())
+   *   const ultraBle = new ChameleonUltra()
+   *   ultraBle.use(new WebbleAdapter())
+   * </script>
    * ```
    *
    * Example usage in CommonJS:
@@ -215,6 +217,8 @@ export class ChameleonUltra {
           this.supportedCmds.clear() // clear supportedCmds
           this.rxSink?.controller.abort(err)
           while (this.port?.readable?.locked === true) await sleep(10)
+          await this.port?.readable.cancel(err)
+          await this.port?.writable.close()
           delete this.port
         } catch (err) {
           throw _.merge(new Error(err.message ?? 'Failed to disconnect'), { originalError: err })
@@ -352,8 +356,14 @@ export class ChameleonUltra {
    * Get current firmware version of device.
    * @returns Current firmware version of device.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdGetAppVersion()) // '1.0'
+   * }
+   * ```
    */
-  async cmdGetAppVersion (): Promise<string> {
+  async cmdGetAppVersion (): Promise<`${number}.${number}`> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_APP_VERSION }) // cmd = 1000
     const data = (await this._readRespTimeout())?.data
@@ -364,6 +374,14 @@ export class ChameleonUltra {
    * Change device mode to tag reader or tag emulator.
    * @param mode The mode to be changed.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+   * }
+   * ```
    */
   async cmdChangeDeviceMode (mode: DeviceMode): Promise<void> {
     this._clearRxBufs()
@@ -375,20 +393,37 @@ export class ChameleonUltra {
    * Get current mode of device.
    * @returns Current mode of device.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   const deviceMode = await ultra.cmdGetDeviceMode()
+   *   console.log(DeviceMode[deviceMode]) // 'TAG'
+   * }
+   * ```
    */
   async cmdGetDeviceMode (): Promise<DeviceMode> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_DEVICE_MODE }) // cmd = 1002
     const data = (await this._readRespTimeout())?.data
-    return data[0] as DeviceMode
+    return data[0]
   }
 
   /**
    * Change the active emulation tag slot of device.
    * @param slot The slot to be active.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * const { Slot } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSlotSetActive(Slot.SLOT_1)
+   * }
+   * ```
    */
-  async cmdSetActiveSlot (slot: Slot): Promise<void> {
+  async cmdSlotSetActive (slot: Slot): Promise<void> {
     if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SET_ACTIVE_SLOT, data: Buffer.from([slot]) }) // cmd = 1003
@@ -400,8 +435,16 @@ export class ChameleonUltra {
    * @param slot The slot to be set.
    * @param tagType The tag type to be set.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * const { Slot, TagType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSlotChangeTagType(Slot.SLOT_1, TagType.MIFARE_1024)
+   * }
+   * ```
    */
-  async cmdSetSlotTagType (slot: Slot, tagType: TagType): Promise<void> {
+  async cmdSlotChangeTagType (slot: Slot, tagType: TagType): Promise<void> {
     if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
     if (!_.isSafeInteger(tagType) || !isTagType(tagType)) throw new TypeError('Invalid tag type')
     this._clearRxBufs()
@@ -414,8 +457,16 @@ export class ChameleonUltra {
    * @param slot The slot to be reset.
    * @param tagType The tag type to be reset.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * const { Slot, TagType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSlotResetTagType(Slot.SLOT_1, TagType.MIFARE_1024)
+   * }
+   * ```
    */
-  async cmdResetSlotData (slot: Slot, tagType: TagType): Promise<void> {
+  async cmdSlotResetTagType (slot: Slot, tagType: TagType): Promise<void> {
     if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
     if (!_.isSafeInteger(tagType) || !isTagType(tagType)) throw new TypeError('Invalid tagType')
     this._clearRxBufs()
@@ -428,8 +479,16 @@ export class ChameleonUltra {
    * @param slot The slot to be enable/disable.
    * @param enable `true` to enable the slot, `false` to disable the slot.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * const { Slot } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSlotSetEnable(Slot.SLOT_1, true)
+   * }
+   * ```
    */
-  async cmdSetSlotEnable (slot: Slot, enable: boolean): Promise<void> {
+  async cmdSlotSetEnable (slot: Slot, enable: boolean): Promise<void> {
     if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SET_SLOT_ENABLE, data: Buffer.from([slot, enable ? 1 : 0]) }) // cmd = 1006
@@ -442,8 +501,16 @@ export class ChameleonUltra {
    * @param freq The freq type to be set.
    * @param name The name to be set. The `byteLength` of name should between `1` and `32`.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * const { Slot, FreqType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSlotSetFreqName(Slot.SLOT_1, FreqType.HF, 'My Tag')
+   * }
+   * ```
    */
-  async cmdSetSlotTagName (slot: Slot, freq: FreqType, name: string): Promise<void> {
+  async cmdSlotSetFreqName (slot: Slot, freq: FreqType, name: string): Promise<void> {
     const data = Buffer.concat([Buffer.from([slot, freq]), Buffer.from(name)])
     if (!_.inRange(data.length, 3, 35)) throw new TypeError('byteLength of name should between 1 and 32')
     this._clearRxBufs()
@@ -460,8 +527,17 @@ export class ChameleonUltra {
    * @param freq The freq type to be get.
    * @returns The nickname of specified freq type in specified slot.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * const { Slot, FreqType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   const name = await ultra.cmdSlotGetFreqName(Slot.SLOT_1, FreqType.HF)
+   *   console.log(name) // 'My Tag'
+   * }
+   * ```
    */
-  async cmdGetSlotTagName (slot: Slot, freq: FreqType): Promise<string | undefined> {
+  async cmdSlotGetFreqName (slot: Slot, freq: FreqType): Promise<string | undefined> {
     try {
       if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('slot should between 0 and 7')
       if (!_.isSafeInteger(freq) || !isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
@@ -477,8 +553,15 @@ export class ChameleonUltra {
   /**
    * The SlotSettings, hf tag data and lf tag data will be written to persistent storage. But the slot nickname is not affected by this command.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMf1WriteEmuBlock(1, Buffer.alloc(16))
+   *   await ultra.cmdSlotSaveSettings()
+   * }
+   * ```
    */
-  async cmdSaveSlotSettings (): Promise<void> {
+  async cmdSlotSaveSettings (): Promise<void> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.SLOT_DATA_CONFIG_SAVE }) // cmd = 1009
     await this._readRespTimeout()
@@ -487,6 +570,12 @@ export class ChameleonUltra {
   /**
    * Enter bootloader mode.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdEnterBootloader()
+   * }
+   * ```
    */
   async cmdEnterBootloader (): Promise<void> {
     this._clearRxBufs()
@@ -498,6 +587,12 @@ export class ChameleonUltra {
    * Get chipset id of device in hex format.
    * @returns Chipset id of device in hex format.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdGetDeviceChipId()) // '4c63d92842621cdb'
+   * }
+   * ```
    */
   async cmdGetDeviceChipId (): Promise<string> {
     this._clearRxBufs()
@@ -510,6 +605,12 @@ export class ChameleonUltra {
    * Get the ble address of device.
    * @returns The ble address of device.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdBleGetAddress()) // 'E8:B6:3D:04:B6:FE'
+   * }
+   * ```
    */
   async cmdBleGetAddress (): Promise<string> {
     this._clearRxBufs()
@@ -524,6 +625,14 @@ export class ChameleonUltra {
    * Set the animation mode of device while wake-up and sleep.
    * @param mode The animation mode to be set.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { AnimationMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSetAnimationMode(AnimationMode.SHORT)
+   * }
+   * ```
    */
   async cmdSetAnimationMode (mode: AnimationMode): Promise<void> {
     if (!_.isSafeInteger(mode) || !isAnimationMode(mode)) throw new TypeError('Invalid animation mode')
@@ -535,6 +644,12 @@ export class ChameleonUltra {
   /**
    * Save the settings of device to persistent storage.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdSaveSettings()
+   * }
+   * ```
    */
   async cmdSaveSettings (): Promise<void> {
     this._clearRxBufs()
@@ -545,6 +660,12 @@ export class ChameleonUltra {
   /**
    * Reset the settings of device to default values.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdResetSettings()
+   * }
+   * ```
    */
   async cmdResetSettings (): Promise<void> {
     this._clearRxBufs()
@@ -556,17 +677,32 @@ export class ChameleonUltra {
    * Get the animation mode of device while wake-up and sleep.
    * @returns The animation mode of device.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { AnimationMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   const mode = await ultra.cmdGetAnimationMode()
+   *   console.log(AnimationMode[mode]) // 'FULL'
+   * }
+   * ```
    */
   async cmdGetAnimationMode (): Promise<AnimationMode> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_ANIMATION_MODE }) // cmd = 1016
-    return (await this._readRespTimeout())?.data[0] as AnimationMode
+    return (await this._readRespTimeout())?.data[0]
   }
 
   /**
    * Get the git version of firmware.
    * @returns The git version of firmware.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdGetGitVersion() // '98605be'
+   * }
+   * ```
    */
   async cmdGetGitVersion (): Promise<string> {
     this._clearRxBufs()
@@ -579,27 +715,61 @@ export class ChameleonUltra {
    * Get the active emulation tag slot of device.
    * @returns The active slot of device.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * const { Slot } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   const slot = await ultra.cmdSlotGetActive()
+   *   console.log(Slot[slot]) // 'SLOT_1'
+   * }
+   * ```
    */
-  async cmdGetActiveSlot (): Promise<Slot> {
+  async cmdSlotGetActive (): Promise<Slot> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_ACTIVE_SLOT }) // cmd = 1018
-    return (await this._readRespTimeout())?.data[0] as Slot
+    return (await this._readRespTimeout())?.data[0]
   }
 
   /**
    * Get the slot info of all slots.
    * @returns The slot info of all slots.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const slots = await ultra.cmdSlotGetInfo()
+   *   console.log(JSON.stringify(slots))
+   *   /**
+   *    * [
+   *    *   { "hfTagType": 3, "lfTagType": 1 },
+   *    *   { "hfTagType": 3, "lfTagType": 0 },
+   *    *   { "hfTagType": 0, "lfTagType": 1 },
+   *    *   { "hfTagType": 0, "lfTagType": 0 },
+   *    *   { "hfTagType": 0, "lfTagType": 0 },
+   *    *   { "hfTagType": 0, "lfTagType": 0 },
+   *    *   { "hfTagType": 0, "lfTagType": 0 },
+   *    *   { "hfTagType": 3, "lfTagType": 0 }
+   *    * ]
+   *    *\/
+   * }
+   * ```
    */
-  async cmdGetSlotInfo (): Promise<ReturnType<typeof ResponseDecoder.parseSlotInfo>> {
+  async cmdSlotGetInfo (): Promise<Decoder.SlotInfo[]> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_SLOT_INFO }) // cmd = 1019
-    return ResponseDecoder.parseSlotInfo((await this._readRespTimeout())?.data)
+    return Decoder.SlotInfo.fromCmd1019((await this._readRespTimeout())?.data)
   }
 
   /**
    * Permanently wipes Chameleon to factory settings. This will delete all your slot data and custom settings. There's no going back.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdWipeFds()
+   * }
+   * ```
    */
   async cmdWipeFds (): Promise<void> {
     this._clearRxBufs()
@@ -611,8 +781,15 @@ export class ChameleonUltra {
    * Get enabled slots.
    * @returns Enabled slots.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const enabledSlots = await ultra.cmdSlotGetIsEnable()
+   *   console.log(enabledSlots.toString('hex')) // '0101010000000001'
+   * }
+   * ```
    */
-  async cmdGetEnabledSlots (): Promise<Buffer> {
+  async cmdSlotGetIsEnable (): Promise<Buffer> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_ENABLED_SLOTS }) // cmd = 1023
     return (await this._readRespTimeout())?.data
@@ -623,8 +800,16 @@ export class ChameleonUltra {
    * @param slot The slot to be deleted.
    * @param freq The freq type of slot.
    * @group Commands related to slot
+   * @example
+   * ```js
+   * const { Slot, FreqType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSlotDeleteFreqType(Slot.SLOT_1, FreqType.HF)
+   * }
+   * ```
    */
-  async cmdDeleteSlotFreqType (slot: Slot, freq: FreqType): Promise<void> {
+  async cmdSlotDeleteFreqType (slot: Slot, freq: FreqType): Promise<void> {
     if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
     if (!_.isSafeInteger(freq) || !isFreqType(freq)) throw new TypeError('Invalid freq')
     this._clearRxBufs()
@@ -636,11 +821,18 @@ export class ChameleonUltra {
    * Get the battery info of device.
    * @returns The battery info of device.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const battery = await ultra.cmdGetBatteryInfo()
+   *   console.log(JSON.stringify(battery)) // { "voltage": 4192, "level": 99 }
+   * }
+   * ```
    */
-  async cmdGetBatteryInfo (): Promise<ReturnType<typeof ResponseDecoder.parseBatteryInfo>> {
+  async cmdGetBatteryInfo (): Promise<Decoder.BatteryInfo> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_BATTERY_INFO }) // cmd = 1025
-    return ResponseDecoder.parseBatteryInfo((await this._readRespTimeout())?.data)
+    return Decoder.BatteryInfo.fromCmd1025((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -648,12 +840,21 @@ export class ChameleonUltra {
    * @param btn The button to be get.
    * @returns The button press action of specified button.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { ButtonType, ButtonAction } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   const btnAction = await ultra.cmdGetButtonPressAction(ButtonType.BUTTON_A)
+   *   console.log(ButtonAction[btnAction]) // 'CYCLE_SLOT_INC'
+   * }
+   * ```
    */
   async cmdGetButtonPressAction (btn: ButtonType): Promise<ButtonAction> {
     if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_BUTTON_PRESS_CONFIG, data: Buffer.from(btn) }) // cmd = 1026
-    return (await this._readRespTimeout())?.data[0] as ButtonAction
+    return (await this._readRespTimeout())?.data[0]
   }
 
   /**
@@ -661,6 +862,14 @@ export class ChameleonUltra {
    * @param btn The button to be set.
    * @param action The button press action to be set.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { ButtonType, ButtonAction } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSetButtonPressAction(ButtonType.BUTTON_A, ButtonAction.CYCLE_SLOT_INC)
+   * }
+   * ```
    */
   async cmdSetButtonPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
     if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
@@ -678,12 +887,21 @@ export class ChameleonUltra {
    * @param btn The button to be get.
    * @returns The button long press action of specified button.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { ButtonType, ButtonAction } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   const btnAction = await ultra.cmdGetButtonLongPressAction(ButtonType.BUTTON_A)
+   *   console.log(ButtonAction[btnAction]) // 'CLONE_IC_UID'
+   * }
+   * ```
    */
   async cmdGetButtonLongPressAction (btn: ButtonType): Promise<ButtonAction> {
     if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_LONG_BUTTON_PRESS_CONFIG, data: Buffer.from(btn) }) // cmd = 1028
-    return (await this._readRespTimeout())?.data[0] as ButtonAction
+    return (await this._readRespTimeout())?.data[0]
   }
 
   /**
@@ -691,6 +909,14 @@ export class ChameleonUltra {
    * @param btn The button to be set.
    * @param action The button long press action to be set.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { ButtonType, ButtonAction } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdSetButtonLongPressAction(ButtonType.BUTTON_A, ButtonAction.CYCLE_SLOT_INC)
+   * }
+   * ```
    */
   async cmdSetButtonLongPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
     if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
@@ -707,6 +933,12 @@ export class ChameleonUltra {
    * Set the ble pairing key of device.
    * @param key The new ble pairing key.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdBleSetPairingKey('123456')
+   * }
+   * ```
    */
   async cmdBleSetPairingKey (key: string): Promise<void> {
     if (!_.isString(key) || !/^\d{6}$/.test(key)) throw new TypeError('Invalid key, must be 6 digits')
@@ -719,6 +951,12 @@ export class ChameleonUltra {
    * Get current ble pairing key of device.
    * @returns The ble pairing key.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdBleGetPairingKey()) // '123456'
+   * }
+   * ```
    */
   async cmdBleGetPairingKey (): Promise<string> {
     this._clearRxBufs()
@@ -729,6 +967,12 @@ export class ChameleonUltra {
   /**
    * Delete all ble bindings.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdBleDeleteAllBonds()
+   * }
+   * ```
    */
   async cmdBleDeleteAllBonds (): Promise<void> {
     this._clearRxBufs()
@@ -740,6 +984,15 @@ export class ChameleonUltra {
    * Get the device is ChameleonUltra or ChameleonLite.
    * @returns `true` if device is ChameleonUltra, `false` if device is ChameleonLite.
    * @group Commands related to device
+   * @example
+   * ```js
+   * const { DeviceModel } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   const model = await ultra.cmdGetDeviceModel()
+   *   console.log(DeviceModel[model]) // 'ULTRA'
+   * }
+   * ```
    */
   async cmdGetDeviceModel (): Promise<DeviceModel> {
     this._clearRxBufs()
@@ -752,17 +1005,41 @@ export class ChameleonUltra {
    * Get the settings of device.
    * @returns The settings of device.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const settings = await ultra.cmdGetDeviceSettings()
+   *   console.log(JSON.stringify(settings)
+   *   /**
+   *    * {
+   *    *   "version": 5,
+   *    *   "animation": 0,
+   *    *   "buttonPressAction": [1, 2],
+   *    *   "buttonLongPressAction": [3, 3],
+   *    *   "blePairingMode": false,
+   *    *   "blePairingKey": "123456"
+   *    * }
+   *    *\/
+   * }
+   * ```
    */
-  async cmdGetDeviceSettings (): Promise<ReturnType<typeof ResponseDecoder.parseDeviceSettings>> {
+  async cmdGetDeviceSettings (): Promise<Decoder.DeviceSettings> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.GET_DEVICE_SETTINGS }) // cmd = 1034
-    return ResponseDecoder.parseDeviceSettings((await this._readRespTimeout())?.data)
+    return Decoder.DeviceSettings.fromCmd1034((await this._readRespTimeout())?.data)
   }
 
   /**
    * Get the cmds supported by device.
    * @returns The cmds supported by device.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const cmds = await ultra.cmdGetSupportedCmds()
+   *   console.log(cmds.size) // 67
+   * }
+   * ```
    */
   async cmdGetSupportedCmds (): Promise<Set<Cmd>> {
     this._clearRxBufs()
@@ -777,6 +1054,12 @@ export class ChameleonUltra {
    * To check if the specified cmd is supported by device.
    * @returns `true` if the specified cmd is supported by device, otherwise return `false`.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.isCmdSupported(Cmd.GET_APP_VERSION)) // true
+   * }
+   * ```
    */
   async isCmdSupported (cmd: Cmd): Promise<boolean> {
     if (this.supportedCmds.size === 0) this.supportedCmds = await this.cmdGetSupportedCmds()
@@ -787,6 +1070,12 @@ export class ChameleonUltra {
    * Get the ble pairing mode of device.
    * @returns `true` if pairing is required to connect to device, otherwise return `false`.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdBleGetPairingMode()) // false
+   * }
+   * ```
    */
   async cmdBleGetPairingMode (): Promise<boolean> {
     this._clearRxBufs()
@@ -798,6 +1087,12 @@ export class ChameleonUltra {
    * Set if the ble pairing is required when connecting to device.
    * @param enable `true` to enable pairing mode, `false` to disable pairing mode.
    * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdBleSetPairingMode(false)
+   * }
+   * ```
    */
   async cmdBleSetPairingMode (enable: boolean): Promise<void> {
     this._clearRxBufs()
@@ -810,17 +1105,43 @@ export class ChameleonUltra {
    * @returns The basic infomation of scanned tag.
    * @throws This command will throw an error if tag not scanned or any error occured.
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   console.log(await ultra.cmdHf14aScan())
+   *   /**
+   *    * {
+   *    *   "atqa": Buffer.from('0400', 'hex'),
+   *    *   "cascade": 1,
+   *    *   "sak": Buffer.from('08', 'hex'),
+   *    *   "uid": Buffer.from('877209e1', 'hex')
+   *    * }
+   *    *\/
+   * }
+   * ```
    */
-  async cmdHf14aScan (): Promise<ReturnType<typeof ResponseDecoder.parseHf14aTag>> {
+  async cmdHf14aScan (): Promise<Decoder.Hf14aAntiColl> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.HF14A_SCAN }) // cmd = 2000
-    return ResponseDecoder.parseHf14aTag((await this._readRespTimeout())?.data)
+    return Decoder.Hf14aAntiColl.fromCmd2000((await this._readRespTimeout())?.data)
   }
 
   /**
-   * Check if the tag support mifare protocol.
-   * @returns `true` if device support mf1, otherwise return `false`.
+   * Test whether it is mifare classic tag.
+   * @returns `true` if tag is mifare classic tag, otherwise return `false`.
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   console.log(await ultra.cmdMf1IsSupport()) // true
+   * }
+   * ```
    */
   async cmdMf1IsSupport (): Promise<boolean> {
     try {
@@ -838,17 +1159,27 @@ export class ChameleonUltra {
    * Check the nt level of mifare protocol.
    * @returns The nt level of mifare protocol.
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   console.log(await ultra.cmdMf1TestNtLevel()) // 'weak'
+   * }
+   * ```
    */
-  async cmdMf1TestNtLevel (): Promise<Mf1NtLevel> {
+  async cmdMf1TestPrngType (): Promise<Mf1PrngType> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.MF1_DETECT_NT_LEVEL }) // cmd = 2002
     const status = (await this._readRespTimeout())?.status
-    const statusToString: Record<number, Mf1NtLevel> = {
-      0x00: 'weak',
-      0x24: 'static',
-      0x25: 'hard',
-    }
-    return statusToString[status] ?? 'unknown'
+    const statusToPrngType = new Map<RespStatus, Mf1PrngType>([
+      [0x00, Mf1PrngType.WEAK],
+      [0x24, Mf1PrngType.STATIC],
+      [0x25, Mf1PrngType.HARD],
+    ])
+    if (!statusToPrngType.has(status)) throw new Error(`Invalid status: ${status}`)
+    return statusToPrngType.get(status) as Mf1PrngType
   }
 
   /**
@@ -874,13 +1205,13 @@ export class ChameleonUltra {
    * @group Commands related to device mode: READER
    * @alpha
    */
-  async cmdMf1AcquireDarkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax = 15): Promise<ReturnType<typeof ResponseDecoder.parseMf1DarksideCore>> {
+  async cmdMf1AcquireDarkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax = 15): Promise<Decoder.Mf1DarksideArgs> {
     this._clearRxBufs()
     await this._writeCmd({
       cmd: Cmd.MF1_DARKSIDE_ACQUIRE, // cmd = 2004
       data: Buffer.from([keyType, block, isFirst ? 1 : 0, syncMax]),
     })
-    return ResponseDecoder.parseMf1DarksideCore((await this._readRespTimeout({ timeout: (syncMax + 5) * 1000 }))?.data)
+    return Decoder.Mf1DarksideArgs.fromCmd2004((await this._readRespTimeout({ timeout: syncMax * 1e4 }))?.data)
   }
 
   /**
@@ -890,7 +1221,7 @@ export class ChameleonUltra {
    * @group Commands related to device mode: READER
    * @alpha
    */
-  async cmdMf1TestNtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<ReturnType<typeof ResponseDecoder.parseMf1NtDistance>> {
+  async cmdMf1TestNtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<Decoder.Mf1NtDistanceArgs> {
     if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
     if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
     this._clearRxBufs()
@@ -898,7 +1229,7 @@ export class ChameleonUltra {
       cmd: Cmd.MF1_DETECT_NT_DIST, // cmd = 2005
       data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey]),
     })
-    return ResponseDecoder.parseMf1NtDistance((await this._readRespTimeout())?.data)
+    return Decoder.Mf1NtDistanceArgs.fromCmd2005((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -911,7 +1242,7 @@ export class ChameleonUltra {
   async cmdMf1AcquireNested ({
     src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') },
     dst: { dstBlock = 0, dstKeyType = Mf1KeyType.KEY_A },
-  }: CmdAcquireMf1NestedArgs): Promise<ReturnType<typeof ResponseDecoder.parseMf1NestedCore>> {
+  }: CmdAcquireMf1NestedArgs): Promise<Decoder.Mf1NestedArgs[]> {
     if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
     if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
     if (!_.isSafeInteger(dstKeyType) || !isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dstKeyType')
@@ -920,7 +1251,7 @@ export class ChameleonUltra {
       cmd: Cmd.MF1_NESTED_ACQUIRE, // cmd = 2006
       data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey, Buffer.from([dstKeyType, dstBlock])]),
     })
-    return ResponseDecoder.parseMf1NestedCore((await this._readRespTimeout())?.data)
+    return Decoder.Mf1NestedArgs.fromCmd2006((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -928,6 +1259,20 @@ export class ChameleonUltra {
    * @param args
    * @returns `true` if the key is valid for specified block and key type.
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   console.log(await ultra.cmdMf1CheckBlockKey({
+   *     block: 0,
+   *     keyType: Mf1KeyType.KEY_A,
+   *     key,
+   *   })) // true
+   * }
+   * ```
    */
   async cmdMf1CheckBlockKey ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdCheckMf1BlockKeyArgs = {}): Promise<boolean> {
     try {
@@ -941,7 +1286,7 @@ export class ChameleonUltra {
       await this._readRespTimeout()
       return true
     } catch (err) {
-      if (err.status === RespStatus.MF_ERRAUTH) return false
+      if (err.status === RespStatus.MF_ERR_AUTH) return false
       throw err
     }
   }
@@ -951,6 +1296,21 @@ export class ChameleonUltra {
    * @param args
    * @returns The data read from specified block.
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const block1 = await ultra.cmdMf1ReadBlock({
+   *     block: 1,
+   *     keyType: Mf1KeyType.KEY_A,
+   *     key,
+   *   })
+   *   console.log(block1.toString('hex')) // '00000000000000000000000000000000'
+   * }
+   * ```
    */
   async cmdMf1ReadBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdReadMf1BlockArgs = {}): Promise<Buffer> {
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
@@ -966,6 +1326,22 @@ export class ChameleonUltra {
    * Write data to specified block.
    * @param args
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const block1 = Buffer.from('00000000000000000000000000000000', 'hex')
+   *   await ultra.cmdMf1WriteBlock({
+   *     block: 1,
+   *     keyType: Mf1KeyType.KEY_A,
+   *     key,
+   *     data: block1,
+   *   })
+   * }
+   * ```
    */
   async cmdMf1WriteBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex'), data }: CmdWriteMf1BlockArgs = {}): Promise<void> {
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
@@ -982,24 +1358,56 @@ export class ChameleonUltra {
    * Get the info composed of `cmdHf14aScan()` and `cmdMf1TestNtLevel()`.
    * @returns The info about 14a tag and mifare protocol.
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { Buffer } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const tag = await ultra.hf14aInfo()
+   *   console.log(tag)
+   *   /**
+   *    * {
+   *    *   "tag": {
+   *    *     "uid": Buffer.from('d2040000', 'hex'),
+   *    *     "cascade": 1,
+   *    *     "sak": Buffer.from('08', 'hex'),
+   *    *     "atqa": Buffer.from('0400', 'hex')
+   *    *   },
+   *    *   "mifare": { "prngAttack": "weak" }
+   *    * }
+   *    *\/
+   * }
+   * ```
    */
-  async hf14aInfo (): Promise<Hf14aInfoResp> {
+  async hf14aInfo (): Promise<Decoder.Hf14aTagInfo> {
     if (await this.cmdGetDeviceMode() !== DeviceMode.READER) await this.cmdChangeDeviceMode(DeviceMode.READER)
-    const resp: Hf14aInfoResp = {
-      tag: await this.cmdHf14aScan(),
+    const tag = await this.cmdHf14aScan()
+    const item: Decoder.Hf14aTagInfo = {
+      tag,
+      nxpTypeBySak: NxpTypeBySak.get(tag.sak[0]),
     }
     if (await this.cmdMf1IsSupport()) {
-      resp.mifare = {
-        prngAttack: await this.cmdMf1TestNtLevel(),
-      }
+      item.prngType = await this.cmdMf1TestPrngType()
     }
-    return resp
+    return item
   }
 
   /**
    * Scan em410x tag and print id
    * @returns The id of em410x tag.
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { Buffer } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *
+   *   const id = await ultra.cmdEm410xScan()
+   *   console.log(id.toString('hex')) // 'deadbeef88'
+   * }
+   * ```
    */
   async cmdEm410xScan (): Promise<Buffer> {
     this._clearRxBufs()
@@ -1011,6 +1419,15 @@ export class ChameleonUltra {
    * Write id of em410x tag to t55xx tag.
    * @param id The id of em410x tag.
    * @group Commands related to device mode: READER
+   * @example
+   * ```js
+   * const { Buffer } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   await ultra.cmdEm410xWriteToT55xx(Buffer.from('deadbeef88', 'hex'))
+   * }
+   * ```
    */
   async cmdEm410xWriteToT55xx (id: Buffer): Promise<void> {
     if (!Buffer.isBuffer(id) || id.length !== 5) throw new TypeError('id should be a Buffer with length 5')
@@ -1029,6 +1446,12 @@ export class ChameleonUltra {
    * @param blockStart The start block of actived slot.
    * @param data The data to be set. the length of data should be multiples of 16.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMf1WriteEmuBlock(1, Buffer.alloc(16))
+   * }
+   * ```
    */
   async cmdMf1WriteEmuBlock (blockStart: number = 0, data: Buffer): Promise<void> {
     if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
@@ -1044,11 +1467,21 @@ export class ChameleonUltra {
    * Set the mifare anti-collision data of actived slot.
    * @param args
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdHf14aSetAntiCollData({
+   *     atqa: Buffer.from('0400', 'hex'),
+   *     sak: Buffer.from('08', 'hex'),
+   *     uid: Buffer.from('01020304', 'hex')
+   *   })
+   * }
+   * ```
    */
-  async cmdHf14aSetAntiCollData ({ sak, atqa, uid }: EmuMf1AntiColl): Promise<void> {
-    if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
-    if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
+  async cmdHf14aSetAntiCollData ({ sak, atqa, uid }: Decoder.Hf14aAntiColl): Promise<void> {
     if (!Buffer.isBuffer(uid) || !_.includes([4, 7, 10], uid.length)) throw new TypeError('uid should be a Buffer with length 4, 7 or 10')
+    if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
+    if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
     this._clearRxBufs()
     await this._writeCmd({
       cmd: Cmd.HF14A_SET_ANTI_COLL_DATA, // cmd = 4001
@@ -1061,6 +1494,12 @@ export class ChameleonUltra {
    * Enable or disable the mifare MFKey32 detection and clear the data of detections.
    * @param enable `true` to enable the detection, `false` to disable the detection.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMf1SetDetectionEnable(true)
+   * }
+   * ```
    */
   async cmdMf1SetDetectionEnable (enable: boolean = true): Promise<void> {
     this._clearRxBufs()
@@ -1072,6 +1511,12 @@ export class ChameleonUltra {
    * Get the count of mifare MFKey32 detections.
    * @returns The count of mifare MFKey32 detections.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMf1GetDetectionCount()) // 0
+   * }
+   * ```
    */
   async cmdMf1GetDetectionCount (): Promise<number> {
     this._clearRxBufs()
@@ -1084,12 +1529,29 @@ export class ChameleonUltra {
    * @param index The start index of detections to be get.
    * @returns The mifare MFKey32 detections.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const logs = await ultra.cmdMf1GetDetectionLogs(0)
+   *   console.log(logs)
+   *   /**
+   *    * {
+   *    *   "block": 2,
+   *    *   "isKeyB": 1,
+   *    *   "isNested": 0,
+   *    *   "uid": Buffer.from('65535d33', 'hex'),
+   *    *   "nt": Buffer.from('cb7b9ed9', 'hex'),
+   *    *   "nr": Buffer.from('5a8ffec6', 'hex'),
+   *    *   "ar": Buffer.from('5c7c6f89', 'hex'),
+   *    * }
+   *    *\/
+   * }
+   * ```
    */
-  async cmdMf1GetDetectionLogs (index: number = 0): Promise<Array<ReturnType<typeof ResponseDecoder.parseMf1Detection>>> {
+  async cmdMf1GetDetectionLogs (index: number = 0): Promise<Decoder.Mf1DetectionLog[]> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.MF1_GET_DETECTION_LOG, data: new Buffer(4).writeUInt32BE(index) }) // cmd = 4006
-    const data = (await this._readRespTimeout())?.data
-    return _.map(data.chunk(18), ResponseDecoder.parseMf1Detection)
+    return Decoder.Mf1DetectionLog.fromCmd4006((await this._readRespTimeout())?.data)
   }
 
   /**
@@ -1098,6 +1560,13 @@ export class ChameleonUltra {
    * @param blockCount The count of blocks to be get.
    * @returns The mifare block data of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const data = await ultra.cmdMf1ReadEmuBlock(1)
+   *   console.log(data.toString('hex')) // '00000000000000000000000000000000'
+   * }
+   * ```
    */
   async cmdMf1ReadEmuBlock (blockStart: number = 0, blockCount: number = 1): Promise<Buffer> {
     this._clearRxBufs()
@@ -1109,17 +1578,39 @@ export class ChameleonUltra {
    * Get the mifare settings of actived slot.
    * @returns The mifare settings of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const mf1Settings = await ultra.cmdMf1GetEmuSettings()
+   *   console.log(JSON.stringify(mf1Settings))
+   *   /**
+   *    * {
+   *    *   "detection": false,
+   *    *   "gen1a": false,
+   *    *   "gen2": false,
+   *    *   "blockAntiColl": false,
+   *    *   "write": 0
+   *    *  }
+   *    *\/
+   * }
+   * ```
    */
-  async cmdMf1GetEmuSettings (): Promise<ReturnType<typeof ResponseDecoder.parseEmuMf1Settings>> {
+  async cmdMf1GetEmuSettings (): Promise<Decoder.Mf1EmuSettings> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.MF1_GET_EMULATOR_CONFIG }) // cmd = 4009
-    return ResponseDecoder.parseEmuMf1Settings((await this._readRespTimeout())?.data)
+    return Decoder.Mf1EmuSettings.fromCmd4009((await this._readRespTimeout())?.data)
   }
 
   /**
    * Set the mifare gen1a mode of actived slot.
    * @returns The mifare gen1a mode of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMf1GetGen1aMode()) // false
+   * }
+   * ```
    */
   async cmdMf1GetGen1aMode (): Promise<boolean> {
     this._clearRxBufs()
@@ -1131,6 +1622,12 @@ export class ChameleonUltra {
    * Set the mifare gen1a mode of actived slot.
    * @param enable `true` to enable the gen1a mode, `false` to disable the gen1a mode.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMf1SetGen1aMode(false))
+   * }
+   * ```
    */
   async cmdMf1SetGen1aMode (enable: boolean = false): Promise<void> {
     this._clearRxBufs()
@@ -1142,6 +1639,12 @@ export class ChameleonUltra {
    * Get the mifare gen2 mode of actived slot.
    * @returns The mifare gen2 mode of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMf1GetGen2Mode()) // false
+   * }
+   * ```
    */
   async cmdMf1GetGen2Mode (): Promise<boolean> {
     this._clearRxBufs()
@@ -1153,6 +1656,12 @@ export class ChameleonUltra {
    * Set the mifare gen2 mode of actived slot.
    * @param enable `true` to enable the gen2 mode, `false` to disable the gen2 mode.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMf1SetGen2Mode(false))
+   * }
+   * ```
    */
   async cmdMf1SetGen2Mode (enable: boolean = false): Promise<void> {
     this._clearRxBufs()
@@ -1164,6 +1673,12 @@ export class ChameleonUltra {
    * Get the mode of actived slot that using anti-collision data from block 0 for 4 byte UID tags or not.
    * @returns The mode of actived slot that using anti-collision data from block 0 for 4 byte UID tags or not.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMf1GetBlockAntiCollMode()) // false
+   * }
+   * ```
    */
   async cmdMf1GetBlockAntiCollMode (): Promise<boolean> {
     this._clearRxBufs()
@@ -1175,6 +1690,12 @@ export class ChameleonUltra {
    * Set the mode of actived slot that using anti-collision data from block 0 for 4 byte UID tags or not.
    * @param enable `true` to enable the mode, `false` to disable the mode.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMf1SetBlockAntiCollMode(false))
+   * }
+   * ```
    */
   async cmdMf1SetBlockAntiCollMode (enable: boolean = false): Promise<void> {
     this._clearRxBufs()
@@ -1186,17 +1707,29 @@ export class ChameleonUltra {
    * Get the mifare write mode of actived slot.
    * @returns The mifare write mode of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMf1GetWriteMode()) // 0
+   * }
+   * ```
    */
   async cmdMf1GetWriteMode (): Promise<EmuMf1WriteMode> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.MF1_GET_WRITE_MODE }) // cmd = 4016
-    return (await this._readRespTimeout())?.data[0] as EmuMf1WriteMode
+    return (await this._readRespTimeout())?.data[0]
   }
 
   /**
    * Set the mifare write mode of actived slot.
    * @param mode The mifare write mode of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMf1SetWriteMode(0))
+   * }
+   * ```
    */
   async cmdMf1SetWriteMode (mode: EmuMf1WriteMode): Promise<void> {
     if (!_.isSafeInteger(mode) || !isEmuMf1WriteMode(mode)) throw new TypeError('Invalid emu write mode')
@@ -1209,17 +1742,37 @@ export class ChameleonUltra {
    * Get the mifare anti-collision data of actived slot.
    * @returns The mifare anti-collision data of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const res = await ultra.cmdHf14aGetAntiCollData()
+   *   console.log(res)
+   *   /**
+   *    * {
+   *    *   "atqa": Buffer.from('0400', 'hex'),
+   *    *   "sak": Buffer.from('08', 'hex'),
+   *    *   "uid": Buffer.from('11223344', 'hex'),
+   *    * }
+   *    *\/
+   * }
+   * ```
    */
-  async cmdHf14aGetAntiCollData (): Promise<EmuMf1AntiColl> {
+  async cmdHf14aGetAntiCollData (): Promise<Decoder.Hf14aAntiColl> {
     this._clearRxBufs()
     await this._writeCmd({ cmd: Cmd.HF14A_GET_ANTI_COLL_DATA }) // cmd = 4018
-    return ResponseDecoder.parseEmuMf1AntiColl((await this._readRespTimeout())?.data)
+    return Decoder.Hf14aAntiColl.fromCmd4018((await this._readRespTimeout())?.data)
   }
 
   /**
    * Set the em410x id of actived slot.
    * @param id The em410x id of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdEm410xSetEmuId(Buffer.from('deadbeef88', 'hex'))
+   * }
+   * ```
    */
   async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
     if (!Buffer.isBuffer(id) || id.length !== 5) throw new TypeError('id should be a Buffer with length 5')
@@ -1232,6 +1785,13 @@ export class ChameleonUltra {
    * Get the em410x id of actived slot.
    * @returns The em410x id of actived slot.
    * @group Commands related to device mode: TAG
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const id = await ultra.cmdEm410xGetEmuId()
+   *   console.log(id.toString('hex')) // 'deadbeef88'
+   * }
+   * ```
    */
   async cmdEm410xGetEmuId (): Promise<Buffer> {
     this._clearRxBufs()
@@ -1406,9 +1966,9 @@ export enum RespStatus {
   HF_ERRSTAT = 0x02, // IC卡通訊異常
   HF_ERRCRC = 0x03, // IC卡通訊校驗異常
   HF_COLLISION = 0x04, // IC卡衝突
-  HF_ERRBCC = 0x05, // IC卡BCC錯誤
-  MF_ERRAUTH = 0x06, // MF卡驗證失敗
-  HF_ERRPARITY = 0x07, // IC卡奇偶校驗錯誤
+  HF_ERR_BCC = 0x05, // IC卡BCC錯誤
+  MF_ERR_AUTH = 0x06, // MF卡驗證失敗
+  HF_ERR_PARITY = 0x07, // IC卡奇偶校驗錯誤
 
   DARKSIDE_CANT_FIXED_NT = 0x20, // Darkside，無法固定隨機數，這個情況可能出現在UID卡上
   DARKSIDE_LUCK_AUTH_OK = 0x21, // Darkside，直接驗證成功了，可能剛好金鑰是空的
@@ -1435,9 +1995,9 @@ export const RespStatusMsg = new Map([
   [RespStatus.HF_ERRSTAT, 'HF tag status error'],
   [RespStatus.HF_ERRCRC, 'HF tag data crc error'],
   [RespStatus.HF_COLLISION, 'HF tag collision'],
-  [RespStatus.HF_ERRBCC, 'HF tag uid bcc error'],
-  [RespStatus.MF_ERRAUTH, 'HF tag auth fail'],
-  [RespStatus.HF_ERRPARITY, 'HF tag data parity error'],
+  [RespStatus.HF_ERR_BCC, 'HF tag uid bcc error'],
+  [RespStatus.MF_ERR_AUTH, 'HF tag auth fail'],
+  [RespStatus.HF_ERR_PARITY, 'HF tag data parity error'],
 
   [RespStatus.DARKSIDE_CANT_FIXED_NT, 'Darkside Can\'t select a nt(PRNG is unpredictable)'],
   [RespStatus.DARKSIDE_LUCK_AUTH_OK, 'Darkside try to recover a default key'],
@@ -1472,9 +2032,9 @@ export const RespStatusFail = new Set([
   RespStatus.HF_ERRSTAT,
   RespStatus.HF_ERRCRC,
   RespStatus.HF_COLLISION,
-  RespStatus.HF_ERRBCC,
-  RespStatus.MF_ERRAUTH,
-  RespStatus.HF_ERRPARITY,
+  RespStatus.HF_ERR_BCC,
+  RespStatus.MF_ERR_AUTH,
+  RespStatus.HF_ERR_PARITY,
 
   RespStatus.DARKSIDE_CANT_FIXED_NT,
   RespStatus.DARKSIDE_NACK_NO_SEND,
@@ -1572,7 +2132,19 @@ export class ChameleonUltraFrame {
   get status (): number { return this.buf.readUInt16BE(4) }
 }
 
-export type Mf1NtLevel = 'static' | 'weak' | 'hard' | 'unknown'
+export enum Mf1PrngType {
+  STATIC = 0, // StaticNested: the random number of the card response is fixed
+  WEAK = 1, // Nested: the random number of the card response is weak
+  HARD = 2, // HardNested: the random number of the card response is unpredictable
+}
+
+export enum DarksideStatus {
+  OK = 0, // normal process
+  CANT_FIX_NT = 1, // the random number cannot be fixed, this situation may appear on some UID card
+  LUCKY_AUTH_OK = 2, // the direct authentification is successful, maybe the key is just the default one
+  NO_NAK_SENT = 3, // the card does not respond to NACK, it may be a card that fixes Nack logic vulnerabilities
+  TAG_CHANGED = 4, // card change while running DARKSIDE
+}
 
 export enum Mf1KeyType {
   KEY_A = 0x60,
@@ -1600,8 +2172,8 @@ export interface CmdWriteMf1BlockArgs {
 }
 
 export enum DeviceModel {
-  ULTRA = 0,
-  LITE = 1,
+  LITE = 0,
+  ULTRA = 1,
 }
 
 export enum EmuMf1WriteMode {
@@ -1643,4 +2215,20 @@ export interface CmdAcquireMf1NestedArgs {
   }
 }
 
-export { ResponseDecoder }
+/**
+ * @see [MIFARE type identification procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
+ */
+export const NxpTypeBySak = new Map([
+  [0x00, 'MIFARE Ultralight Classic/C/EV1/Nano | NTAG 2xx'],
+  [0x08, 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'],
+  [0x09, 'MIFARE Mini 0.3k'],
+  [0x10, 'MIFARE Plus 2K'],
+  [0x11, 'MIFARE Plus 4K'],
+  [0x18, 'MIFARE Classic 4K | Plus S 4K | Plus X 4K'],
+  [0x19, 'MIFARE Classic 2K'],
+  [0x20, 'MIFARE Plus EV1/EV2 | DESFire EV1/EV2/EV3 | DESFire Light | NTAG 4xx | MIFARE Plus S 2/4K | MIFARE Plus X 2/4K | MIFARE Plus SE 1K'],
+  [0x28, 'SmartMX with MIFARE Classic 1K'],
+  [0x38, 'SmartMX with MIFARE Classic 4K'],
+])
+
+export { Decoder as ResponseDecoder }

@@ -158,7 +158,7 @@ block script
             this.showLoading({ text: 'Scanning tag...' })
             const { ultra } = this
             await this.setDeviceMode('reader')
-            const slot = await ultra.cmdGetActiveSlot()
+            const slot = await ultra.cmdSlotGetActive()
             const tag1 = await ultra.cmdHf14aScan()
             await this.setDeviceMode('tag')
             const tag2 = {
@@ -181,16 +181,16 @@ block script
             const { ultra } = this
             const { atqa, sak, slot, tagType, uid } = this.h
             console.log({ atqa, sak, slot, tagType, uid })
-            const slotName = await ultra.cmdGetSlotTagName(slot, FreqType.HF) ?? '(no name)'
+            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating tag...' })
             await this.setDeviceMode('tag')
             // reset slot
-            await ultra.cmdSetSlotEnable(slot, true)
-            await ultra.cmdSetActiveSlot(slot)
-            await ultra.cmdSetSlotTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
-            await ultra.cmdResetSlotData(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
+            await ultra.cmdSlotChangeTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
+            await ultra.cmdSlotResetTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
+            await ultra.cmdSlotSetEnable(slot, true)
+            await ultra.cmdSlotSetActive(slot)
             // set anti-coll
             const tag = {
               atqa: Buffer.from(atqa, 'hex').reverse(),
@@ -207,7 +207,7 @@ block script
             tag.atqa.copy(block0, tag.uid.length + 2) // atqa
             console.log(`block0 = ${block0.toString('hex')}`)
             await ultra.cmdMf1WriteEmuBlock(0, block0) // set block0
-            await ultra.cmdSaveSlotSettings()
+            await ultra.cmdSlotSaveSettings()
             await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
             console.error(err)
