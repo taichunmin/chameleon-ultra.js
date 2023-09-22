@@ -4,11 +4,11 @@ block beforehtml
   - const title = 'MFKey32'
 
 block style
-  meta(property="og:description", content="A tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32) with ChameleonUltra.")
+  meta(property="og:description", content="A ChameleonUltra tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32).")
   meta(property="og:locale", content="zh_TW")
   meta(property="og:title", content=title)
   meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}pug/mfkey32.html`)
+  meta(property="og:url", content=`${baseurl}mfkey32.html`)
   style
     :sass
       [v-cloak]
@@ -200,7 +200,7 @@ block script
               sak: Buffer.from(sak, 'hex'),
               uid: Buffer.from(uid, 'hex').slice(-4),
             }
-            await ultra.cmdMf1SetBlockAntiCollMode(false)
+            await ultra.cmdMf1SetAntiCollMode(false)
             await ultra.cmdHf14aSetAntiCollData(tag)
             await ultra.cmdMf1SetDetectionEnable(true) // enable detection
             const block0 = Buffer.allocUnsafe(16)

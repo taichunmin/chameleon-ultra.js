@@ -821,6 +821,35 @@ export class ChameleonUltra {
   }
 
   /**
+   * Delete the nick name of the slot
+   * @param slot Slot number
+   * @param freq Frequency type
+   * @returns `true` if success, `false` if slot name is empty.
+   * @group Slot Related
+   * @example
+   * ```js
+   * const { Slot, FreqType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdSlotDeleteFreqName(Slot.SLOT_1, FreqType.HF)) // true
+   * }
+   */
+  async cmdSlotDeleteFreqName (slot: Slot, freq: FreqType): Promise<boolean> {
+    try {
+      if (!isSlot(slot)) throw new TypeError('Invalid slot')
+      if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+      this._clearRxBufs()
+      const cmd = Cmd.DELETE_SLOT_TAG_NICK // cmd = 1021
+      await this._writeCmd({ cmd, data: new Buffer([slot, freq]) })
+      await this._readRespTimeout({ cmd })
+      return true
+    } catch (err) {
+      if (err.status === RespStatus.FLASH_WRITE_FAIL) return false // slot name is empty
+      throw err
+    }
+  }
+
+  /**
    * Get enabled slots.
    * @returns Enabled slots.
    * @group Slot Related
@@ -1659,9 +1688,27 @@ export class ChameleonUltra {
   }
 
   /**
+   * Get the feature of mifare MFKey32 detections is enabled or not.
+   * @returns `true` if the feature of mifare MFKey32 detections is enabled, otherwise return `false`.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMf1GetDetectionEnable()) // false
+   * }
+   * ```
+   */
+  async cmdMf1GetDetectionEnable (): Promise<boolean> {
+    this._clearRxBufs()
+    const cmd = Cmd.MF1_GET_DETECTION_ENABLE // cmd = 4007
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data[0] === 1
+  }
+
+  /**
    * Get the mifare block data of actived slot.
-   * @param blockStart The start block of actived slot.
-   * @param blockCount The count of blocks to be get.
+   * @param offset The start block of actived slot.
+   * @param length The count of blocks to be get.
    * @returns The mifare block data of actived slot.
    * @group Mifare Classic Related
    * @example
@@ -1672,10 +1719,10 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1ReadEmuBlock (blockStart: number = 0, blockCount: number = 1): Promise<Buffer> {
+  async cmdMf1ReadEmuBlock (offset: number = 0, length: number = 1): Promise<Buffer> {
     this._clearRxBufs()
-    const cmd = Cmd.MF1_READ_EMU_BLOCK_DATA // cmd = 4007
-    await this._writeCmd({ cmd, data: new Buffer([blockStart, blockCount]) })
+    const cmd = Cmd.MF1_READ_EMU_BLOCK_DATA // cmd = 4008
+    await this._writeCmd({ cmd, data: new Buffer([offset, length]) })
     return (await this._readRespTimeout({ cmd }))?.data
   }
 
@@ -1693,7 +1740,7 @@ export class ChameleonUltra {
    *    *   "detection": false,
    *    *   "gen1a": false,
    *    *   "gen2": false,
-   *    *   "blockAntiColl": false,
+   *    *   "antiColl": false,
    *    *   "write": 0
    *    *  }
    *    *\/
@@ -1702,7 +1749,7 @@ export class ChameleonUltra {
    */
   async cmdMf1GetEmuSettings (): Promise<Decoder.Mf1EmuSettings> {
     this._clearRxBufs()
-    const cmd = Cmd.MF1_GET_EMULATOR_CONFIG // cmd = 4008
+    const cmd = Cmd.MF1_GET_EMULATOR_CONFIG // cmd = 4009
     await this._writeCmd({ cmd })
     return Decoder.Mf1EmuSettings.fromCmd4009((await this._readRespTimeout({ cmd }))?.data)
   }
@@ -1786,11 +1833,11 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   console.log(await ultra.cmdMf1GetBlockAntiCollMode()) // false
+   *   console.log(await ultra.cmdMf1GetAntiCollMode()) // false
    * }
    * ```
    */
-  async cmdMf1GetBlockAntiCollMode (): Promise<boolean> {
+  async cmdMf1GetAntiCollMode (): Promise<boolean> {
     this._clearRxBufs()
     const cmd = Cmd.HF14A_GET_BLOCK_ANTI_COLL_MODE // cmd = 4014
     await this._writeCmd({ cmd })
@@ -1804,11 +1851,11 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   await ultra.cmdMf1SetBlockAntiCollMode(false))
+   *   await ultra.cmdMf1SetAntiCollMode(false))
    * }
    * ```
    */
-  async cmdMf1SetBlockAntiCollMode (enable: number | boolean): Promise<void> {
+  async cmdMf1SetAntiCollMode (enable: number | boolean): Promise<void> {
     this._clearRxBufs()
     const cmd = Cmd.HF14A_SET_BLOCK_ANTI_COLL_MODE // cmd = 4015
     await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
@@ -1956,6 +2003,203 @@ export class ChameleonUltra {
       data: new Buffer([0x30, pageOffset]),
     })
   }
+
+  async _mf1Gen1aAuth<T extends (...args: any) => any> (cb: T): Promise<Awaited<ReturnType<T>>> {
+    try {
+      await this.cmdHf14aRaw({ appendCrc: true, data: new Buffer([0x50, 0x00]), waitResponse: false }) // HALT + close RF field
+      const resp1 = await this.cmdHf14aRaw({ data: new Buffer([0x40]), dataBitLength: 7, keepRfField: true }) // 0x40 (7)
+      if (resp1[0] !== 0x0A) throw new Error('Gen1a auth failed 1')
+      const resp2 = await this.cmdHf14aRaw({ data: new Buffer([0x43]), keepRfField: true }) // 0x43
+      if (resp2[0] !== 0x0A) throw new Error('Gen1a auth failed 2')
+      return await cb()
+    } finally {
+      await this.cmdHf14aRaw({ appendCrc: true, data: new Buffer([0x50, 0x00]), waitResponse: false }) // HALT + close RF field
+    }
+  }
+
+  /**
+   * Read blocks from Mifare Classic Gen1a.
+   * @param offset The start block of Mifare Classic Gen1a.
+   * @param length The amount of blocks to read.
+   * @returns The blocks data.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const card = await ultra.mf1Gen1aReadBlocks(0, 64)
+   *   console.log(_.map(card.chunk(16), chunk => chunk.toString('hex')).join('\n'))
+   * }
+   * ```
+   */
+  async mf1Gen1aReadBlocks (offset: number, length: number = 1): Promise<Buffer> {
+    return await this._mf1Gen1aAuth(async () => {
+      const buf = new Buffer(length * 16)
+      for (let i = 0; i < length; i++) {
+        buf.set(await this.cmdHf14aRaw({
+          appendCrc: true,
+          checkResponseCrc: true,
+          data: new Buffer([0x30, offset + i]),
+          keepRfField: true,
+        }), i * 16)
+      }
+      return buf
+    })
+  }
+
+  /**
+   * Write blocks to Mifare Classic Gen1a.
+   * @param offset The start block of Mifare Classic Gen1a.
+   * @param data The blocks data to write.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   await ultra.mf1Gen1aWriteBlocks(1, new Buffer(16))
+   * }
+   * ```
+   */
+  async mf1Gen1aWriteBlocks (offset: number, data: Buffer): Promise<void> {
+    if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
+    await this._mf1Gen1aAuth(async () => {
+      const blocks = data.chunk(16)
+      for (let i = 0; i < blocks.length; i++) {
+        const resp1 = await this.cmdHf14aRaw({ appendCrc: true, data: new Buffer([0xA0, offset + i]), keepRfField: true })
+        if (resp1[0] !== 0x0A) throw new Error('Gen1a write failed 1')
+        const resp2 = await this.cmdHf14aRaw({ appendCrc: true, data: blocks[i], keepRfField: true })
+        if (resp2[0] !== 0x0A) throw new Error('Gen1a write failed 2')
+      }
+    })
+  }
+
+  /**
+   * Given a list of keys, check which is the correct key A and key B of the sector.
+   * @param sector The sector number to be checked.
+   * @param keys The keys dictionary.
+   * @returns The Key A and Key B of the sector.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const sectorKey = await ultra.mf1CheckSectorKeys(0, keys)
+   *   console.log(_.mapValues(sectorKey, key => key.toString('hex')))
+   *   // { "96": "ffffffffffff", "97": "ffffffffffff" }
+   * }
+   */
+  async mf1CheckSectorKeys (sector: number, keys: Buffer[]): Promise<Partial<Record<Mf1KeyType, Buffer>>> {
+    keys = _.chain(keys)
+      .filter(key => Buffer.isBuffer(key) && key.length === 6)
+      .uniqBy(key => key.toString('hex'))
+      .value()
+    if (keys.length === 0) throw new TypeError('keys should be an array of Buffer with length 6')
+    const sectorKey: Partial<Record<Mf1KeyType, Buffer>> = {}
+    for (const keyType of [Mf1KeyType.KEY_B, Mf1KeyType.KEY_A]) {
+      for (const key of keys) {
+        if (!await this.cmdMf1CheckBlockKey({ block: sector * 4 + 3, keyType, key })) continue
+        sectorKey[keyType] = key
+        break
+      }
+    }
+    return sectorKey
+  }
+
+  /**
+   * Read the sector data of Mifare Classic by given keys.
+   * @param sector The sector number to be read.
+   * @param keys The keys dictionary.
+   * @returns The sector data and the read status of each block.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
+   *   const { data, success } = await ultra.mf1ReadSectorByKeys(0, keys)
+   *   console.log({ data: data.toString('hex'), success })
+   *   // { "data": "...", "success": [true, true, true, true] }
+   * }
+   */
+  async mf1ReadSectorByKeys (sector: number, keys: Buffer[]): Promise<{ data: Buffer, success: boolean[] }> {
+    const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
+    if (_.keys(sectorKey).length === 0) throw new Error('No valid key')
+    const data = new Buffer(64)
+    const success = _.times(4, () => false)
+    for (let i = 0; i < 4; i++) {
+      for (const keyType of [Mf1KeyType.KEY_B, Mf1KeyType.KEY_A]) {
+        const key = sectorKey[keyType]
+        if (_.isNil(key)) continue
+        try {
+          data.set(await this.cmdMf1ReadBlock({ block: sector * 4 + i, keyType, key }), i * 16)
+          success[i] = true
+          break
+        } catch (err) {
+          if (!this.isConnected()) throw err
+          this.logger.core(`Failed to read block ${sector * 4 + i} with ${Mf1KeyType[keyType]} = ${key.toString('hex')}`)
+        }
+      }
+    }
+    if (!_.isNil(sectorKey[Mf1KeyType.KEY_A])) data.set(sectorKey[Mf1KeyType.KEY_A], 48)
+    if (!_.isNil(sectorKey[Mf1KeyType.KEY_B])) data.set(sectorKey[Mf1KeyType.KEY_B], 58)
+    return { data, success }
+  }
+
+  /**
+   * Write the sector data of Mifare Classic by given keys.
+   * @param sector The sector number to be written.
+   * @param keys The key dictionary.
+   * @param data Sector data
+   * @returns the write status of each block.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
+   *   const data = Buffer.concat([
+   *     Buffer.from('00000000000000000000000000000000', 'hex'),
+   *     Buffer.from('00000000000000000000000000000000', 'hex'),
+   *     Buffer.from('00000000000000000000000000000000', 'hex'),
+   *     Buffer.from('ffffffffffffff078069ffffffffffff', 'hex'),
+   *   ])
+   *   const { success } = await ultra.mf1WriteSectorByKeys(1, keys, data)
+   *   console.log(success)
+   *   // [true, true, true, true]
+   * }
+   */
+  async mf1WriteSectorByKeys (sector: number, keys: Buffer[], data: Buffer): Promise<{ success: boolean[] }> {
+    if (!Buffer.isBuffer(data) || data.length !== 64) throw new TypeError('data should be a Buffer with length 64')
+    const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
+    if (_.keys(sectorKey).length === 0) throw new Error('No valid key')
+    const success = _.times(4, () => false)
+    for (let i = 0; i < 4; i++) {
+      for (const keyType of [Mf1KeyType.KEY_B, Mf1KeyType.KEY_A]) {
+        const key = sectorKey[keyType]
+        if (_.isNil(key)) continue
+        try {
+          await this.cmdMf1WriteBlock({ block: sector * 4 + i, keyType, key, data: data.slice(i * 16, i * 16 + 16) })
+          success[i] = true
+          break
+        } catch (err) {
+          if (!this.isConnected()) throw err
+          this.logger.core(`Failed to write block ${sector * 4 + i} with ${Mf1KeyType[keyType]} = ${key.toString('hex')}`)
+        }
+      }
+    }
+    return { success }
+  }
 }
 
 /**
@@ -1968,7 +2212,7 @@ export type Logger = Debugger | ((...args: any[]) => void)
  * @internal
  * @group Internal
  */
-export interface WriteCmdArgs {
+export type WriteCmdArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   /**
    * The command to be sent to device.
    */
@@ -2007,6 +2251,7 @@ export enum Cmd {
   GET_ACTIVE_SLOT = 1018,
   GET_SLOT_INFO = 1019,
   WIPE_FDS = 1020,
+  DELETE_SLOT_TAG_NICK = 1021,
   GET_ENABLED_SLOTS = 1023,
   DELETE_SLOT_SENSE_TYPE = 1024,
   GET_BATTERY_INFO = 1025,
@@ -2045,6 +2290,7 @@ export enum Cmd {
   MF1_SET_DETECTION_ENABLE = 4004,
   MF1_GET_DETECTION_COUNT = 4005,
   MF1_GET_DETECTION_LOG = 4006,
+  MF1_GET_DETECTION_ENABLE = 4007,
   MF1_READ_EMU_BLOCK_DATA = 4008,
   MF1_GET_EMULATOR_CONFIG = 4009,
   MF1_GET_GEN1A_MODE = 4010,
@@ -2243,7 +2489,7 @@ class ChameleonRxSink implements UnderlyingSink<Buffer> {
  * @internal
  * @group Plugin Related
  */
-export interface PluginInstallContext {
+export type PluginInstallContext = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   Buffer: typeof Buffer
   ultra: ChameleonUltra
 }
@@ -2312,19 +2558,19 @@ export enum Mf1KeyType {
 }
 export const isMf1KeyType = createIsEnumInteger(Mf1KeyType)
 
-export interface CmdReadMf1BlockArgs {
+export type CmdReadMf1BlockArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   block?: number
   keyType?: Mf1KeyType
   key?: Buffer
 }
 
-export interface CmdCheckMf1BlockKeyArgs {
+export type CmdCheckMf1BlockKeyArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   block?: number
   keyType?: Mf1KeyType
   key?: Buffer
 }
 
-export interface CmdWriteMf1BlockArgs {
+export type CmdWriteMf1BlockArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   block?: number
   keyType?: Mf1KeyType
   key?: Buffer
@@ -2357,7 +2603,7 @@ export enum AnimationMode {
 }
 export const isAnimationMode = createIsEnumInteger(AnimationMode)
 
-export interface CmdTestMf1NtDistanceArgs {
+export type CmdTestMf1NtDistanceArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   src: {
     srcKeyType?: Mf1KeyType
     srcBlock?: number
@@ -2365,7 +2611,7 @@ export interface CmdTestMf1NtDistanceArgs {
   }
 }
 
-export interface CmdAcquireMf1NestedArgs {
+export type CmdAcquireMf1NestedArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   src: {
     srcKeyType?: Mf1KeyType
     srcBlock?: number
@@ -2377,8 +2623,8 @@ export interface CmdAcquireMf1NestedArgs {
   }
 }
 
-export interface CmdHf14aRawArgs {
-  /** Set `true` to activate RF field before sending data */
+export type CmdHf14aRawArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
+  /** Set `true` to activate RF field. If `data` is not empty or `autoSelect` is true, `activateRfField` will be set to `true`. */
   activateRfField?: boolean
   /** Set `true` to add CRC before sending data. */
   appendCrc?: boolean
