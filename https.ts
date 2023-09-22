@@ -33,10 +33,12 @@ async function main (): Promise<void> {
   const livereloadServer = livereload.createServer({
     port: getPort(),
     server: httpsServer,
-  })
+  }) as LiveReloadServer1
 
+  livereloadServer._filterRefresh = livereloadServer.filterRefresh
+  livereloadServer.filterRefresh = _.debounce((filepath) => { livereloadServer._filterRefresh?.(filepath) }, 1000)
   livereloadServer.watch(publicDir)
-  console.log(`build finish. Visit: ${getSiteurl()}`)
+  console.log(`build finish. Visit: ${getSiteurl('/test.html')}`)
 
   watch(['./pug'], { recursive: true }, async (e, name) => {
     if (e !== 'update') return
@@ -45,6 +47,8 @@ async function main (): Promise<void> {
     console.log(getSiteurl(`./${match[1].replace(/\\/g, '/')}.html`))
   })
 }
+
+type LiveReloadServer1 = livereload.LiveReloadServer & { _filterRefresh?: livereload.LiveReloadServer['filterRefresh'] }
 
 main().catch(err => {
   console.error(err)

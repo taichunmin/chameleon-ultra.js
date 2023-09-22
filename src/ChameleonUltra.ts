@@ -1150,7 +1150,7 @@ export class ChameleonUltra {
       await this._readRespTimeout()
       return true
     } catch (err) {
-      if (err.status === RespStatus.HF_ERRSTAT) return false
+      if (err.status === RespStatus.HF_ERR_STAT) return false
       throw err
     }
   }
@@ -1368,13 +1368,14 @@ export class ChameleonUltra {
    *   console.log(tag)
    *   /**
    *    * {
+   *    *   "nxpTypeBySak": "MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K",
+   *    *   "prngType": 1,
    *    *   "tag": {
    *    *     "uid": Buffer.from('d2040000', 'hex'),
    *    *     "cascade": 1,
    *    *     "sak": Buffer.from('08', 'hex'),
    *    *     "atqa": Buffer.from('0400', 'hex')
-   *    *   },
-   *    *   "mifare": { "prngAttack": "weak" }
+   *    *   }
    *    * }
    *    *\/
    * }
@@ -1963,8 +1964,8 @@ export const isDeviceMode = createIsEnum(DeviceMode)
 export enum RespStatus {
   HF_TAG_OK = 0x00, // IC卡操作成功
   HF_TAG_NOT_FOUND = 0x01, // 沒有發現IC卡
-  HF_ERRSTAT = 0x02, // IC卡通訊異常
-  HF_ERRCRC = 0x03, // IC卡通訊校驗異常
+  HF_ERR_STAT = 0x02, // IC卡通訊異常
+  HF_ERR_CRC = 0x03, // IC卡通訊校驗異常
   HF_COLLISION = 0x04, // IC卡衝突
   HF_ERR_BCC = 0x05, // IC卡BCC錯誤
   MF_ERR_AUTH = 0x06, // MF卡驗證失敗
@@ -1978,7 +1979,7 @@ export enum RespStatus {
   NESTED_TAG_IS_HARD = 0x25, // Nested，檢測到卡片應答的隨機數是不可預測的
 
   LF_TAG_OK = 0x40, // 低頻卡的一些操作成功！
-  LF_TAG_NOT_FOUND = 0x41, // 無法搜尋到有效的EM410X標籤
+  EM410X_TAG_NOT_FOUND = 0x41, // 無法搜尋到有效的EM410X標籤
 
   PAR_ERR = 0x60, // BLE指令傳遞的參數錯誤，或者是呼叫某些函數傳遞的參數錯誤
   DEVICE_MODE_ERROR = 0x66, // 當前裝置所處的模式錯誤，無法呼叫對應的API
@@ -1992,8 +1993,8 @@ export enum RespStatus {
 export const RespStatusMsg = new Map([
   [RespStatus.HF_TAG_OK, 'HF tag operation succeeded'],
   [RespStatus.HF_TAG_NOT_FOUND, 'HF tag not found or lost'],
-  [RespStatus.HF_ERRSTAT, 'HF tag status error'],
-  [RespStatus.HF_ERRCRC, 'HF tag data crc error'],
+  [RespStatus.HF_ERR_STAT, 'HF tag status error'],
+  [RespStatus.HF_ERR_CRC, 'HF tag data crc error'],
   [RespStatus.HF_COLLISION, 'HF tag collision'],
   [RespStatus.HF_ERR_BCC, 'HF tag uid bcc error'],
   [RespStatus.MF_ERR_AUTH, 'HF tag auth fail'],
@@ -2007,7 +2008,7 @@ export const RespStatusMsg = new Map([
   [RespStatus.NESTED_TAG_IS_HARD, 'HardNested tag, not weak nested'],
 
   [RespStatus.LF_TAG_OK, 'LF tag operation succeeded'],
-  [RespStatus.LF_TAG_NOT_FOUND, 'EM410x tag no found'],
+  [RespStatus.EM410X_TAG_NOT_FOUND, 'EM410x tag no found'],
 
   [RespStatus.PAR_ERR, 'API request fail, param error'],
   [RespStatus.DEVICE_MODE_ERROR, 'API request fail, device mode error'],
@@ -2029,8 +2030,8 @@ export const RespStatusSuccess = new Set([
 
 export const RespStatusFail = new Set([
   RespStatus.HF_TAG_NOT_FOUND,
-  RespStatus.HF_ERRSTAT,
-  RespStatus.HF_ERRCRC,
+  RespStatus.HF_ERR_STAT,
+  RespStatus.HF_ERR_CRC,
   RespStatus.HF_COLLISION,
   RespStatus.HF_ERR_BCC,
   RespStatus.MF_ERR_AUTH,
@@ -2042,7 +2043,7 @@ export const RespStatusFail = new Set([
   RespStatus.NESTED_TAG_IS_STATIC,
   RespStatus.NESTED_TAG_IS_HARD,
 
-  RespStatus.LF_TAG_NOT_FOUND,
+  RespStatus.EM410X_TAG_NOT_FOUND,
 
   RespStatus.PAR_ERR,
   RespStatus.DEVICE_MODE_ERROR,
