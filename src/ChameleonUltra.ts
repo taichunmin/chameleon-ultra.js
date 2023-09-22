@@ -1836,44 +1836,30 @@ export enum Cmd {
   SET_SLOT_TAG_TYPE = 1004,
   SET_SLOT_DATA_DEFAULT = 1005,
   SET_SLOT_ENABLE = 1006,
-
   SET_SLOT_TAG_NICK = 1007,
   GET_SLOT_TAG_NICK = 1008,
-
   SLOT_DATA_CONFIG_SAVE = 1009,
-
   ENTER_BOOTLOADER = 1010,
   GET_DEVICE_CHIP_ID = 1011,
   GET_DEVICE_ADDRESS = 1012,
-
   SAVE_SETTINGS = 1013,
   RESET_SETTINGS = 1014,
   SET_ANIMATION_MODE = 1015,
   GET_ANIMATION_MODE = 1016,
-
   GET_GIT_VERSION = 1017,
-
   GET_ACTIVE_SLOT = 1018,
   GET_SLOT_INFO = 1019,
-
   WIPE_FDS = 1020,
-
   GET_ENABLED_SLOTS = 1023,
   DELETE_SLOT_SENSE_TYPE = 1024,
-
   GET_BATTERY_INFO = 1025,
-
   GET_BUTTON_PRESS_CONFIG = 1026,
   SET_BUTTON_PRESS_CONFIG = 1027,
-
   GET_LONG_BUTTON_PRESS_CONFIG = 1028,
   SET_LONG_BUTTON_PRESS_CONFIG = 1029,
-
   SET_BLE_PAIRING_KEY = 1030,
   GET_BLE_PAIRING_KEY = 1031,
-
   DELETE_ALL_BLE_BONDS = 1032,
-
   GET_DEVICE_MODEL = 1033,
   GET_DEVICE_SETTINGS = 1034,
   GET_DEVICE_CAPABILITIES = 1035,
@@ -1901,9 +1887,7 @@ export enum Cmd {
   MF1_SET_DETECTION_ENABLE = 4004,
   MF1_GET_DETECTION_COUNT = 4005,
   MF1_GET_DETECTION_LOG = 4006,
-
   MF1_READ_EMU_BLOCK_DATA = 4008,
-
   MF1_GET_EMULATOR_CONFIG = 4009,
   MF1_GET_GEN1A_MODE = 4010,
   MF1_SET_GEN1A_MODE = 4011,
@@ -1932,9 +1916,12 @@ export enum Slot {
 export const isSlot = createIsEnum(Slot)
 
 export enum FreqType {
-  NONE = 0, // 無場感應
-  LF = 1, // 低頻125khz場感應
-  HF = 2, // 高頻13.56mhz場感應
+  /** No Freq */
+  NONE = 0,
+  /** Low Freq: 125 kHz */
+  LF = 1,
+  /** High Freq: 13.56 MHz */
+  HF = 2,
 }
 export const isFreqType = createIsEnum(FreqType)
 
@@ -1962,14 +1949,22 @@ export enum DeviceMode {
 export const isDeviceMode = createIsEnum(DeviceMode)
 
 export enum RespStatus {
-  HF_TAG_OK = 0x00, // IC卡操作成功
-  HF_TAG_NOT_FOUND = 0x01, // 沒有發現IC卡
-  HF_ERR_STAT = 0x02, // IC卡通訊異常
-  HF_ERR_CRC = 0x03, // IC卡通訊校驗異常
-  HF_COLLISION = 0x04, // IC卡衝突
-  HF_ERR_BCC = 0x05, // IC卡BCC錯誤
-  MF_ERR_AUTH = 0x06, // MF卡驗證失敗
-  HF_ERR_PARITY = 0x07, // IC卡奇偶校驗錯誤
+  /** IC card operation is successful */
+  HF_TAG_OK = 0x00,
+  /** IC card not found */
+  HF_TAG_NOT_FOUND = 0x01,
+  /** Abnormal IC card status */
+  HF_ERR_STAT = 0x02,
+  /** IC card communication verification abnormal */
+  HF_ERR_CRC = 0x03,
+  /** IC card conflict */
+  HF_COLLISION = 0x04,
+  /** IC card BCC error */
+  HF_ERR_BCC = 0x05,
+  /** MF card verification failed */
+  MF_ERR_AUTH = 0x06,
+  /** IC card parity error */
+  HF_ERR_PARITY = 0x07,
 
   DARKSIDE_CANT_FIXED_NT = 0x20, // Darkside，無法固定隨機數，這個情況可能出現在UID卡上
   DARKSIDE_LUCK_AUTH_OK = 0x21, // Darkside，直接驗證成功了，可能剛好金鑰是空的
@@ -1978,26 +1973,35 @@ export enum RespStatus {
   NESTED_TAG_IS_STATIC = 0x24, // Nested，檢測到卡片應答的隨機數是固定的
   NESTED_TAG_IS_HARD = 0x25, // Nested，檢測到卡片應答的隨機數是不可預測的
 
-  LF_TAG_OK = 0x40, // 低頻卡的一些操作成功！
-  EM410X_TAG_NOT_FOUND = 0x41, // 無法搜尋到有效的EM410X標籤
+  /** LF tag operation is successful */
+  LF_TAG_OK = 0x40,
+  /** EM410X tag not found error */
+  EM410X_TAG_NOT_FOUND = 0x41,
 
-  PAR_ERR = 0x60, // BLE指令傳遞的參數錯誤，或者是呼叫某些函數傳遞的參數錯誤
-  DEVICE_MODE_ERROR = 0x66, // 當前裝置所處的模式錯誤，無法呼叫對應的API
-  INVALID_CMD = 0x67, // 無效的指令
-  DEVICE_SUCCESS = 0x68, // 裝置相關操作成功執行
-  NOT_IMPLEMENTED = 0x69, // 呼叫了某些未實現的操作，屬於開發者遺漏的錯誤
-  FLASH_WRITE_FAIL = 0x70, // flash寫入失敗
-  FLASH_READ_FAIL = 0x71, // flash讀取失敗
+  /** Invalid param error */
+  PAR_ERR = 0x60,
+  /** Wrong device mode error */
+  DEVICE_MODE_ERROR = 0x66,
+  /** invalid cmd error */
+  INVALID_CMD = 0x67,
+  /** Device operation succeeded */
+  DEVICE_SUCCESS = 0x68,
+  /** Not implemented error */
+  NOT_IMPLEMENTED = 0x69,
+  /** Flash write failed */
+  FLASH_WRITE_FAIL = 0x70,
+  /** Flash read failed */
+  FLASH_READ_FAIL = 0x71,
 }
 
 export const RespStatusMsg = new Map([
   [RespStatus.HF_TAG_OK, 'HF tag operation succeeded'],
-  [RespStatus.HF_TAG_NOT_FOUND, 'HF tag not found or lost'],
+  [RespStatus.HF_TAG_NOT_FOUND, 'HF tag not found error'],
   [RespStatus.HF_ERR_STAT, 'HF tag status error'],
   [RespStatus.HF_ERR_CRC, 'HF tag data crc error'],
   [RespStatus.HF_COLLISION, 'HF tag collision'],
   [RespStatus.HF_ERR_BCC, 'HF tag uid bcc error'],
-  [RespStatus.MF_ERR_AUTH, 'HF tag auth fail'],
+  [RespStatus.MF_ERR_AUTH, 'HF tag auth failed'],
   [RespStatus.HF_ERR_PARITY, 'HF tag data parity error'],
 
   [RespStatus.DARKSIDE_CANT_FIXED_NT, 'Darkside Can\'t select a nt(PRNG is unpredictable)'],
@@ -2008,13 +2012,13 @@ export const RespStatusMsg = new Map([
   [RespStatus.NESTED_TAG_IS_HARD, 'HardNested tag, not weak nested'],
 
   [RespStatus.LF_TAG_OK, 'LF tag operation succeeded'],
-  [RespStatus.EM410X_TAG_NOT_FOUND, 'EM410x tag no found'],
+  [RespStatus.EM410X_TAG_NOT_FOUND, 'EM410x tag not found error'],
 
-  [RespStatus.PAR_ERR, 'API request fail, param error'],
-  [RespStatus.DEVICE_MODE_ERROR, 'API request fail, device mode error'],
-  [RespStatus.INVALID_CMD, 'API request fail, cmd invalid'],
+  [RespStatus.PAR_ERR, 'invalid param error'],
+  [RespStatus.DEVICE_MODE_ERROR, 'wrong device mode error'],
+  [RespStatus.INVALID_CMD, 'invalid cmd error'],
   [RespStatus.DEVICE_SUCCESS, 'Device operation succeeded'],
-  [RespStatus.NOT_IMPLEMENTED, 'Some api not implemented'],
+  [RespStatus.NOT_IMPLEMENTED, 'Not implemented error'],
   [RespStatus.FLASH_WRITE_FAIL, 'Flash write failed'],
   [RespStatus.FLASH_READ_FAIL, 'Flash read failed'],
 ])
@@ -2134,17 +2138,25 @@ export class ChameleonUltraFrame {
 }
 
 export enum Mf1PrngType {
-  STATIC = 0, // StaticNested: the random number of the card response is fixed
-  WEAK = 1, // Nested: the random number of the card response is weak
-  HARD = 2, // HardNested: the random number of the card response is unpredictable
+  /** StaticNested: the random number of the card response is fixed */
+  STATIC = 0,
+  /** Nested: the random number of the card response is weak */
+  WEAK = 1,
+  /** HardNested: the random number of the card response is unpredictable */
+  HARD = 2,
 }
 
 export enum DarksideStatus {
-  OK = 0, // normal process
-  CANT_FIX_NT = 1, // the random number cannot be fixed, this situation may appear on some UID card
-  LUCKY_AUTH_OK = 2, // the direct authentification is successful, maybe the key is just the default one
-  NO_NAK_SENT = 3, // the card does not respond to NACK, it may be a card that fixes Nack logic vulnerabilities
-  TAG_CHANGED = 4, // card change while running DARKSIDE
+  /** normal process */
+  OK = 0,
+  /** the random number cannot be fixed, this situation may appear on some UID card */
+  CANT_FIX_NT = 1,
+  /** the direct authentification is successful, maybe the key is just the default one */
+  LUCKY_AUTH_OK = 2,
+  /** the card does not respond to NACK, it may be a card that fixes Nack logic vulnerabilities */
+  NO_NAK_SENT = 3,
+  /** card change while running DARKSIDE */
+  TAG_CHANGED = 4,
 }
 
 export enum Mf1KeyType {
