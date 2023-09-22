@@ -25,6 +25,18 @@ html(lang="zh-Hant")
     link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/font-awesome@4/css/font-awesome.min.css")
     link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-tomorrow.min.css")
     link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap")
+    style
+      :sass
+        .bgicon
+          aspect-ratio: 1/1
+          background-position: center
+          background-repeat: no-repeat
+          background-size: contain
+          display: inline-block
+          width: .875em
+    style.
+      .bgicon-chameleon-ultra { background-image: url(#{baseurl}img/chameleon-ultra.svg) }
+      .bgicon-nfc { background-image: url(#{baseurl}img/nfc.svg) }
     block style
   body
     include ./livereload

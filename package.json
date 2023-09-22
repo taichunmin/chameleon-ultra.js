@@ -139,11 +139,12 @@
     "**/jstransformer-scss": "^2.0.0"
   },
   "scripts": {
-    "build": "set -ex && rimraf ./dist && mkdir -p dist && yarn build:dts && ts-node ./pug/build.ts && rollup --config rollup.config.mjs && typedoc && ts-node ./sitemap.ts && touch ./dist/.nojekyll",
+    "build": "set -ex && rimraf ./dist && mkdir -p dist && cp -r public/* dist && yarn build:dts && ts-node ./pug/build.ts && rollup --config rollup.config.mjs && typedoc && ts-node ./sitemap.ts && touch ./dist/.nojekyll",
     "build:dts": "tsc -p tsconfig.types.json --emitDeclarationOnly",
-    "dev": "DEBUG_COLORS=1 concurrently --names \"TS,PUG,DOC,HTTPS\" -c \"bgBlue,bgYellow,bgGray,bgGreen\" \"yarn dev:ts\" \"yarn dev:pug\" \"yarn dev:docs\" \"yarn dev:https\"",
+    "dev": "DEBUG_COLORS=1 concurrently --names \"DOC,HTTPS,PUBLIC,PUG,TS\" -c \"bgGray,bgGreen,bgGray,bgBlue,bgYellow\" \"yarn dev:docs\" \"yarn dev:https\" \"yarn dev:public\" \"yarn dev:pug\" \"yarn dev:ts\"",
     "dev:docs": "nodemon --watch src --ext ts,json --exec typedoc",
     "dev:https": "ts-node ./https.ts",
+    "dev:public": "nodemon --watch public --ext svg,png,jpg,jpeg --exec \"cp -r public/* dist\"",
     "dev:pug": "nodemon --watch pug --ext pug ./pug/build.ts",
     "dev:ts": "nodemon --watch src --ext ts,json --exec \"rollup --config rollup.config.mjs\"",
     "docs": "typedoc",
