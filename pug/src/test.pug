@@ -1,7 +1,7 @@
 extends /include/bootstrapV4
 
 block beforehtml
-  - const title = 'ChameleonUltra Test'
+  - const title = 'Test'
 
 block style
   style
@@ -13,10 +13,10 @@ block style
 
 block content
   #app.my-3.container(v-cloak)
-    h4.text-center= title
+    h4.text-center #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
     .form-group.mt-3
       label Choose connection method:
-      select.form-control.form-control-sm(v-model="h.adapter")
+      select.form-control.form-control-sm(v-model="ls.adapter")
         option(value="ble") via BLE (PC &amp; Android, bond is required)
         option(value="usb") via USB Serial (PC only)
 
@@ -31,23 +31,26 @@ block script
     window.vm = new Vue({
       el: '#app',
       data: {
-        h: {
+        ls: {
           adapter: 'ble',
         },
+        ss: {},
       },
       async mounted () {
         // 自動儲存功能
-        try {
-          const saved = JSON5.parse(localStorage.getItem(location.pathname))
-          if (saved) this.$set(this, 'h', { ...this.h, ...saved })
-        } catch (err) {}
-        this.$watch('h', () => {
-          localStorage.setItem(location.pathname, JSON5.stringify(this.h))
-        }, { deep: true })
+        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+          try {
+            const saved = JSON5.parse(storage.getItem(location.pathname))
+            if (saved) this.$set(this, key, _.merge(this[key], saved))
+          } catch (err) {}
+          this.$watch(key, () => {
+            storage.setItem(location.pathname, JSON5.stringify(this[key]))
+          }, { deep: true })
+        }
       },
       computed: {
         ultra () {
-          return this.h.adapter === 'usb' ? ultraUsb : ultraBle
+          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
         },
       },
       methods: {

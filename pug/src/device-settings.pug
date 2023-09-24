@@ -8,7 +8,7 @@ block style
   meta(property="og:locale", content="zh_TW")
   meta(property="og:title", content=title)
   meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}/pug/device-settings.html`)
+  meta(property="og:url", content=`${baseurl}pug/device-settings.html`)
   style
     :sass
       [v-cloak]
@@ -24,16 +24,16 @@ block style
 
 block content
   #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px= title
+    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
     .form-group
       label Connect method:
       .input-group.input-group-sm.mb-3
-        select.form-control(v-model="h.adapter")
+        select.form-control(v-model="ls.adapter")
           option(value="ble") BLE (PC &amp; Android)
           option(value="usb") USB Serial (PC only)
         .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
     .row.mx-n1.mb-2
-      .col-6.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnLoadDevice") #[i.fa.fa-upload] Load
+      .col-6.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnLoadDevice") #[i.fa.fa-sign-out] Load
       .col-6.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnSaveDevice") #[i.fa.fa-floppy-o] Save
     .card.mb-2
       h6.card-header.text-white.bg-secondary #[i.fa.fa-cog.mr-1] Device Settings
@@ -41,58 +41,58 @@ block content
         form(@submit.prevent)
           .input-group.input-group-sm.letter-spacing-n1px.mb-2
             .input-group-prepend: span.input-group-text.justify-content-center animationMode
-            select.form-control.form-control-sm(v-model.number="device.animationMode")
+            select.form-control.form-control-sm(v-model.number="ss.animationMode")
               option(value="0") Full
               option(value="1") Short
               option(value="2") None
           .input-group.input-group-sm.letter-spacing-n1px.mb-2
             .input-group-prepend: span.input-group-text.justify-content-center blePairingMode
-            select.form-control.form-control-sm(v-model.number="device.blePairingMode")
+            select.form-control.form-control-sm(v-model.number="ss.blePairingMode")
               option(value="0") Disable
               option(value="1") Enable
           .input-group.input-group-sm.letter-spacing-n1px.mb-2
             .input-group-prepend: span.input-group-text.justify-content-center blePairingKey
-            input.form-control.form-control-sm(v-model="device.blePairingKey", autocomplete="off", :type="blePairingKeyVisible ? 'text' : 'password'")
+            input.form-control.form-control-sm(v-model="ss.blePairingKey", autocomplete="off", :type="ss.blePairingKeyVisible ? 'text' : 'password'")
             .input-group-append
-              button.btn.btn-outline-secondary(v-if="blePairingKeyVisible", type="button", @click="blePairingKeyVisible = false"): i.fa.fa-eye
-              button.btn.btn-outline-secondary(v-else, type="button", @click="blePairingKeyVisible = true"): i.fa.fa-eye-slash
+              button.btn.btn-outline-secondary(v-if="ss.blePairingKeyVisible", type="button", @click="ss.blePairingKeyVisible = false"): i.fa.fa-eye
+              button.btn.btn-outline-secondary(v-else, type="button", @click="ss.blePairingKeyVisible = true"): i.fa.fa-eye-slash
           .input-group.input-group-sm.letter-spacing-n1px.mb-2
             .input-group-prepend: span.input-group-text.justify-content-center deviceMode
-            select.form-control.form-control-sm(v-model.number="device.mode")
+            select.form-control.form-control-sm(v-model.number="ss.mode")
               option(value="0") TAG
               option(value="1") READER
           template(v-for="k in ['pressBtnA', 'pressBtnB', 'longPressBtnA', 'longPressBtnB']")
             .input-group.input-group-sm.letter-spacing-n1px.mb-2
               .input-group-prepend: span.input-group-text.justify-content-center {{ k }}
-              select.form-control.form-control-sm(v-model.number="device[k]")
+              select.form-control.form-control-sm(v-model.number="ss[k]")
                 option(value="0") DISABLE
                 option(value="1") CYCLE_SLOT_INC
                 option(value="2") CYCLE_SLOT_DEC
                 option(value="3") CLONE_IC_UID
     .card.mb-2.text-sm
       h6.card-header.text-white.bg-info #[i.fa.fa-info-circle.mr-1] Device Info
-      ul.list-group.list-group-flush.letter-spacing-n1px(v-if="device.bleAddress")
+      ul.list-group.list-group-flush.letter-spacing-n1px(v-if="ss.bleAddress")
         li.list-group-item.d-flex.justify-content-between.align-items-center
           span.text-muted appVersion
-          span {{ device?.appVersion ?? '?' }}
+          span {{ ss?.appVersion ?? '?' }}
         li.list-group-item.d-flex.justify-content-between.align-items-center
           span.text-muted gitVersion
-          span {{ device?.gitVersion ?? '?' }}
+          span {{ ss?.gitVersion ?? '?' }}
         li.list-group-item.d-flex.justify-content-between.align-items-center
           span.text-muted bleAddress
-          span {{ device?.bleAddress ?? '?' }}
+          span {{ ss?.bleAddress ?? '?' }}
         li.list-group-item.d-flex.justify-content-between.align-items-center
           span.text-muted batteryLevel
-          span {{ device?.batteryLevel ?? '?' }} %
+          span {{ ss?.batteryLevel ?? '?' }} %
         li.list-group-item.d-flex.justify-content-between.align-items-center
           span.text-muted batteryVoltage
-          span {{ device?.batteryVoltage ?? '?' }} mV
+          span {{ ss?.batteryVoltage ?? '?' }} mV
         li.list-group-item.d-flex.justify-content-between.align-items-center
           span.text-muted chipId
-          span {{ device?.chipId ?? '?' }}
+          span {{ ss?.chipId ?? '?' }}
         li.list-group-item.d-flex.justify-content-between.align-items-center
           span.text-muted model
-          span {{ ['ChameleonLite', 'ChameleonUltra']?.[device?.model] ?? '?' }}
+          span {{ ['ChameleonLite', 'ChameleonUltra']?.[ss?.model] ?? '?' }}
       .card-body.py-3(v-else) Click "Load" button to load device info.
     .card.mb-2
       h6.card-header.text-white.bg-danger #[i.fa.fa-exclamation-triangle.mr-1] Danger Zone
@@ -128,17 +128,17 @@ block script
     window.vm = new Vue({
       el: '#app',
       data: {
-        h: {
+        ls: {
           adapter: 'ble',
         },
-        blePairingKeyVisible: false,
-        device: {
+        ss: {
           animationMode: null,
           appVersion: null,
           batteryLevel: null,
           batteryVoltage: null,
           bleAddress: null,
           blePairingKey: null,
+          blePairingKeyVisible: false,
           blePairingMode: null,
           chipId: null,
           gitVersion: null,
@@ -152,17 +152,19 @@ block script
       },
       async mounted () {
         // 自動儲存功能
-        try {
-          const saved = JSON5.parse(localStorage.getItem(location.pathname))
-          if (saved) this.$set(this, 'h', { ...this.h, ...saved })
-        } catch (err) {}
-        this.$watch('h', () => {
-          localStorage.setItem(location.pathname, JSON5.stringify(this.h))
-        }, { deep: true })
+        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+          try {
+            const saved = JSON5.parse(storage.getItem(location.pathname))
+            if (saved) this.$set(this, key, _.merge(this[key], saved))
+          } catch (err) {}
+          this.$watch(key, () => {
+            storage.setItem(location.pathname, JSON5.stringify(this[key]))
+          }, { deep: true })
+        }
       },
       computed: {
         ultra () {
-          return this.h.adapter === 'usb' ? ultraUsb : ultraBle
+          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
         },
       },
       methods: {
@@ -171,7 +173,7 @@ block script
             this.showLoading({ text: 'Loading settings...' })
             const { ultra } = this
             const batteryInfo = await ultra.cmdGetBatteryInfo()
-            const device = {
+            const ss = {
               animationMode: await ultra.cmdGetAnimationMode(),
               appVersion: await ultra.cmdGetAppVersion(),
               batteryLevel: batteryInfo.level,
@@ -185,12 +187,11 @@ block script
               model: await ultra.cmdGetDeviceModel(),
             }
             for (const btn of ['A', 'B']) {
-              device[`pressBtn${btn}`] = await ultra.cmdGetButtonPressAction(btn)
-              device[`longPressBtn${btn}`] = await ultra.cmdGetButtonLongPressAction(btn)
+              ss[`pressBtn${btn}`] = await ultra.cmdGetButtonPressAction(btn)
+              ss[`longPressBtn${btn}`] = await ultra.cmdGetButtonLongPressAction(btn)
             }
             //- console.log(JSON.stringify(device, null, 2))
-            this.$set(this, 'device', device)
-            this.blePairingKeyVisible = false
+            this.$set(this, 'ss', { ...this.ss, ...ss, blePairingKeyVisible: false })
             Swal.close()
           } catch (err) {
             console.error(err)
@@ -201,14 +202,14 @@ block script
           try {
             this.showLoading({ text: 'Saving settings...' })
             const { ultra } = this
-            const device = await joiDeviceSettings.validateAsync(this.device, { stripUnknown: true })
-            await ultra.cmdSetAnimationMode(device.animationMode)
-            await ultra.cmdBleSetPairingMode(device.blePairingMode)
-            await ultra.cmdBleSetPairingKey(device.blePairingKey)
-            await ultra.cmdChangeDeviceMode(device.mode)
+            const ss = await joiDeviceSettings.validateAsync(this.ss, { stripUnknown: true })
+            await ultra.cmdSetAnimationMode(ss.animationMode)
+            await ultra.cmdBleSetPairingMode(ss.blePairingMode)
+            await ultra.cmdBleSetPairingKey(ss.blePairingKey)
+            await ultra.cmdChangeDeviceMode(ss.mode)
             for (const btn of ['A', 'B']) {
-              await ultra.cmdSetButtonPressAction(btn, device[`pressBtn${btn}`])
-              await ultra.cmdSetButtonLongPressAction(btn, device[`longPressBtn${btn}`])
+              await ultra.cmdSetButtonPressAction(btn, ss[`pressBtn${btn}`])
+              await ultra.cmdSetButtonLongPressAction(btn, ss[`longPressBtn${btn}`])
             }
             await ultra.cmdSaveSettings()
             await Swal.fire({ icon: 'success', text: 'Settings save successfully!' })

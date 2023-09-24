@@ -1,14 +1,14 @@
 extends /include/bootstrapV4
 
 block beforehtml
-  - const title = 'MFKey32 with ChameleonUltra'
+  - const title = 'MFKey32'
 
 block style
   meta(property="og:description", content="A tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32) with ChameleonUltra.")
   meta(property="og:locale", content="zh_TW")
   meta(property="og:title", content=title)
   meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}/pug/mfkey32.html`)
+  meta(property="og:url", content=`${baseurl}pug/mfkey32.html`)
   style
     :sass
       [v-cloak]
@@ -22,11 +22,11 @@ block style
 
 block content
   #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px= title
+    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
     .form-group
       label Connect method:
       .input-group.input-group-sm.mb-3
-        select.form-control(v-model="h.adapter")
+        select.form-control(v-model="ls.adapter")
           option(value="ble") BLE (PC &amp; Android)
           option(value="usb") USB Serial (PC only)
         .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
@@ -35,25 +35,25 @@ block content
       .card-body
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center Slot
-          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="h.slot")
+          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
             option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center TagType
-          select.form-control.form-control-sm.letter-spacing-n1px(v-model="h.tagType")
+          select.form-control.form-control-sm.letter-spacing-n1px(v-model="ss.tagType")
             option(value="0") Mifare 1k
             option(value="1") Mifare 4k
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center UID
-          input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", placeholder="Hex format of UID", required, v-model="h.uid")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.uid = ''") #[i.fa.fa-fw.fa-times]
+          input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", placeholder="Hex format of UID", required, v-model="ss.uid")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center ATQA
-          input.form-control(pattern="[\\dA-Fa-f]{4}", placeholder="Hex format of ATQA", required, v-model="h.atqa")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.atqa = ''") #[i.fa.fa-fw.fa-times]
+          input.form-control(pattern="[\\dA-Fa-f]{4}", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.atqa = ''") #[i.fa.fa-fw.fa-times]
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center SAK
-          input.form-control(pattern="[\\dA-Fa-f]{2}", placeholder="Hex format of SAK", required, v-model="h.sak")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.sak = ''") #[i.fa.fa-fw.fa-times]
+          input.form-control(pattern="[\\dA-Fa-f]{2}", placeholder="Hex format of SAK", required, v-model="ss.sak")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.sak = ''") #[i.fa.fa-fw.fa-times]
         .row.mx-n1
           .col.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnScanTag") #[i.fa.fa-fw.fa-sign-out] Scan UID
           .col.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnEmulateTag") #[i.fa.fa-fw.fa-sign-in] Emulate
@@ -62,17 +62,17 @@ block content
       .card-body
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center Block
-          input.form-control(type="number", min="0", max="63", required, v-model.number="h.block")
-          .input-group-append: span.input-group-text Sector {{ blockToSector(h?.block ?? 0) }}
+          input.form-control(type="number", min="0", max="63", required, v-model.number="ss.block")
+          .input-group-append: span.input-group-text Sector {{ blockToSector(ss?.block ?? 0) }}
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center KeyType
-          select.form-control.form-control-sm(v-model.number="h.keyType")
+          select.form-control.form-control-sm(v-model.number="ss.keyType")
             option(value="0") Key A
             option(value="1") Key B
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center KEY
-          input.form-control(type="text", required, pattern="[\\dA-Fa-f]{12}", v-model="h.key")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="h.key") #[i.fa.fa-fw.fa-clipboard]
+          input.form-control(type="text", required, pattern="[\\dA-Fa-f]{12}", v-model="ss.key")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.key") #[i.fa.fa-fw.fa-clipboard]
         .row.mx-n1
           .col.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnRecover") #[i.fa.fa-fw.fa-key] Recover
           .col.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnCheck") #[i.fa.fa-fw.fa-unlock-alt] Check
@@ -84,7 +84,7 @@ block content
             th Key
             th &nbsp;
           tbody
-            tr(v-if="!h.detects.length")
+            tr(v-if="!ss.detects.length")
               td.text-left.px-4.py-3(colspan="4")
                 p A tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32) with ChameleonUltra.
                 strong Usage:
@@ -98,14 +98,13 @@ block content
                   li Click "Recover" button to recover key. It may take a long time.
                   li Put your tag in front of ChameleonUltra, click "Test" button to select detected key then click "Check" button to check if the key is correct.
             tr(
-              v-for="d in h.detects",
+              v-for="d in ss.detects",
               :key="`${d.block}-${d.keyType}-${d.key}`",
             )
               td(@click="btnCopy(blockToSector(d.block))") {{ blockToSector(d.block) }}
               td(@click="btnCopy('AB'[d.keyType])") {{ 'AB'[d.keyType] }}
               td(@click="btnCopy(d.key)") {{ d.key }}
               td(@click="btnSetTestFromDetect(d)"): a.badge.badge-primary.mr-1(href="javascript:void(0)") Test
-    button.btn.btn-block.btn-danger.letter-spacing-n1px(@click="btnReset") #[i.fa.mr-2.fa-repeat] Reset to default
 
 block script
   script.
@@ -118,8 +117,10 @@ block script
     window.vm = new Vue({
       el: '#app',
       data: {
-        h: {
+        ls: {
           adapter: 'ble',
+        },
+        ss: {
           atqa: '0004',
           block: 0,
           detects: [],
@@ -133,17 +134,19 @@ block script
       },
       async mounted () {
         // 自動儲存功能
-        try {
-          const saved = JSON5.parse(localStorage.getItem(location.pathname))
-          if (saved) this.$set(this, 'h', { ...this.h, ...saved })
-        } catch (err) {}
-        this.$watch('h', () => {
-          localStorage.setItem(location.pathname, JSON5.stringify(this.h))
-        }, { deep: true })
+        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+          try {
+            const saved = JSON5.parse(storage.getItem(location.pathname))
+            if (saved) this.$set(this, key, _.merge(this[key], saved))
+          } catch (err) {}
+          this.$watch(key, () => {
+            storage.setItem(location.pathname, JSON5.stringify(this[key]))
+          }, { deep: true })
+        }
       },
       computed: {
         ultra () {
-          return this.h.adapter === 'usb' ? ultraUsb : ultraBle
+          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
         },
       },
       methods: {
@@ -169,7 +172,7 @@ block script
             }
             tag2.tagType = (tag2.atqa === '0002' && tag2.sak === '18') ? 1 : 0
             console.log(tag2)
-            _.merge(this.h, tag2)
+            _.merge(this.ss, tag2)
             Swal.close()
           } catch (err) {
             console.error(err)
@@ -179,7 +182,7 @@ block script
         async btnEmulateTag () {
           try {
             const { ultra } = this
-            const { atqa, sak, slot, tagType, uid } = this.h
+            const { atqa, sak, slot, tagType, uid } = this.ss
             console.log({ atqa, sak, slot, tagType, uid })
             const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
@@ -246,7 +249,7 @@ block script
             logs = _.values(_.groupBy(logs, log => `${log.uid.toString('hex')}-${log.block}-${log.isKeyB ? 1 : 0}`))
             console.log(logs)
             const recoverMax = _.sumBy(logs, arr => arr.length * (arr.length - 1) / 2)
-            this.$set(this.h, 'detects', [])
+            this.$set(this.ss, 'detects', [])
             let recoverCnt = 0
             for (const grp of logs) {
               for (let i = 0; i < grp.length; i++) {
@@ -258,7 +261,7 @@ block script
                   }))
                   const r1 = grp[j]
                   try {
-                    this.$set(this.h, 'detects', _.unionWith(this.h.detects, [{
+                    this.$set(this.ss, 'detects', _.unionWith(this.ss.detects, [{
                       block: r0.block,
                       keyType: r0.isKeyb ? 1 : 0,
                       key: this.mfkey32v2(r0.uid, r0, r1),
@@ -281,7 +284,7 @@ block script
           try {
             this.showLoading({ text: 'Checking key...' })
             const { ultra } = this
-            const { block, keyType, key } = this.h
+            const { block, keyType, key } = this.ss
             await this.setDeviceMode('reader')
             const isCorrect = await ultra.cmdMf1CheckBlockKey({
               block,
@@ -306,13 +309,6 @@ block script
           document.execCommand('copy')
           container.removeChild(dom)
           await Swal.fire({ icon: 'success', title: '複製成功' })
-        },
-        async btnReset () {
-          if (!await this.confirm('Reset web page data to default?', 'Yes', 'Cancel')) return
-          this.showLoading({ text: 'Web page will reload after reset.' })
-          localStorage.removeItem(location.pathname)
-          location.reload()
-          return await new Promise(resolve => {})
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
           return await new Promise((resolve, reject) => {
@@ -351,7 +347,7 @@ block script
           }).toString('hex')
         },
         btnSetTestFromDetect (detect) {
-          _.merge(this.h, _.pick(detect, ['block', 'keyType', 'key']))
+          _.merge(this.ss, _.pick(detect, ['block', 'keyType', 'key']))
         },
         blockToSector (block = 0) {
           return block < 128 ? block >>> 2 : 24 + (block >>> 4)

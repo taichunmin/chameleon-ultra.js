@@ -2193,7 +2193,7 @@ export enum EmuMf1WriteMode {
   /** Normal write as standard mifare */
   NORMAL = 0,
   /** Send NACK to write attempts */
-  DEINED = 1,
+  DENIED = 1,
   /** Acknowledge writes, but don't remember contents */
   DECEIVE = 2,
   /** Store data to RAM, but not save to persistent storage */
