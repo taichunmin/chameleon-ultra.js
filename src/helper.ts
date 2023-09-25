@@ -50,6 +50,11 @@ export function createIsEnum<T extends readonly any[] | ArrayLike<any> | Record<
   return (val: any): val is ValuesType<T> => s.has(val)
 }
 
+export function createIsEnumInteger<T extends readonly any[] | ArrayLike<any> | Record<any, any>> (e: T): (val: any) => val is ValuesType<T> {
+  const isEnum = createIsEnum(e)
+  return (val: any): val is ValuesType<T> => _.isInteger(val) && isEnum(val)
+}
+
 const ERROR_KEYS = [
   'address',
   'args',

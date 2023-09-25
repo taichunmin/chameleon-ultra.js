@@ -13,6 +13,10 @@ export default class WebserialAdapter implements ChameleonPlugin {
   name = 'adapter'
   port?: SerialPort
 
+  static u16ToHex (num: number): string {
+    return _.toUpper(`000${num.toString(16)}`.slice(-4))
+  }
+
   async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
     const { ultra } = context
     this.logger.webserial = ultra.createDebugger('webserial')
@@ -36,7 +40,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
         this.isOpen = true
 
         const info = await this.port.getInfo() as { usbVendorId: number, usbProductId: number }
-        this.logger.webserial(`port selected, usbVendorId = ${info.usbVendorId}, usbProductId = ${info.usbProductId}`)
+        this.logger.webserial(`port selected, usbVendorId = 0x${WebserialAdapter.u16ToHex(info.usbVendorId)}, usbProductId = 0x${WebserialAdapter.u16ToHex(info.usbProductId)}`)
         this.port.addEventListener?.('disconnect', () => { void ultra.disconnect(new Error('Webserial disconnect')) })
         ultra.port = _.merge(this.port, {
           isOpen: () => { return this.isOpen },

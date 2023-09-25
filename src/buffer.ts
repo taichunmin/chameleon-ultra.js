@@ -765,17 +765,17 @@ export class Buffer extends Uint8Array {
     return this
   }
 
-  writeBitMSB (bitOffset: number, val: number): this {
+  writeBitMSB (bitOffset: number, val: number | boolean): this {
     const tmp = [bitOffset >>> 3, (bitOffset & 7) ^ 7]
     const oldBit = (this[tmp[0]] >>> tmp[1]) & 1
-    if ((oldBit ^ (val !== 0 ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
+    if ((oldBit ^ (Boolean(val) ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
     return this
   }
 
-  writeBitLSB (bitOffset: number, val: number): this {
+  writeBitLSB (bitOffset: number, val: number | boolean): this {
     const tmp = [this.length - (bitOffset >>> 3) - 1, bitOffset & 7]
     const oldBit = (this[tmp[0]] >>> tmp[1]) & 1
-    if ((oldBit ^ (val !== 0 ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
+    if ((oldBit ^ (Boolean(val) ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
     return this
   }
 

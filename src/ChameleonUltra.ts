@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { createIsEnum, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
+import { createIsEnum, createIsEnumInteger, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
 import * as Decoder from './ResponseDecoder'
@@ -305,7 +305,7 @@ export class ChameleonUltra {
    * @internal
    * @group Internal
    */
-  async _readRespTimeout ({ timeout }: { timeout?: number } = {}): Promise<ChameleonUltraFrame> {
+  async _readRespTimeout ({ cmd, timeout }: { cmd?: Cmd, timeout?: number } = {}): Promise<ChameleonUltraFrame> {
     interface Context {
       startedAt?: number
       nowts?: number
@@ -325,19 +325,24 @@ export class ChameleonUltra {
         try {
           const sofIdx = buf.indexOf(START_OF_FRAME)
           if (sofIdx < 0) throw new Error('SOF not found')
-          buf = buf.subarray(sofIdx) // ignore bytes before SOF
+          else if (sofIdx > 0) throw _.merge(new Error('ignore bytes before SOF'), { skip: sofIdx })
           // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
           if (buf.length < 10) throw new Error('buf.length < 10')
           if (this._calcLrc(buf.subarray(2, 8)) !== buf[8]) throw _.merge(new Error('head lrc mismatch'), { skip: 1 })
           const lenFrame = buf.readUInt16BE(6) + 10
           if (buf.length < lenFrame) throw new Error('waiting for more data')
           if (this._calcLrc(buf.subarray(9, -1)) !== buf[buf.length - 1]) throw _.merge(new Error('data lrc mismatch'), { skip: 1 })
-          if (buf.length > lenFrame) this.rxSink.bufs.unshift(buf.subarray(lenFrame))
           ctx.resp = new ChameleonUltraFrame(buf.subarray(0, lenFrame))
+          if (!_.isNil(cmd) && ctx.resp.cmd !== cmd) throw _.merge(new Error(`expect cmd=${cmd} but receive cmd=${ctx.resp.cmd}`), { skip: lenFrame })
+          // resp is valid
+          if (buf.length > lenFrame) this.rxSink.bufs.unshift(buf.subarray(lenFrame))
           break
         } catch (err) {
           const skip = err.skip ?? 0
-          if (skip > 0) buf = buf.subarray(skip)
+          if (skip > 0) {
+            this.logger.respError(`readRespTimeout skip ${skip} byte(s), reason = ${err.message}`)
+            buf = buf.subarray(skip)
+          }
           this.rxSink.bufs.unshift(buf)
         }
         await sleep(10)
@@ -365,8 +370,9 @@ export class ChameleonUltra {
    */
   async cmdGetAppVersion (): Promise<`${number}.${number}`> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_APP_VERSION }) // cmd = 1000
-    const data = (await this._readRespTimeout())?.data
+    const cmd = Cmd.GET_APP_VERSION // cmd = 1000
+    await this._writeCmd({ cmd })
+    const data = (await this._readRespTimeout({ cmd }))?.data
     return `${data[1]}.${data[0]}`
   }
 
@@ -384,9 +390,11 @@ export class ChameleonUltra {
    * ```
    */
   async cmdChangeDeviceMode (mode: DeviceMode): Promise<void> {
+    if (!isDeviceMode(mode)) throw new TypeError('Invalid device mode')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.CHANGE_DEVICE_MODE, data: Buffer.from([mode]) }) // cmd = 1001
-    await this._readRespTimeout()
+    const cmd = Cmd.CHANGE_DEVICE_MODE // cmd = 1001
+    await this._writeCmd({ cmd, data: new Buffer([mode]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -405,8 +413,9 @@ export class ChameleonUltra {
    */
   async cmdGetDeviceMode (): Promise<DeviceMode> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_MODE }) // cmd = 1002
-    const data = (await this._readRespTimeout())?.data
+    const cmd = Cmd.GET_DEVICE_MODE // cmd = 1002
+    await this._writeCmd({ cmd })
+    const data = (await this._readRespTimeout({ cmd }))?.data
     return data[0]
   }
 
@@ -424,10 +433,11 @@ export class ChameleonUltra {
    * ```
    */
   async cmdSlotSetActive (slot: Slot): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!isSlot(slot)) throw new TypeError('Invalid slot')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_ACTIVE_SLOT, data: Buffer.from([slot]) }) // cmd = 1003
-    await this._readRespTimeout()
+    const cmd = Cmd.SET_ACTIVE_SLOT // cmd = 1003
+    await this._writeCmd({ cmd, data: new Buffer([slot]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -445,11 +455,12 @@ export class ChameleonUltra {
    * ```
    */
   async cmdSlotChangeTagType (slot: Slot, tagType: TagType): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!_.isSafeInteger(tagType) || !isTagType(tagType)) throw new TypeError('Invalid tag type')
+    if (!isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!isTagType(tagType)) throw new TypeError('Invalid tag type')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_SLOT_TAG_TYPE, data: Buffer.from([slot, tagType]) }) // cmd = 1004
-    await this._readRespTimeout()
+    const cmd = Cmd.SET_SLOT_TAG_TYPE // cmd = 1004
+    await this._writeCmd({ cmd, data: new Buffer([slot, tagType]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -467,11 +478,12 @@ export class ChameleonUltra {
    * ```
    */
   async cmdSlotResetTagType (slot: Slot, tagType: TagType): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!_.isSafeInteger(tagType) || !isTagType(tagType)) throw new TypeError('Invalid tagType')
+    if (!isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!isTagType(tagType)) throw new TypeError('Invalid tagType')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_SLOT_DATA_DEFAULT, data: Buffer.from([slot, tagType]) }) // cmd = 1005
-    await this._readRespTimeout()
+    const cmd = Cmd.SET_SLOT_DATA_DEFAULT // cmd = 1005
+    await this._writeCmd({ cmd, data: new Buffer([slot, tagType]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -488,11 +500,12 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdSlotSetEnable (slot: Slot, enable: boolean): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
+  async cmdSlotSetEnable (slot: Slot, enable: number | boolean): Promise<void> {
+    if (!isSlot(slot)) throw new TypeError('Invalid slot')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_SLOT_ENABLE, data: Buffer.from([slot, enable ? 1 : 0]) }) // cmd = 1006
-    await this._readRespTimeout()
+    const cmd = Cmd.SET_SLOT_ENABLE // cmd = 1006
+    await this._writeCmd({ cmd, data: new Buffer([slot, Boolean(enable) ? 1 : 0]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -511,14 +524,14 @@ export class ChameleonUltra {
    * ```
    */
   async cmdSlotSetFreqName (slot: Slot, freq: FreqType, name: string): Promise<void> {
-    const data = Buffer.concat([Buffer.from([slot, freq]), Buffer.from(name)])
+    if (!isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+    const data = Buffer.concat([new Buffer([slot, freq]), Buffer.from(name)])
     if (!_.inRange(data.length, 3, 35)) throw new TypeError('byteLength of name should between 1 and 32')
     this._clearRxBufs()
-    await this._writeCmd({
-      cmd: Cmd.SET_SLOT_TAG_NICK, // cmd = 1007
-      data: Buffer.concat([Buffer.from([slot, freq]), Buffer.from(name)]),
-    })
-    await this._readRespTimeout()
+    const cmd = Cmd.SET_SLOT_TAG_NICK // cmd = 1007
+    await this._writeCmd({ cmd, data })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -539,11 +552,12 @@ export class ChameleonUltra {
    */
   async cmdSlotGetFreqName (slot: Slot, freq: FreqType): Promise<string | undefined> {
     try {
-      if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('slot should between 0 and 7')
-      if (!_.isSafeInteger(freq) || !isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+      if (!isSlot(slot)) throw new TypeError('Invalid slot')
+      if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
       this._clearRxBufs()
-      await this._writeCmd({ cmd: Cmd.GET_SLOT_TAG_NICK, data: Buffer.from([slot, freq]) }) // cmd = 1008
-      return (await this._readRespTimeout())?.data.toString('utf8')
+      const cmd = Cmd.GET_SLOT_TAG_NICK // cmd = 1008
+      await this._writeCmd({ cmd, data: new Buffer([slot, freq]) })
+      return (await this._readRespTimeout({ cmd }))?.data.toString('utf8')
     } catch (err) {
       if (err.status === RespStatus.FLASH_READ_FAIL) return // slot name is empty
       throw err
@@ -563,8 +577,9 @@ export class ChameleonUltra {
    */
   async cmdSlotSaveSettings (): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SLOT_DATA_CONFIG_SAVE }) // cmd = 1009
-    await this._readRespTimeout()
+    const cmd = Cmd.SLOT_DATA_CONFIG_SAVE // cmd = 1009
+    await this._writeCmd({ cmd })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -579,8 +594,9 @@ export class ChameleonUltra {
    */
   async cmdEnterBootloader (): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.ENTER_BOOTLOADER }) // cmd = 1010
-    await this._readRespTimeout()
+    const cmd = Cmd.ENTER_BOOTLOADER // cmd = 1010
+    await this._writeCmd({ cmd })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -596,8 +612,9 @@ export class ChameleonUltra {
    */
   async cmdGetDeviceChipId (): Promise<string> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_CHIP_ID }) // cmd = 1011
-    const data = (await this._readRespTimeout())?.data
+    const cmd = Cmd.GET_DEVICE_CHIP_ID // cmd = 1011
+    await this._writeCmd({ cmd })
+    const data = (await this._readRespTimeout({ cmd }))?.data
     return data.toString('hex')
   }
 
@@ -614,11 +631,46 @@ export class ChameleonUltra {
    */
   async cmdBleGetAddress (): Promise<string> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_ADDRESS }) // cmd = 1012
-    const data = (await this._readRespTimeout())?.data
+    const cmd = Cmd.GET_DEVICE_ADDRESS // cmd = 1012
+    await this._writeCmd({ cmd })
+    const data = (await this._readRespTimeout({ cmd }))?.data
     const arr = []
     for (let i = data.length - 1; i >= 0; i--) arr.push(data.subarray(i, i + 1).toString('hex'))
     return _.toUpper(arr.join(':'))
+  }
+
+  /**
+   * Save the settings of device to persistent storage.
+   * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdSaveSettings()
+   * }
+   * ```
+   */
+  async cmdSaveSettings (): Promise<void> {
+    this._clearRxBufs()
+    const cmd = Cmd.SAVE_SETTINGS // cmd = 1013
+    await this._writeCmd({ cmd })
+    await this._readRespTimeout({ cmd })
+  }
+
+  /**
+   * Reset the settings of device to default values.
+   * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdResetSettings()
+   * }
+   * ```
+   */
+  async cmdResetSettings (): Promise<void> {
+    this._clearRxBufs()
+    const cmd = Cmd.RESET_SETTINGS // cmd = 1014
+    await this._writeCmd({ cmd })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -635,42 +687,11 @@ export class ChameleonUltra {
    * ```
    */
   async cmdSetAnimationMode (mode: AnimationMode): Promise<void> {
-    if (!_.isSafeInteger(mode) || !isAnimationMode(mode)) throw new TypeError('Invalid animation mode')
+    if (!isAnimationMode(mode)) throw new TypeError('Invalid animation mode')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_ANIMATION_MODE, data: Buffer.from([mode]) }) // cmd = 1015
-    await this._readRespTimeout()
-  }
-
-  /**
-   * Save the settings of device to persistent storage.
-   * @group Commands related to device
-   * @example
-   * ```js
-   * async function run (ultra) {
-   *   await ultra.cmdSaveSettings()
-   * }
-   * ```
-   */
-  async cmdSaveSettings (): Promise<void> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SAVE_SETTINGS }) // cmd = 1013
-    await this._readRespTimeout()
-  }
-
-  /**
-   * Reset the settings of device to default values.
-   * @group Commands related to device
-   * @example
-   * ```js
-   * async function run (ultra) {
-   *   await ultra.cmdResetSettings()
-   * }
-   * ```
-   */
-  async cmdResetSettings (): Promise<void> {
-    this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.RESET_SETTINGS }) // cmd = 1014
-    await this._readRespTimeout()
+    const cmd = Cmd.SET_ANIMATION_MODE // cmd = 1015
+    await this._writeCmd({ cmd, data: new Buffer([mode]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -689,8 +710,9 @@ export class ChameleonUltra {
    */
   async cmdGetAnimationMode (): Promise<AnimationMode> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_ANIMATION_MODE }) // cmd = 1016
-    return (await this._readRespTimeout())?.data[0]
+    const cmd = Cmd.GET_ANIMATION_MODE // cmd = 1016
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data[0]
   }
 
   /**
@@ -706,8 +728,9 @@ export class ChameleonUltra {
    */
   async cmdGetGitVersion (): Promise<string> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_GIT_VERSION }) // cmd = 1017
-    const data = (await this._readRespTimeout())?.data
+    const cmd = Cmd.GET_GIT_VERSION // cmd = 1017
+    await this._writeCmd({ cmd })
+    const data = (await this._readRespTimeout({ cmd }))?.data
     return data.toString('utf8')
   }
 
@@ -727,8 +750,9 @@ export class ChameleonUltra {
    */
   async cmdSlotGetActive (): Promise<Slot> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_ACTIVE_SLOT }) // cmd = 1018
-    return (await this._readRespTimeout())?.data[0]
+    const cmd = Cmd.GET_ACTIVE_SLOT // cmd = 1018
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data[0]
   }
 
   /**
@@ -757,8 +781,9 @@ export class ChameleonUltra {
    */
   async cmdSlotGetInfo (): Promise<Decoder.SlotInfo[]> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_SLOT_INFO }) // cmd = 1019
-    return Decoder.SlotInfo.fromCmd1019((await this._readRespTimeout())?.data)
+    const cmd = Cmd.GET_SLOT_INFO // cmd = 1019
+    await this._writeCmd({ cmd })
+    return Decoder.SlotInfo.fromCmd1019((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -773,8 +798,9 @@ export class ChameleonUltra {
    */
   async cmdWipeFds (): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.WIPE_FDS }) // cmd = 1020
-    await this._readRespTimeout()
+    const cmd = Cmd.WIPE_FDS // cmd = 1020
+    await this._writeCmd({ cmd })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -791,8 +817,9 @@ export class ChameleonUltra {
    */
   async cmdSlotGetIsEnable (): Promise<Buffer> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_ENABLED_SLOTS }) // cmd = 1023
-    return (await this._readRespTimeout())?.data
+    const cmd = Cmd.GET_ENABLED_SLOTS // cmd = 1023
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data
   }
 
   /**
@@ -810,11 +837,12 @@ export class ChameleonUltra {
    * ```
    */
   async cmdSlotDeleteFreqType (slot: Slot, freq: FreqType): Promise<void> {
-    if (!_.isSafeInteger(slot) || !isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!_.isSafeInteger(freq) || !isFreqType(freq)) throw new TypeError('Invalid freq')
+    if (!isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!isFreqType(freq)) throw new TypeError('Invalid freq')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.DELETE_SLOT_SENSE_TYPE, data: Buffer.from([slot, freq]) }) // cmd = 1024
-    await this._readRespTimeout()
+    const cmd = Cmd.DELETE_SLOT_SENSE_TYPE // cmd = 1024
+    await this._writeCmd({ cmd, data: new Buffer([slot, freq]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -831,8 +859,9 @@ export class ChameleonUltra {
    */
   async cmdGetBatteryInfo (): Promise<Decoder.BatteryInfo> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_BATTERY_INFO }) // cmd = 1025
-    return Decoder.BatteryInfo.fromCmd1025((await this._readRespTimeout())?.data)
+    const cmd = Cmd.GET_BATTERY_INFO // cmd = 1025
+    await this._writeCmd({ cmd })
+    return Decoder.BatteryInfo.fromCmd1025((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -851,10 +880,11 @@ export class ChameleonUltra {
    * ```
    */
   async cmdGetButtonPressAction (btn: ButtonType): Promise<ButtonAction> {
-    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
+    if (!isButtonType(btn)) throw new TypeError('Invalid button type')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_BUTTON_PRESS_CONFIG, data: Buffer.from(btn) }) // cmd = 1026
-    return (await this._readRespTimeout())?.data[0]
+    const cmd = Cmd.GET_BUTTON_PRESS_CONFIG // cmd = 1026
+    await this._writeCmd({ cmd, data: Buffer.fromUtf8String(btn) })
+    return (await this._readRespTimeout({ cmd }))?.data[0]
   }
 
   /**
@@ -872,14 +902,15 @@ export class ChameleonUltra {
    * ```
    */
   async cmdSetButtonPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
-    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
-    if (!_.isSafeInteger(action) || !isButtonAction(action)) throw new TypeError('Invalid button action')
+    if (!isButtonType(btn)) throw new TypeError('Invalid button type')
+    if (!isButtonAction(action)) throw new TypeError('Invalid button action')
     this._clearRxBufs()
+    const cmd = Cmd.SET_BUTTON_PRESS_CONFIG // cmd = 1027
     const data = new Buffer(2)
-    data.write(btn, 0)
+    data.write(btn, 0, 'utf8')
     data[1] = action
-    await this._writeCmd({ cmd: Cmd.SET_BUTTON_PRESS_CONFIG, data }) // cmd = 1027
-    await this._readRespTimeout()
+    await this._writeCmd({ cmd, data })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -898,10 +929,11 @@ export class ChameleonUltra {
    * ```
    */
   async cmdGetButtonLongPressAction (btn: ButtonType): Promise<ButtonAction> {
-    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
+    if (!isButtonType(btn)) throw new TypeError('Invalid button type')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_LONG_BUTTON_PRESS_CONFIG, data: Buffer.from(btn) }) // cmd = 1028
-    return (await this._readRespTimeout())?.data[0]
+    const cmd = Cmd.GET_LONG_BUTTON_PRESS_CONFIG // cmd = 1028
+    await this._writeCmd({ cmd, data: Buffer.fromUtf8String(btn) })
+    return (await this._readRespTimeout({ cmd }))?.data[0]
   }
 
   /**
@@ -919,14 +951,15 @@ export class ChameleonUltra {
    * ```
    */
   async cmdSetButtonLongPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
-    if (!_.isString(btn) || !isButtonType(btn)) throw new TypeError('Invalid button type')
-    if (!_.isSafeInteger(action) || !isButtonAction(action)) throw new TypeError('Invalid button action')
+    if (!isButtonType(btn)) throw new TypeError('Invalid button type')
+    if (!isButtonAction(action)) throw new TypeError('Invalid button action')
     this._clearRxBufs()
+    const cmd = Cmd.SET_LONG_BUTTON_PRESS_CONFIG // cmd = 1029
     const data = new Buffer(2)
     data.write(btn, 0)
     data[1] = action
-    await this._writeCmd({ cmd: Cmd.SET_LONG_BUTTON_PRESS_CONFIG, data }) // cmd = 1029
-    await this._readRespTimeout()
+    await this._writeCmd({ cmd, data })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -943,8 +976,9 @@ export class ChameleonUltra {
   async cmdBleSetPairingKey (key: string): Promise<void> {
     if (!_.isString(key) || !/^\d{6}$/.test(key)) throw new TypeError('Invalid key, must be 6 digits')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_BLE_PAIRING_KEY, data: Buffer.from(key) }) // cmd = 1030
-    await this._readRespTimeout()
+    const cmd = Cmd.SET_BLE_PAIRING_KEY // cmd = 1030
+    await this._writeCmd({ cmd, data: Buffer.from(key) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -960,8 +994,9 @@ export class ChameleonUltra {
    */
   async cmdBleGetPairingKey (): Promise<string> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_BLE_PAIRING_KEY }) // cmd = 1031
-    return (await this._readRespTimeout())?.data.toString('utf8')
+    const cmd = Cmd.GET_BLE_PAIRING_KEY // cmd = 1031
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data.toString('utf8')
   }
 
   /**
@@ -976,8 +1011,9 @@ export class ChameleonUltra {
    */
   async cmdBleDeleteAllBonds (): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.DELETE_ALL_BLE_BONDS }) // cmd = 1032
-    await this._readRespTimeout()
+    const cmd = Cmd.DELETE_ALL_BLE_BONDS // cmd = 1032
+    await this._writeCmd({ cmd })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -996,8 +1032,9 @@ export class ChameleonUltra {
    */
   async cmdGetDeviceModel (): Promise<DeviceModel> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_MODEL }) // cmd = 1033
-    const data = (await this._readRespTimeout())?.data
+    const cmd = Cmd.GET_DEVICE_MODEL // cmd = 1033
+    await this._writeCmd({ cmd })
+    const data = (await this._readRespTimeout({ cmd }))?.data
     return data[0]
   }
 
@@ -1025,8 +1062,9 @@ export class ChameleonUltra {
    */
   async cmdGetDeviceSettings (): Promise<Decoder.DeviceSettings> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_SETTINGS }) // cmd = 1034
-    return Decoder.DeviceSettings.fromCmd1034((await this._readRespTimeout())?.data)
+    const cmd = Cmd.GET_DEVICE_SETTINGS // cmd = 1034
+    await this._writeCmd({ cmd })
+    return Decoder.DeviceSettings.fromCmd1034((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -1043,8 +1081,9 @@ export class ChameleonUltra {
    */
   async cmdGetSupportedCmds (): Promise<Set<Cmd>> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_DEVICE_CAPABILITIES }) // cmd = 1035
-    const data = (await this._readRespTimeout())?.data
+    const cmd = Cmd.GET_DEVICE_CAPABILITIES // cmd = 1035
+    await this._writeCmd({ cmd })
+    const data = (await this._readRespTimeout({ cmd }))?.data
     const cmds = new Set<Cmd>()
     for (let i = 0; i < data.length; i += 2) cmds.add(data.readUInt16LE(i))
     return cmds
@@ -1079,8 +1118,9 @@ export class ChameleonUltra {
    */
   async cmdBleGetPairingMode (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.GET_BLE_PAIRING_ENABLE }) // cmd = 1036
-    return (await this._readRespTimeout())?.data[0] === 1
+    const cmd = Cmd.GET_BLE_PAIRING_ENABLE // cmd = 1036
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data[0] === 1
   }
 
   /**
@@ -1094,10 +1134,11 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdBleSetPairingMode (enable: boolean): Promise<void> {
+  async cmdBleSetPairingMode (enable: number | boolean): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.SET_BLE_PAIRING_ENABLE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 1037
-    await this._readRespTimeout()
+    const cmd = Cmd.SET_BLE_PAIRING_ENABLE // cmd = 1037
+    await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1125,8 +1166,9 @@ export class ChameleonUltra {
    */
   async cmdHf14aScan (): Promise<Decoder.Hf14aAntiColl> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.HF14A_SCAN }) // cmd = 2000
-    return Decoder.Hf14aAntiColl.fromCmd2000((await this._readRespTimeout())?.data)
+    const cmd = Cmd.HF14A_SCAN // cmd = 2000
+    await this._writeCmd({ cmd })
+    return Decoder.Hf14aAntiColl.fromCmd2000((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -1146,8 +1188,9 @@ export class ChameleonUltra {
   async cmdMf1IsSupport (): Promise<boolean> {
     try {
       this._clearRxBufs()
-      await this._writeCmd({ cmd: Cmd.MF1_DETECT_SUPPORT }) // cmd = 2001
-      await this._readRespTimeout()
+      const cmd = Cmd.MF1_DETECT_SUPPORT // cmd = 2001
+      await this._writeCmd({ cmd })
+      await this._readRespTimeout({ cmd })
       return true
     } catch (err) {
       if (err.status === RespStatus.HF_ERR_STAT) return false
@@ -1171,8 +1214,9 @@ export class ChameleonUltra {
    */
   async cmdMf1TestPrngType (): Promise<Mf1PrngType> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_DETECT_NT_LEVEL }) // cmd = 2002
-    const status = (await this._readRespTimeout())?.status
+    const cmd = Cmd.MF1_DETECT_NT_LEVEL // cmd = 2002
+    await this._writeCmd({ cmd })
+    const status = (await this._readRespTimeout({ cmd }))?.status
     const statusToPrngType = new Map<RespStatus, Mf1PrngType>([
       [0x00, Mf1PrngType.WEAK],
       [0x24, Mf1PrngType.STATIC],
@@ -1190,8 +1234,9 @@ export class ChameleonUltra {
    */
   async cmdMf1TestDarkside (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_DETECT_DARKSIDE }) // cmd = 2003
-    const status = (await this._readRespTimeout({ timeout: 6e4 }))?.status
+    const cmd = Cmd.MF1_DETECT_DARKSIDE // cmd = 2003
+    await this._writeCmd({ cmd })
+    const status = (await this._readRespTimeout({ cmd, timeout: 6e4 }))?.status
     return status === RespStatus.HF_TAG_OK
   }
 
@@ -1205,13 +1250,12 @@ export class ChameleonUltra {
    * @group Commands related to device mode: READER
    * @alpha
    */
-  async cmdMf1AcquireDarkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax = 15): Promise<Decoder.Mf1DarksideArgs> {
+  async cmdMf1AcquireDarkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax: number = 15): Promise<Decoder.Mf1DarksideArgs> {
+    if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     this._clearRxBufs()
-    await this._writeCmd({
-      cmd: Cmd.MF1_DARKSIDE_ACQUIRE, // cmd = 2004
-      data: Buffer.from([keyType, block, isFirst ? 1 : 0, syncMax]),
-    })
-    return Decoder.Mf1DarksideArgs.fromCmd2004((await this._readRespTimeout({ timeout: syncMax * 1e4 }))?.data)
+    const cmd = Cmd.MF1_DARKSIDE_ACQUIRE // cmd = 2004
+    await this._writeCmd({ cmd, data: new Buffer([keyType, block, isFirst ? 1 : 0, syncMax]) })
+    return Decoder.Mf1DarksideArgs.fromCmd2004((await this._readRespTimeout({ cmd, timeout: syncMax * 1e4 }))?.data)
   }
 
   /**
@@ -1222,14 +1266,12 @@ export class ChameleonUltra {
    * @alpha
    */
   async cmdMf1TestNtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<Decoder.Mf1NtDistanceArgs> {
+    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
     if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
-    if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
     this._clearRxBufs()
-    await this._writeCmd({
-      cmd: Cmd.MF1_DETECT_NT_DIST, // cmd = 2005
-      data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey]),
-    })
-    return Decoder.Mf1NtDistanceArgs.fromCmd2005((await this._readRespTimeout())?.data)
+    const cmd = Cmd.MF1_DETECT_NT_DIST // cmd = 2005
+    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([srcKeyType, srcBlock]), srcKey]) })
+    return Decoder.Mf1NtDistanceArgs.fromCmd2005((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -1244,14 +1286,12 @@ export class ChameleonUltra {
     dst: { dstBlock = 0, dstKeyType = Mf1KeyType.KEY_A },
   }: CmdAcquireMf1NestedArgs): Promise<Decoder.Mf1NestedArgs[]> {
     if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
-    if (!_.isSafeInteger(srcKeyType) || !isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
-    if (!_.isSafeInteger(dstKeyType) || !isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dstKeyType')
+    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
+    if (!isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dstKeyType')
     this._clearRxBufs()
-    await this._writeCmd({
-      cmd: Cmd.MF1_NESTED_ACQUIRE, // cmd = 2006
-      data: Buffer.concat([Buffer.from([srcKeyType, srcBlock]), srcKey, Buffer.from([dstKeyType, dstBlock])]),
-    })
-    return Decoder.Mf1NestedArgs.fromCmd2006((await this._readRespTimeout())?.data)
+    const cmd = Cmd.MF1_NESTED_ACQUIRE // cmd = 2006
+    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([srcKeyType, srcBlock]), srcKey, new Buffer([dstKeyType, dstBlock])]) })
+    return Decoder.Mf1NestedArgs.fromCmd2006((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -1276,14 +1316,12 @@ export class ChameleonUltra {
    */
   async cmdMf1CheckBlockKey ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdCheckMf1BlockKeyArgs = {}): Promise<boolean> {
     try {
-      if (!_.isSafeInteger(keyType) || !isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
+      if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
       if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
       this._clearRxBufs()
-      await this._writeCmd({
-        cmd: Cmd.MF1_AUTH_ONE_KEY_BLOCK, // cmd = 2007
-        data: Buffer.concat([Buffer.from([keyType, block]), key]),
-      })
-      await this._readRespTimeout()
+      const cmd = Cmd.MF1_AUTH_ONE_KEY_BLOCK // cmd = 2007
+      await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([keyType, block]), key]) })
+      await this._readRespTimeout({ cmd })
       return true
     } catch (err) {
       if (err.status === RespStatus.MF_ERR_AUTH) return false
@@ -1313,13 +1351,12 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1ReadBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdReadMf1BlockArgs = {}): Promise<Buffer> {
+    if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
     this._clearRxBufs()
-    await this._writeCmd({
-      cmd: Cmd.MF1_READ_ONE_BLOCK, // cmd = 2008
-      data: Buffer.concat([Buffer.from([keyType, block]), key]),
-    })
-    return (await this._readRespTimeout())?.data
+    const cmd = Cmd.MF1_READ_ONE_BLOCK // cmd = 2008
+    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([keyType, block]), key]) })
+    return (await this._readRespTimeout({ cmd }))?.data
   }
 
   /**
@@ -1344,14 +1381,13 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1WriteBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex'), data }: CmdWriteMf1BlockArgs = {}): Promise<void> {
+    if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
     if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
     this._clearRxBufs()
-    await this._writeCmd({
-      cmd: Cmd.MF1_WRITE_ONE_BLOCK, // cmd = 2009
-      data: Buffer.concat([Buffer.from([keyType, block]), key, data]),
-    })
-    await this._readRespTimeout()
+    const cmd = Cmd.MF1_WRITE_ONE_BLOCK // cmd = 2009
+    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([keyType, block]), key, data]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1412,8 +1448,9 @@ export class ChameleonUltra {
    */
   async cmdEm410xScan (): Promise<Buffer> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.EM410X_SCAN }) // cmd = 3000
-    return (await this._readRespTimeout())?.data
+    const cmd = Cmd.EM410X_SCAN // cmd = 3000
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data
   }
 
   /**
@@ -1433,13 +1470,14 @@ export class ChameleonUltra {
   async cmdEm410xWriteToT55xx (id: Buffer): Promise<void> {
     if (!Buffer.isBuffer(id) || id.length !== 5) throw new TypeError('id should be a Buffer with length 5')
     this._clearRxBufs()
+    const cmd = Cmd.EM410X_WRITE_TO_T55XX // cmd = 3001
     const data = new Buffer(17)
     id.copy(data, 0)
     data.writeUInt32BE(0x20206666, 5) // new key
     data.writeUInt32BE(0x51243648, 9) // old key 1
     data.writeUInt32BE(0x19920427, 13) // old key 2
-    await this._writeCmd({ cmd: Cmd.EM410X_WRITE_TO_T55XX, data }) // cmd = 3001
-    await this._readRespTimeout()
+    await this._writeCmd({ cmd, data })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1457,11 +1495,9 @@ export class ChameleonUltra {
   async cmdMf1WriteEmuBlock (blockStart: number = 0, data: Buffer): Promise<void> {
     if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
     this._clearRxBufs()
-    await this._writeCmd({
-      cmd: Cmd.MF1_WRITE_EMU_BLOCK_DATA, // cmd = 4000
-      data: Buffer.concat([Buffer.from([blockStart]), data]),
-    })
-    await this._readRespTimeout()
+    const cmd = Cmd.MF1_WRITE_EMU_BLOCK_DATA // cmd = 4000
+    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([blockStart]), data]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1484,11 +1520,9 @@ export class ChameleonUltra {
     if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
     if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
     this._clearRxBufs()
-    await this._writeCmd({
-      cmd: Cmd.HF14A_SET_ANTI_COLL_DATA, // cmd = 4001
-      data: Buffer.concat([sak, atqa, uid]),
-    })
-    await this._readRespTimeout()
+    const cmd = Cmd.HF14A_SET_ANTI_COLL_DATA // cmd = 4001
+    await this._writeCmd({ cmd, data: Buffer.concat([sak, atqa, uid]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1502,10 +1536,11 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1SetDetectionEnable (enable: boolean = true): Promise<void> {
+  async cmdMf1SetDetectionEnable (enable: number | boolean): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_SET_DETECTION_ENABLE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4004
-    await this._readRespTimeout()
+    const cmd = Cmd.MF1_SET_DETECTION_ENABLE // cmd = 4004
+    await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1521,8 +1556,9 @@ export class ChameleonUltra {
    */
   async cmdMf1GetDetectionCount (): Promise<number> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_GET_DETECTION_COUNT }) // cmd = 4005
-    return (await this._readRespTimeout())?.data.readUInt32LE()
+    const cmd = Cmd.MF1_GET_DETECTION_COUNT // cmd = 4005
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data.readUInt32LE()
   }
 
   /**
@@ -1551,8 +1587,9 @@ export class ChameleonUltra {
    */
   async cmdMf1GetDetectionLogs (index: number = 0): Promise<Decoder.Mf1DetectionLog[]> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_GET_DETECTION_LOG, data: new Buffer(4).writeUInt32BE(index) }) // cmd = 4006
-    return Decoder.Mf1DetectionLog.fromCmd4006((await this._readRespTimeout())?.data)
+    const cmd = Cmd.MF1_GET_DETECTION_LOG // cmd = 4006
+    await this._writeCmd({ cmd, data: new Buffer(4).writeUInt32BE(index) })
+    return Decoder.Mf1DetectionLog.fromCmd4006((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -1571,8 +1608,9 @@ export class ChameleonUltra {
    */
   async cmdMf1ReadEmuBlock (blockStart: number = 0, blockCount: number = 1): Promise<Buffer> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_READ_EMU_BLOCK_DATA, data: new Buffer([blockStart, blockCount]) }) // cmd = 4008
-    return (await this._readRespTimeout())?.data
+    const cmd = Cmd.MF1_READ_EMU_BLOCK_DATA // cmd = 4007
+    await this._writeCmd({ cmd, data: new Buffer([blockStart, blockCount]) })
+    return (await this._readRespTimeout({ cmd }))?.data
   }
 
   /**
@@ -1598,8 +1636,9 @@ export class ChameleonUltra {
    */
   async cmdMf1GetEmuSettings (): Promise<Decoder.Mf1EmuSettings> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_GET_EMULATOR_CONFIG }) // cmd = 4009
-    return Decoder.Mf1EmuSettings.fromCmd4009((await this._readRespTimeout())?.data)
+    const cmd = Cmd.MF1_GET_EMULATOR_CONFIG // cmd = 4008
+    await this._writeCmd({ cmd })
+    return Decoder.Mf1EmuSettings.fromCmd4009((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -1615,8 +1654,9 @@ export class ChameleonUltra {
    */
   async cmdMf1GetGen1aMode (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_GET_GEN1A_MODE }) // cmd = 4010
-    return (await this._readRespTimeout())?.data[0] === 1
+    const cmd = Cmd.MF1_GET_GEN1A_MODE // cmd = 4010
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data[0] === 1
   }
 
   /**
@@ -1630,10 +1670,11 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1SetGen1aMode (enable: boolean = false): Promise<void> {
+  async cmdMf1SetGen1aMode (enable: number | boolean): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_SET_GEN1A_MODE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4011
-    await this._readRespTimeout()
+    const cmd = Cmd.MF1_SET_GEN1A_MODE // cmd = 4011
+    await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1649,8 +1690,9 @@ export class ChameleonUltra {
    */
   async cmdMf1GetGen2Mode (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_GET_GEN2_MODE }) // cmd = 4012
-    return (await this._readRespTimeout())?.data[0] === 1
+    const cmd = Cmd.MF1_GET_GEN2_MODE // cmd = 4012
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data[0] === 1
   }
 
   /**
@@ -1664,10 +1706,11 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1SetGen2Mode (enable: boolean = false): Promise<void> {
+  async cmdMf1SetGen2Mode (enable: number | boolean): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_SET_GEN2_MODE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4013
-    await this._readRespTimeout()
+    const cmd = Cmd.MF1_SET_GEN2_MODE // cmd = 4013
+    await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1683,8 +1726,9 @@ export class ChameleonUltra {
    */
   async cmdMf1GetBlockAntiCollMode (): Promise<boolean> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.HF14A_GET_BLOCK_ANTI_COLL_MODE }) // cmd = 4014
-    return (await this._readRespTimeout())?.data[0] === 1
+    const cmd = Cmd.HF14A_GET_BLOCK_ANTI_COLL_MODE // cmd = 4014
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data[0] === 1
   }
 
   /**
@@ -1698,10 +1742,11 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1SetBlockAntiCollMode (enable: boolean = false): Promise<void> {
+  async cmdMf1SetBlockAntiCollMode (enable: number | boolean): Promise<void> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.HF14A_SET_BLOCK_ANTI_COLL_MODE, data: Buffer.from([enable ? 1 : 0]) }) // cmd = 4015
-    await this._readRespTimeout()
+    const cmd = Cmd.HF14A_SET_BLOCK_ANTI_COLL_MODE // cmd = 4015
+    await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1717,8 +1762,9 @@ export class ChameleonUltra {
    */
   async cmdMf1GetWriteMode (): Promise<EmuMf1WriteMode> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_GET_WRITE_MODE }) // cmd = 4016
-    return (await this._readRespTimeout())?.data[0]
+    const cmd = Cmd.MF1_GET_WRITE_MODE // cmd = 4016
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data[0]
   }
 
   /**
@@ -1733,10 +1779,11 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1SetWriteMode (mode: EmuMf1WriteMode): Promise<void> {
-    if (!_.isSafeInteger(mode) || !isEmuMf1WriteMode(mode)) throw new TypeError('Invalid emu write mode')
+    if (!isEmuMf1WriteMode(mode)) throw new TypeError('Invalid emu write mode')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.MF1_SET_WRITE_MODE, data: Buffer.from([mode]) }) // cmd = 4017
-    await this._readRespTimeout()
+    const cmd = Cmd.MF1_SET_WRITE_MODE // cmd = 4017
+    await this._writeCmd({ cmd, data: new Buffer([mode]) })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1760,8 +1807,9 @@ export class ChameleonUltra {
    */
   async cmdHf14aGetAntiCollData (): Promise<Decoder.Hf14aAntiColl> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.HF14A_GET_ANTI_COLL_DATA }) // cmd = 4018
-    return Decoder.Hf14aAntiColl.fromCmd4018((await this._readRespTimeout())?.data)
+    const cmd = Cmd.HF14A_GET_ANTI_COLL_DATA // cmd = 4018
+    await this._writeCmd({ cmd })
+    return Decoder.Hf14aAntiColl.fromCmd4018((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -1778,8 +1826,9 @@ export class ChameleonUltra {
   async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
     if (!Buffer.isBuffer(id) || id.length !== 5) throw new TypeError('id should be a Buffer with length 5')
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.EM410X_SET_EMU_ID, data: id }) // cmd = 5000
-    await this._readRespTimeout()
+    const cmd = Cmd.EM410X_SET_EMU_ID // cmd = 5000
+    await this._writeCmd({ cmd, data: id })
+    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1796,8 +1845,9 @@ export class ChameleonUltra {
    */
   async cmdEm410xGetEmuId (): Promise<Buffer> {
     this._clearRxBufs()
-    await this._writeCmd({ cmd: Cmd.EM410X_GET_EMU_ID }) // cmd = 5001
-    return (await this._readRespTimeout())?.data
+    const cmd = Cmd.EM410X_GET_EMU_ID // cmd = 5001
+    await this._writeCmd({ cmd })
+    return (await this._readRespTimeout({ cmd }))?.data
   }
 }
 
@@ -1913,7 +1963,7 @@ export enum Slot {
   SLOT_7 = 6,
   SLOT_8 = 7,
 }
-export const isSlot = createIsEnum(Slot)
+export const isSlot = createIsEnumInteger(Slot)
 
 export enum FreqType {
   /** No Freq */
@@ -1923,7 +1973,7 @@ export enum FreqType {
   /** High Freq: 13.56 MHz */
   HF = 2,
 }
-export const isFreqType = createIsEnum(FreqType)
+export const isFreqType = createIsEnumInteger(FreqType)
 
 export enum TagType {
   // 特定的且必須存在的標誌不存在的類型
@@ -1940,13 +1990,13 @@ export enum TagType {
   NTAG_215 = 7,
   NTAG_216 = 8,
 }
-export const isTagType = createIsEnum(TagType)
+export const isTagType = createIsEnumInteger(TagType)
 
 export enum DeviceMode {
   TAG = 0,
   READER = 1,
 }
-export const isDeviceMode = createIsEnum(DeviceMode)
+export const isDeviceMode = createIsEnumInteger(DeviceMode)
 
 export enum RespStatus {
   /** IC card operation is successful */
@@ -2069,7 +2119,7 @@ export enum ButtonAction {
   CYCLE_SLOT_DEC = 2,
   CLONE_IC_UID = 3,
 }
-export const isButtonAction = createIsEnum(ButtonAction)
+export const isButtonAction = createIsEnumInteger(ButtonAction)
 
 export interface ChameleonSerialPort<I, O> {
   isOpen?: () => boolean
@@ -2163,7 +2213,7 @@ export enum Mf1KeyType {
   KEY_A = 0x60,
   KEY_B = 0x61,
 }
-export const isMf1KeyType = createIsEnum(Mf1KeyType)
+export const isMf1KeyType = createIsEnumInteger(Mf1KeyType)
 
 export interface CmdReadMf1BlockArgs {
   block?: number
@@ -2199,14 +2249,14 @@ export enum EmuMf1WriteMode {
   /** Store data to RAM, but not save to persistent storage */
   SHADOW = 3,
 }
-export const isEmuMf1WriteMode = createIsEnum(EmuMf1WriteMode)
+export const isEmuMf1WriteMode = createIsEnumInteger(EmuMf1WriteMode)
 
 export enum AnimationMode {
   FULL = 0,
   SHORT = 1,
   NONE = 2,
 }
-export const isAnimationMode = createIsEnum(AnimationMode)
+export const isAnimationMode = createIsEnumInteger(AnimationMode)
 
 export interface CmdTestMf1NtDistanceArgs {
   src: {
