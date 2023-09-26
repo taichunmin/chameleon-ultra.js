@@ -7,7 +7,7 @@ import * as Decoder from './ResponseDecoder'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
-const VERSION_SUPPORTED = { gte: '1.0', lt: '2.0' }
+const VERSION_SUPPORTED = { gte: '1.0', lt: '2.0' } as const
 
 /**
  * The core library of "chameleon-ultra.js". The instance of this class must use exactly one adapter plugin to communication to ChameleonUltra.
@@ -62,14 +62,9 @@ export class ChameleonUltra {
   supportedCmds: Set<Cmd> = new Set<Cmd>()
 
   /**
-   * The firmware version of device.
+   * The supported version of SDK.
    */
-  appVersion?: string
-
-  /**
-   * The git version of firmware.
-   */
-  gitVersion?: string
+  static VERSION_SUPPORTED = VERSION_SUPPORTED
 
   /**
    * Create a new instance of ChameleonUltra.
@@ -227,8 +222,6 @@ export class ChameleonUltra {
         try {
           // clean up
           this.supportedCmds.clear()
-          this.appVersion = undefined
-          this.gitVersion = undefined
 
           // close port
           this.rxSink?.controller.abort(err)
