@@ -40,9 +40,9 @@ jobs:
           set -ex
           yarn
           yarn lint
-          yarn test --coverage
+          yarn test:ci
           yarn build
-          yarn test:publish
+          yarn publish:test
   deploy:
     if: github.ref == 'refs/heads/master'
     needs: test
@@ -61,7 +61,7 @@ jobs:
         run: |
           set -ex
           yarn
-          yarn test --coverage
+          yarn test:ci
           yarn build
       - name: Coveralls
         uses: coverallsapp/github-action@master

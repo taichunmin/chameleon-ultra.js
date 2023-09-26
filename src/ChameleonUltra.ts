@@ -1,12 +1,13 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { createIsEnum, createIsEnumInteger, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn } from './helper'
+import { createIsEnum, createIsEnumInteger, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare as verCmp } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
 import * as Decoder from './ResponseDecoder'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
+const VERSION_SUPPORTED = { gte: '1.0', lt: '2.0' }
 
 /**
  * The core library of "chameleon-ultra.js". The instance of this class must use exactly one adapter plugin to communication to ChameleonUltra.
@@ -208,7 +209,9 @@ export class ChameleonUltra {
         this.appVersion = await this.cmdGetAppVersion()
         this.gitVersion = await this.cmdGetGitVersion()
         const version = `${this.appVersion} (${this.gitVersion})`
-        if (this.appVersion !== '1.0') throw new Error(`Unsupported firmware version = ${version}`)
+        if (verCmp(this.appVersion, VERSION_SUPPORTED.gte) < 0 || verCmp(this.appVersion, VERSION_SUPPORTED.lt) >= 0) {
+          throw new Error(`Expected firmware version = ${JSON.stringify(VERSION_SUPPORTED)}, current = ${version}`)
+        }
         this.logger.core(`chameleon connected, version = ${version}`)
       } catch (err) {
         this.logger.core(`Failed to connect: ${err.message as string}`)
