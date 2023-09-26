@@ -61,6 +61,16 @@ export class ChameleonUltra {
   supportedCmds: Set<Cmd> = new Set<Cmd>()
 
   /**
+   * The firmware version of device.
+   */
+  appVersion?: string
+
+  /**
+   * The git version of firmware.
+   */
+  gitVersion?: string
+
+  /**
    * Create a new instance of ChameleonUltra.
    * @param debug Enable debug mode.
    * @example
@@ -194,7 +204,12 @@ export class ChameleonUltra {
           await this.disconnect(_.merge(new Error(`Failed to read resp: ${err.message}`), { originalError: err }))
         })
 
-        this.logger.core('chameleon connected')
+        // check version
+        this.appVersion = await this.cmdGetAppVersion()
+        this.gitVersion = await this.cmdGetGitVersion()
+        const version = `${this.appVersion} (${this.gitVersion})`
+        if (this.appVersion !== '1.0') throw new Error(`Unsupported firmware version = ${version}`)
+        this.logger.core(`chameleon connected, version = ${version}`)
       } catch (err) {
         this.logger.core(`Failed to connect: ${err.message as string}`)
         if (this.isConnected()) await this.disconnect(err)
@@ -214,11 +229,16 @@ export class ChameleonUltra {
       this.isDisconnecting = true // 避免重複執行
       await this.invokeHook('disconnect', { err }, async (ctx, next) => {
         try {
-          this.supportedCmds.clear() // clear supportedCmds
+          // clean up
+          this.supportedCmds.clear()
+          this.appVersion = undefined
+          this.gitVersion = undefined
+
+          // close port
           this.rxSink?.controller.abort(err)
           while (this.port?.readable?.locked === true) await sleep(10)
-          await this.port?.readable.cancel(err)
-          await this.port?.writable.close()
+          await this.port?.readable?.cancel(err)
+          await this.port?.writable?.close()
           delete this.port
         } catch (err) {
           throw _.merge(new Error(err.message ?? 'Failed to disconnect'), { originalError: err })
