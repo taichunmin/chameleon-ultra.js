@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { createIsEnum, createIsEnumInteger, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare as verCmp } from './helper'
+import { createIsEnum, createIsEnumInteger, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
 import * as Decoder from './ResponseDecoder'
@@ -205,14 +205,7 @@ export class ChameleonUltra {
           await this.disconnect(_.merge(new Error(`Failed to read resp: ${err.message}`), { originalError: err }))
         })
 
-        // check version
-        this.appVersion = await this.cmdGetAppVersion()
-        this.gitVersion = await this.cmdGetGitVersion()
-        const version = `${this.appVersion} (${this.gitVersion})`
-        if (verCmp(this.appVersion, VERSION_SUPPORTED.gte) < 0 || verCmp(this.appVersion, VERSION_SUPPORTED.lt) >= 0) {
-          throw new Error(`Expected firmware version = ${JSON.stringify(VERSION_SUPPORTED)}, current = ${version}`)
-        }
-        this.logger.core(`chameleon connected, version = ${version}`)
+        this.logger.core('chameleon connected')
       } catch (err) {
         this.logger.core(`Failed to connect: ${err.message as string}`)
         if (this.isConnected()) await this.disconnect(err)
@@ -1871,6 +1864,22 @@ export class ChameleonUltra {
     const cmd = Cmd.EM410X_GET_EMU_ID // cmd = 5001
     await this._writeCmd({ cmd })
     return (await this._readRespTimeout({ cmd }))?.data
+  }
+
+  /**
+   * Check if the firmware version is supported by SDK.
+   * @returns `true` if the firmware version is supported, `false` otherwise.
+   * @group Commands related to device
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   if (await ultra.isSupportedAppVersion()) throw new Error('Firmware version is not supported. Please update the firmware.')
+   * }
+   * ```
+   */
+  async isSupportedAppVersion (): Promise<boolean> {
+    const version = await this.cmdGetAppVersion()
+    return versionCompare(version, VERSION_SUPPORTED.gte) >= 0 && versionCompare(version, VERSION_SUPPORTED.lt) < 0
   }
 }
 
