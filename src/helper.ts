@@ -104,3 +104,16 @@ export function jsonStringify (obj: object, space?: number): string {
     return `[UnexpectedJSONParseError]: ${err.message as string}`
   }
 }
+
+export function versionCompare (str1: string, str2: string): number {
+  const tmp = _.map([str1, str2], (str, idx) => {
+    const matched = _.trim(str).match(/^(?:(\d+)[.]?)?(?:(\d+)[.]?)?(?:(\d+)[.]?)?/)
+    if (_.isNil(matched)) throw new Error(`invalid version: str${idx + 1} = ${str}`)
+    return _.map(matched.slice(1), v => _.isNil(v) ? 0 : _.toSafeInteger(v))
+  })
+  for (let i = 0; i < 3; i++) {
+    if (tmp[0][i] > tmp[1][i]) return 1
+    if (tmp[0][i] < tmp[1][i]) return -1
+  }
+  return 0
+}

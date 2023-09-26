@@ -9,7 +9,7 @@
   "name": "chameleon-ultra.js",
   "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
   "unpkg": "dist/iife/index.min.js",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -151,7 +151,8 @@
     "lint": "yarn lint:ci --fix",
     "lint:ci": "eslint --ext .mjs,.cjs,.js,.ts,.pug .",
     "mkcert": "mkdir ./mkcert && mkcert -key-file ./mkcert/key.pem -cert-file ./mkcert/cert.pem -ecdsa localhost",
-    "test": "jest --roots ./src",
-    "test:publish": "npm publish --dry-run"
+    "publish:test": "npm publish --dry-run",
+    "test": "jest --roots ./src --",
+    "test:ci": "jest --roots ./src --ci --coverage"
   }
 }

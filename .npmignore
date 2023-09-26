@@ -137,6 +137,7 @@ out
 *.config.js
 *.config.mjs
 *.html
+*.svg
 *.test.ts
 *.xml
 *.yml
