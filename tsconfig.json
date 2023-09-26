@@ -31,12 +31,14 @@
     "groupOrder": [
       "Constructors",
       "Properties",
-      "Methods related to device",
-      "Commands related to device",
-      "Commands related to slot",
-      "Commands related to device mode: READER",
-      "Commands related to device mode: TAG",
-      "Methods related to plugin",
+      "Connection Related",
+      "Device Related",
+      "Slot Related",
+      "Reader Related",
+      "Emulator Related",
+      "Mifare Classic Related",
+      "Mifare Ultralight Related",
+      "Plugin Related",
       "Methods",
       "*"
     ]
