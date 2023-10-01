@@ -43,7 +43,7 @@ block content
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center name
           input.form-control(placeholder="Slot HF name", v-model="ss.name")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.name = ''") #[i.fa.fa-fw.fa-times]
         .input-group.input-group-sm.letter-spacing-n1px.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center detection
           select.form-control.form-control-sm(v-model.number="ss.detection")
@@ -263,7 +263,8 @@ block script
             this.showLoading({ text: 'Emulating' })
             const ultra = this.ultra
             await ultra.cmdSlotSetActive(this.ss.slot)
-            await ultra.cmdSlotSetFreqName(this.ss.slot, FreqType.HF, this.ss.name)
+            const freqName = this.ss.name
+            if (_.isString(freqName) && freqName.length > 0) await ultra.cmdSlotSetFreqName(this.ss.slot, FreqType.HF, freqName)
             await ultra.cmdMf1SetAntiCollMode(this.ss.antiColl)
             await ultra.cmdMf1SetDetectionEnable(this.ss.detection)
             await ultra.cmdMf1SetGen1aMode(this.ss.gen1a)
@@ -305,13 +306,17 @@ block script
         },
         async btnGen1aRead () {
           try {
-            this.showLoading({ text: 'Reading mifare gen1a' })
+            const genSwalCfg = i => ({
+              html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading mifare gen1a:</span><span>${i} / 16</span></div></div>`,
+            })
+            this.showLoading(genSwalCfg(0))
             const ultra = this.ultra
             await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
               const sectorData = await ultra.mf1Gen1aReadBlocks(i << 2, 4)
               this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
+              this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             await Swal.fire({ icon: 'success', title: 'Read success' })
@@ -324,13 +329,17 @@ block script
           try {
             const msg1 = 'Mifare Gen1a Tag will be REPLACE! Continue?'
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Writing mifare gen1a' })
+            const genSwalCfg = i => ({
+              html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Writing mifare gen1a:</span><span>${i} / 16</span></div></div>`,
+            })
+            this.showLoading(genSwalCfg(0))
             const ultra = this.ultra
             await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
               const sectorData = Buffer.fromHexString(this.ss.body[i])
               await ultra.mf1Gen1aWriteBlocks(i << 2, sectorData)
+              this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             await Swal.fire({ icon: 'success', title: 'Write success' })
@@ -341,7 +350,10 @@ block script
         },
         async btnGen2Read () {
           try {
-            this.showLoading({ text: 'Reading Mifare / Gen2' })
+            const genSwalCfg = i => ({
+              html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
+            })
+            this.showLoading(genSwalCfg(0))
             const ultra = this.ultra
             await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             const keys = _.chain(Buffer.from(this.ss.keys, 'hex').chunk(6))
@@ -360,6 +372,7 @@ block script
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
                 console.error(err)
               }
+              this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             if (failed.length === 0) return await Swal.fire({ icon: 'success', title: 'Read success' })
@@ -373,7 +386,10 @@ block script
           try {
             const msg1 = 'Mifare / Gen2 Tag will be REPLACE! Continue?'
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Writing Mifare / Gen2' })
+            const genSwalCfg = i => ({
+              html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Writing Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
+            })
+            this.showLoading(genSwalCfg(0))
             const ultra = this.ultra
             await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             const keys = _.chain(Buffer.from(this.ss.keys, 'hex').chunk(6))
@@ -392,6 +408,7 @@ block script
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
                 console.error(err)
               }
+              this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             if (failed.length === 0) return await Swal.fire({ icon: 'success', title: 'Write success' })
@@ -629,7 +646,7 @@ block script
             showConfirmButton: false,
             ...opts,
           }
-          if (Swal.isVisible()) return Swal.update(opts)
+          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
           Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
         },
       },

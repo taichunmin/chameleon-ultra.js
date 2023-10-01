@@ -2004,6 +2004,12 @@ export class ChameleonUltra {
     })
   }
 
+  /**
+   * Magic auth helper function for mifare gen1a tag.
+   * @param cb The callback function to be executed after auth.
+   * @returns The result of callback function.
+   * @group Mifare Classic Related
+   */
   async _mf1Gen1aAuth<T extends (...args: any) => any> (cb: T): Promise<Awaited<ReturnType<T>>> {
     try {
       await this.cmdHf14aRaw({ appendCrc: true, data: new Buffer([0x50, 0x00]), waitResponse: false }) // HALT + close RF field
