@@ -283,14 +283,14 @@ export class Mf1EmuSettings {
   detection: boolean
   gen1a: boolean
   gen2: boolean
-  blockAntiColl: boolean
+  antiColl: boolean
   write: EmuMf1WriteMode
 
-  constructor (detection: boolean, gen1a: boolean, gen2: boolean, blockAntiColl: boolean, write: EmuMf1WriteMode) {
+  constructor (detection: boolean, gen1a: boolean, gen2: boolean, antiColl: boolean, write: EmuMf1WriteMode) {
     this.detection = detection
     this.gen1a = gen1a
     this.gen2 = gen2
-    this.blockAntiColl = blockAntiColl
+    this.antiColl = antiColl
     this.write = write
   }
 
@@ -300,7 +300,7 @@ export class Mf1EmuSettings {
       buf[0] === 1, // detection
       buf[1] === 1, // gen1a
       buf[2] === 1, // gen2
-      buf[3] === 1, // blockAntiColl
+      buf[3] === 1, // antiColl
       buf[4], // write
     )
   }

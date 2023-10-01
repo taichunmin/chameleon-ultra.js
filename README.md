@@ -33,7 +33,7 @@
   - [Package manager](#package-manager)
   - [CDN](#cdn)
 - [Getting Started](#getting-started)
-  - [Slot Enable and Emulation Mifare 1K](#slot-enable-and-emulation-mifare-1k)
+  - [Slot Enable and Emulate Mifare 1K](#slot-enable-and-emulate-mifare-1k)
   - [Set new BLE Pairing Key and Enable BLE Pairing](#set-new-ble-pairing-key-and-enable-ble-pairing)
 - [Related links](#related-links)
 
@@ -126,7 +126,7 @@ ultraBle.use(new WebbleAdapter())
 
 ## Getting Started
 
-### Slot Enable and Emulation Mifare 1K
+### Slot Enable and Emulate Mifare 1K
 
 ```js
 const { Buffer, ChameleonUltra, DeviceMode, Slot, TagType, WebserialAdapter } = window.ChameleonUltraJS
