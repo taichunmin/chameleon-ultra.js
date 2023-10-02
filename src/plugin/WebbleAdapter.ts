@@ -64,6 +64,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
 
           // find serv, send, recv, ctrl
           const primaryServices = _.map(await this.device.gatt?.getPrimaryServices(), 'uuid')
+          this.logger.webble(`primaryServices = ${JSON.stringify(primaryServices)}`)
           for (const uuids of BLESERIAL_UUID) {
             try {
               if (!_.includes(primaryServices, uuids.serv)) continue
