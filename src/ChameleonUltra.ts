@@ -1985,6 +1985,7 @@ export class ChameleonUltra {
    * @param args.pageOffset page number to read
    * @returns 4 pages (16 bytes)
    * @group Mifare Ultralight Related
+   * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=16)
    * @example
    * ```js
    * const { DeviceMode } = window.ChameleonUltraJS
@@ -2001,6 +2002,32 @@ export class ChameleonUltra {
       autoSelect: true,
       checkResponseCrc: true,
       data: new Buffer([0x30, pageOffset]),
+    })
+  }
+
+  /**
+   * Write 1 page (4 bytes) to Mifare Ultralight
+   * @param args
+   * @param args.pageOffset page number to read
+   * @param args.data 1 page data (4 bytes)
+   * @group Mifare Ultralight Related
+   * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=17)
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const data = await ultra.mfuWritePage({ pageOffset: 9, data: Buffer.from('00000000', 'hex') })
+   * }
+   * ```
+   */
+  async mfuWritePage ({ pageOffset, data }: { pageOffset: number, data: Buffer }): Promise<void> {
+    if (!Buffer.isBuffer(data) || data.length !== 4) throw new TypeError('data should be a Buffer with length 4')
+    await this.cmdHf14aRaw({
+      appendCrc: true,
+      autoSelect: true,
+      checkResponseCrc: true,
+      data: Buffer.concat([new Buffer([0xA2, pageOffset]), data]),
     })
   }
 

@@ -21,7 +21,9 @@ block content
         option(value="usb") via USB Serial (PC only)
 
 block script
+  script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/vconsole@3/dist/vconsole.min.js")
   script.
+    window.vConsole = new window.VConsole()
     const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
     const ultraUsb = new ChameleonUltra(true)
     ultraUsb.use(new WebserialAdapter())
