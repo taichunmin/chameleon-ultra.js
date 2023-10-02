@@ -63,7 +63,8 @@ export default class WebbleAdapter implements ChameleonPlugin {
           if (!gattIsConnected()) await this.device.gatt?.connect().catch((err: any) => { this.logger.webble(err.message) })
 
           // find serv, send, recv, ctrl
-          const primaryServices = _.map(await this.device.gatt?.getPrimaryServices(), 'uuid')
+          // uuid from [bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055) is uppercase
+          const primaryServices = _.map(await this.device.gatt?.getPrimaryServices(), serv => _.toLower(serv.uuid))
           this.logger.webble(`primaryServices = ${JSON.stringify(primaryServices)}`)
           for (const uuids of BLESERIAL_UUID) {
             try {
