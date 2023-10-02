@@ -47,6 +47,8 @@
 
 A subset of the Web Bluetooth API is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70). See MDN's [Browser compatibility](https://developer.mozilla.org/docs/Web/API/Web_Bluetooth_API#Browser_compatibility) table for more information.
 
+For iPhone and iPad, the Web Bluetooth API is available in [Bluefy – Web BLE Browser](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055).
+
 For Linux and earlier versions of Windows, enable the `#experimental-web-platform-features` flag in `about://flags`.
 
 ### Web Serial API

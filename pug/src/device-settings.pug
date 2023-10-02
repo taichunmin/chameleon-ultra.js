@@ -168,6 +168,12 @@ block script
         },
       },
       methods: {
+        async btnAdapterTips () {
+          await Swal.fire({
+            title: 'Browser & OS',
+            html: '<strong class="text-success">BLE</strong> is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70), <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
+          })
+        },
         async btnLoadDevice () {
           try {
             this.showLoading({ text: 'Loading settings...' })
@@ -233,12 +239,6 @@ block script
         async btnWipeFds () {
           if (!await this.confirm('Factory reset?', 'Yes', 'Cancel')) return
           await this.ultra.cmdWipeFds().catch(console.error)
-        },
-        async btnAdapterTips () {
-          await Swal.fire({
-            title: 'Browser & OS',
-            html: '<strong class="text-primary">BLE</strong> is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70).<hr><strong class="text-primary">USB</strong> is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
-          })
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
           return await new Promise((resolve, reject) => {
