@@ -227,9 +227,9 @@ export class Mf1NestedArgs {
 }
 
 export interface Hf14aTagInfo {
+  antiColl: Hf14aAntiColl
   nxpTypeBySak?: string
   prngType?: Mf1PrngType
-  tag: Hf14aAntiColl
 }
 
 export class Mf1DetectionLog {

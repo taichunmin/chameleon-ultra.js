@@ -587,7 +587,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   await ultra.cmdMf1WriteEmuBlock(1, Buffer.alloc(16))
+   *   await ultra.cmdMf1EmuWriteBlock(1, Buffer.alloc(16))
    *   await ultra.cmdSlotSaveSettings()
    * }
    * ```
@@ -1208,18 +1208,9 @@ export class ChameleonUltra {
    *
    * async function run (ultra) {
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
-   *   const tags = await ultra.cmdHf14aScan()
-   *   console.log(_.map(tags, tag => {
-   *     return _.mapValues(tag, val => val.toString('hex'))
-   *   }))
-   *   // [
-   *   //   {
-   *   //     "uid": "040dc4420d2981",
-   *   //     "atqa": "4400",
-   *   //     "sak": "00",
-   *   //     "ats": ""
-   *   //   }
-   *   // ]
+   *   const antiColl = _.first(await ultra.cmdHf14aScan())
+   *   console.log(_.mapValues(antiColl, val => val.toString('hex')))
+   *   // { uid: '040dc4420d2981', atqa: '4400', sak: '00', ats: ''}
    * }
    * ```
    */
@@ -1447,37 +1438,26 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * const { Buffer } = window.ChameleonUltraJS
+   * const { DeviceMode, Mf1PrngType } = window.ChameleonUltraJS
    *
    * async function run (ultra) {
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
-   *   const tag = await ultra.hf14aInfo()
-   *   console.log(tag)
-   *   /**
-   *    * [
-   *    *   {
-   *    *     "nxpTypeBySak": "MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K",
-   *    *     "prngType": 1,
-   *    *     "tag": {
-   *    *       "uid": Buffer.from('d2040000', 'hex'),
-   *    *       "cascade": 1,
-   *    *       "sak": Buffer.from('08', 'hex'),
-   *    *       "atqa": Buffer.from('0400', 'hex')
-   *    *     }
-   *    *   }
-   *    * ]
-   *    *\/
+   *   const tag = _.first(await ultra.hf14aInfo())
+   *   console.log(tag.nxpTypeBySak) // 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'
+   *   console.log(Mf1PrngType[tag.prngType]) // 'WEAK'
+   *   console.log(_.mapValues(tag.antiColl, val => val.toString('hex')))
+   *   // { uid: 'dbe3d63d', atqa: '0400', sak: '08', ats: '' }
    * }
    * ```
    */
   async hf14aInfo (): Promise<Decoder.Hf14aTagInfo[]> {
     const items = []
-    const tags = await this.cmdHf14aScan()
-    for (const tag of tags) {
-      const item: Decoder.Hf14aTagInfo = { tag, nxpTypeBySak: NxpTypeBySak.get(tag.sak[0]) }
+    const antiColls = await this.cmdHf14aScan()
+    for (const antiColl of antiColls) {
+      const item: Decoder.Hf14aTagInfo = { antiColl, nxpTypeBySak: NxpTypeBySak.get(antiColl.sak[0]) }
       items.push(item)
     }
-    if (tags.length === 1 && await this.cmdMf1IsSupport()) {
+    if (antiColls.length === 1 && await this.cmdMf1IsSupport()) {
       items[0].prngType = await this.cmdMf1TestPrngType()
     }
     return items
@@ -1582,11 +1562,11 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   await ultra.cmdMf1WriteEmuBlock(1, Buffer.alloc(16))
+   *   await ultra.cmdMf1EmuWriteBlock(1, Buffer.alloc(16))
    * }
    * ```
    */
-  async cmdMf1WriteEmuBlock (blockStart: number = 0, data: Buffer): Promise<void> {
+  async cmdMf1EmuWriteBlock (blockStart: number = 0, data: Buffer): Promise<void> {
     if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
     this._clearRxBufs()
     const cmd = Cmd.MF1_WRITE_EMU_BLOCK_DATA // cmd = 4000
@@ -1714,12 +1694,12 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const data = await ultra.cmdMf1ReadEmuBlock(1)
+   *   const data = await ultra.cmdMf1EmuReadBlock(1)
    *   console.log(data.toString('hex')) // '00000000000000000000000000000000'
    * }
    * ```
    */
-  async cmdMf1ReadEmuBlock (offset: number = 0, length: number = 1): Promise<Buffer> {
+  async cmdMf1EmuReadBlock (offset: number = 0, length: number = 1): Promise<Buffer> {
     this._clearRxBufs()
     const cmd = Cmd.MF1_READ_EMU_BLOCK_DATA // cmd = 4008
     await this._writeCmd({ cmd, data: new Buffer([offset, length]) })
@@ -2032,6 +2012,21 @@ export class ChameleonUltra {
   }
 
   /**
+   * Send Mifare Classic HALT command and close RF field.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { DeviceMode } = window.ChameleonUltraJS
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   await ultra.mf1Halt()
+   * }
+   */
+  async mf1Halt (): Promise<void> {
+    await this.cmdHf14aRaw({ appendCrc: true, data: new Buffer([0x50, 0x00]), waitResponse: false }) // HALT + close RF field
+  }
+
+  /**
    * Magic auth helper function for mifare gen1a tag.
    * @param cb The callback function to be executed after auth.
    * @returns The result of callback function.
@@ -2039,14 +2034,14 @@ export class ChameleonUltra {
    */
   async _mf1Gen1aAuth<T extends (...args: any) => any> (cb: T): Promise<Awaited<ReturnType<T>>> {
     try {
-      await this.cmdHf14aRaw({ appendCrc: true, data: new Buffer([0x50, 0x00]), waitResponse: false }) // HALT + close RF field
+      await this.mf1Halt()
       const resp1 = await this.cmdHf14aRaw({ data: new Buffer([0x40]), dataBitLength: 7, keepRfField: true }) // 0x40 (7)
       if (resp1[0] !== 0x0A) throw new Error('Gen1a auth failed 1')
       const resp2 = await this.cmdHf14aRaw({ data: new Buffer([0x43]), keepRfField: true }) // 0x43
       if (resp2[0] !== 0x0A) throw new Error('Gen1a auth failed 2')
       return await cb()
     } finally {
-      await this.cmdHf14aRaw({ appendCrc: true, data: new Buffer([0x50, 0x00]), waitResponse: false }) // HALT + close RF field
+      if (this.isConnected()) await this.mf1Halt()
     }
   }
 
@@ -2214,6 +2209,7 @@ export class ChameleonUltra {
    */
   async mf1WriteSectorByKeys (sector: number, keys: Buffer[], data: Buffer): Promise<{ success: boolean[] }> {
     if (!Buffer.isBuffer(data) || data.length !== 64) throw new TypeError('data should be a Buffer with length 64')
+    if (!this.mf1IsValidAcl(data)) throw new TypeError('Invalid ACL bytes of data')
     const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
     if (_.keys(sectorKey).length === 0) throw new Error('No valid key')
     const success = _.times(4, () => false)
@@ -2232,6 +2228,28 @@ export class ChameleonUltra {
       }
     }
     return { success }
+  }
+
+  /**
+   * Check acl bytes of ACL, block or sector.
+   * @param data Data of ACL, block or sector.
+   * @returns `true` if the acl bytes is valid, `false` otherwise.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(ultra.mf1IsValidAcl(Buffer.from('ff078069', 'hex'))) // true
+   * }
+   * ```
+   */
+  mf1IsValidAcl (data: Buffer): boolean {
+    if (!Buffer.isBuffer(data) || !_.includes([3, 4, 16, 64], data.length)) throw new TypeError('data should be a Buffer with length 3, 4, 16 or 64')
+    if (data.length === 16) data = data.subarray(6)
+    else if (data.length === 64) data = data.subarray(54)
+
+    const acl: number[] = []
+    for (let i = 0; i < 3; i++) acl.push((data[i] & 0xF0) >>> 4, data[i] & 0x0F)
+    return _.every([[1, 2], [0, 5], [3, 4]], ([a, b]: [number, number]) => (acl[a] ^ acl[b]) === 0xF)
   }
 }
 
