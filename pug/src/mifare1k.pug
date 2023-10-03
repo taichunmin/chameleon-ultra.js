@@ -253,7 +253,7 @@ block script
             })
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              const sectorData = await ultra.cmdMf1ReadEmuBlock(i << 2, 4)
+              const sectorData = await ultra.cmdMf1EmuReadBlock(i << 2, 4)
               this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
             }
             await Swal.fire({ icon: 'success', title: 'Load success' })
@@ -285,7 +285,7 @@ block script
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
               const sectorData = Buffer.fromHexString(this.ss.body[i])
-              await ultra.cmdMf1WriteEmuBlock(i << 2, sectorData)
+              await ultra.cmdMf1EmuWriteBlock(i << 2, sectorData)
             }
             await Swal.fire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {

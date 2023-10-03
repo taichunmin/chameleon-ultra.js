@@ -150,7 +150,7 @@ async function run (ultra) {
     atqa: Buffer.from('0400', 'hex'), 
     sak: Buffer.from('08', 'hex'),
   })
-  await ultra.cmdMf1WriteEmuBlock(0, Buffer.from('11223344440804000000000000000000', 'hex'))
+  await ultra.cmdMf1EmuWriteBlock(0, Buffer.from('11223344440804000000000000000000', 'hex'))
   // save slot settings
   await ultra.cmdSlotSaveSettings()
   // set device mode
