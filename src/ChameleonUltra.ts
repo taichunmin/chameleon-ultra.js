@@ -1254,11 +1254,11 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
+   * const { DeviceMode, Mf1PrngType } = window.ChameleonUltraJS
    *
    * async function run (ultra) {
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
-   *   console.log(await ultra.cmdMf1TestNtLevel()) // 'weak'
+   *   console.log(Mf1PrngType[await ultra.cmdMf1TestPrngType()]) // 'WEAK'
    * }
    * ```
    */
@@ -1271,15 +1271,53 @@ export class ChameleonUltra {
 
   /**
    * Check if the tag is suffer from mifare darkside attack.
+   * @param args
    * @returns The detect result of mifare darkside attack.
    * @group Mifare Classic Related
-   * @alpha
+   * @example
+   * ```js
+   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const res1 = await ultra.cmdMf1AcquireStaticNested({
+   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
+   *     dst: { block: 4, keyType: Mf1KeyType.KEY_A },
+   *   })
+   *   const res = {
+   *     uid: res1.uid.toString('hex'),
+   *     nts: _.map(res1.nts, item => ({ nt1: item.nt1.toString('hex'), nt2: item.nt2.toString('hex') })),
+   *   }
+   *   console.log(res)
+   *   // {
+   *   //   uid: 'b908a16d',
+   *   //   nts: [
+   *   //     { nt1: '01200145', nt2: '81901975' },
+   *   //     { nt1: '01200145', nt2: 'cdd400f3' },
+   *   //   ],
+   *   // }
+   * }
+   * ```
    */
-  async cmdMf1AcquireStaticNested (): Promise<Decoder.Mf1StaticNestedArgs> {
+  async cmdMf1AcquireStaticNested ({
+    src: { block: srcBlock, keyType: srcKeyType, key: srcKey },
+    dst: { block: dstBlock, keyType: dstKeyType },
+  }: CmdMf1AcquireStaticNestedArgs): Promise<Decoder.Mf1AcquireStaticNestedRes> {
+    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('src.key should be a Buffer with length 6')
+    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid src.keyType')
+    if (!isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dst.keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_STATIC_NESTED_ACQUIRE // cmd = 2003
-    await this._writeCmd({ cmd })
-    return Decoder.Mf1StaticNestedArgs.fromCmd2003((await this._readRespTimeout({ cmd }))?.data)
+    await this._writeCmd({
+      cmd,
+      data: Buffer.concat([
+        new Buffer([srcKeyType, srcBlock]),
+        srcKey,
+        new Buffer([dstKeyType, dstBlock]),
+      ]),
+    })
+    return Decoder.Mf1AcquireStaticNestedRes.fromCmd2003((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -1305,11 +1343,46 @@ export class ChameleonUltra {
    * @param args
    * @returns The nt distance of mifare protocol.
    * @group Mifare Classic Related
-   * @alpha
+   * @example
+   * ```js
+   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const res1 = await ultra.cmdMf1TestNtDistance({
+   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
+   *   })
+   *   const res2 = await ultra.cmdMf1AcquireNested({
+   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
+   *     dst: { block: 4, keyType: Mf1KeyType.KEY_A },
+   *   })
+   *   const res = {
+   *     uid: res1.uid.toString('hex'),
+   *     dist: res1.dist.toString('hex'),
+   *     nts: _.map(res2, item => ({
+   *       nt1: item.nt1.toString('hex'),
+   *       nt2: item.nt2.toString('hex'),
+   *       par: item.par,
+   *     }))
+   *   }
+   *   console.log(res)
+   *   // {
+   *   //   uid: '877209e1',
+   *   //   dist: '00000080',
+   *   //   nts: [
+   *   //     { nt1: '35141fcb', nt2: '40430522', par: 7 },
+   *   //     { nt1: 'cff2b3ef', nt2: '825ba8ea', par: 5 },
+   *   //   ]
+   *   // }
+   * }
+   * ```
    */
-  async cmdMf1TestNtDistance ({ src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') } }: CmdTestMf1NtDistanceArgs): Promise<Decoder.Mf1NtDistanceArgs> {
-    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
-    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
+  async cmdMf1TestNtDistance ({
+    src: { block: srcBlock, keyType: srcKeyType, key: srcKey },
+  }: CmdTestMf1NtDistanceArgs): Promise<Decoder.Mf1NtDistanceArgs> {
+    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid src.keyType')
+    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('src.key should be a Buffer with length 6')
     this._clearRxBufs()
     const cmd = Cmd.MF1_DETECT_NT_DIST // cmd = 2005
     await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([srcKeyType, srcBlock]), srcKey]) })
@@ -1321,19 +1394,59 @@ export class ChameleonUltra {
    * @param args
    * @returns The data from mifare nested attack.
    * @group Mifare Classic Related
-   * @alpha
+   * @example
+   * ```js
+   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const res1 = await ultra.cmdMf1TestNtDistance({
+   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
+   *   })
+   *   const res2 = await ultra.cmdMf1AcquireNested({
+   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
+   *     dst: { block: 4, keyType: Mf1KeyType.KEY_A },
+   *   })
+   *   const res = {
+   *     uid: res1.uid.toString('hex'),
+   *     dist: res1.dist.toString('hex'),
+   *     nts: _.map(res2, item => ({
+   *       nt1: item.nt1.toString('hex'),
+   *       nt2: item.nt2.toString('hex'),
+   *       par: item.par,
+   *     }))
+   *   }
+   *   console.log(res)
+   *   // {
+   *   //   uid: '877209e1',
+   *   //   dist: '00000080',
+   *   //   nts: [
+   *   //     { nt1: '35141fcb', nt2: '40430522', par: 7 },
+   *   //     { nt1: 'cff2b3ef', nt2: '825ba8ea', par: 5 },
+   *   //   ]
+   *   // }
+   * }
+   * ```
    */
   async cmdMf1AcquireNested ({
-    src: { srcBlock = 0, srcKeyType = Mf1KeyType.KEY_A, srcKey = Buffer.from('FFFFFFFFFFFF', 'hex') },
-    dst: { dstBlock = 0, dstKeyType = Mf1KeyType.KEY_A },
-  }: CmdAcquireMf1NestedArgs): Promise<Decoder.Mf1NestedArgs[]> {
-    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('srcKey should be a Buffer with length 6')
-    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid srcKeyType')
-    if (!isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dstKeyType')
+    src: { block: srcBlock, keyType: srcKeyType, key: srcKey },
+    dst: { block: dstBlock, keyType: dstKeyType },
+  }: CmdMf1AcquireNestedArgs): Promise<Decoder.Mf1NestedRes[]> {
+    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('src.key should be a Buffer with length 6')
+    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid src.keyType')
+    if (!isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dst.keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_NESTED_ACQUIRE // cmd = 2006
-    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([srcKeyType, srcBlock]), srcKey, new Buffer([dstKeyType, dstBlock])]) })
-    return Decoder.Mf1NestedArgs.fromCmd2006((await this._readRespTimeout({ cmd }))?.data)
+    await this._writeCmd({
+      cmd,
+      data: Buffer.concat([
+        new Buffer([srcKeyType, srcBlock]),
+        srcKey,
+        new Buffer([dstKeyType, dstBlock]),
+      ]),
+    })
+    return Decoder.Mf1NestedRes.fromCmd2006((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
@@ -2656,21 +2769,33 @@ export const isAnimationMode = createIsEnumInteger(AnimationMode)
 
 export type CmdTestMf1NtDistanceArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   src: {
-    srcKeyType?: Mf1KeyType
-    srcBlock?: number
-    srcKey?: Buffer
+    keyType: Mf1KeyType
+    block: number
+    key: Buffer
   }
 }
 
-export type CmdAcquireMf1NestedArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
+export type CmdMf1AcquireStaticNestedArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   src: {
-    srcKeyType?: Mf1KeyType
-    srcBlock?: number
-    srcKey?: Buffer
+    block: number
+    key: Buffer
+    keyType: Mf1KeyType
   }
   dst: {
-    dstKeyType?: Mf1KeyType
-    dstBlock?: number
+    block: number
+    keyType: Mf1KeyType
+  }
+}
+
+export type CmdMf1AcquireNestedArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
+  src: {
+    block: number
+    key: Buffer
+    keyType: Mf1KeyType
+  }
+  dst: {
+    block: number
+    keyType: Mf1KeyType
   }
 }
 

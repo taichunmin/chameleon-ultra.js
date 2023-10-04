@@ -30,7 +30,7 @@ test.each([
 ])('#setLfsr(Buffer.from($key, \'hex\'))#getLfsr() = $key', async ({ key }) => {
   const crypto1 = new Crypto1()
   crypto1.setLfsr(Buffer.from(key, 'hex'))
-  expect(crypto1.getLfsr().toString('hex')).toEqual(key)
+  expect(crypto1.getLfsr()).toEqual(_.parseInt(key, 16))
 })
 
 test.each([
@@ -158,7 +158,7 @@ test.each([
   const state = new Crypto1()
   ;[state.even, state.odd] = [even, odd]
   const actual = state.getLfsr()
-  expect(actual.toString('hex')).toEqual(expected)
+  expect(actual).toEqual(_.parseInt(expected, 16))
 })
 
 test.each([
@@ -219,4 +219,37 @@ test.each([
     uid: Buffer.from(uid, 'hex'),
   })
   expect(actual.toString('hex')).toEqual(expected)
+})
+
+test.each([
+  {
+    expected: 'ffffffffffff',
+    isKeyB: false,
+    nts: [{ nt1: '01200145', nt2: '81901975' }, { nt1: '01200145', nt2: 'cdd400f3' }],
+    uid: 'b908a16d',
+  },
+  {
+    expected: 'ffffffffffff',
+    isKeyB: false,
+    nts: [{ nt1: '009080a2', nt2: '40d0d735' }, { nt1: '009080a2', nt2: '664a1da0' }],
+    uid: '03bb67a0',
+  },
+])('.staticnested()', async ({ uid, nts, isKeyB, expected }) => {
+  const keys = Crypto1.staticnested({ uid, nts, keyType: isKeyB ? 97 : 96 })
+  expect(_.map(keys, key => key.toString('hex'))).toContain(expected)
+})
+
+test.skip.each([
+  {
+    dist: '00000080',
+    expected: 'ffffffffffff',
+    uid: '877209e1',
+    nts: [
+      { nt1: 'b4a08a09', nt2: '8a15bbf2', par: 5 },
+      { nt1: '1613293d', nt2: '912e6760', par: 7 },
+    ],
+  },
+])('.nested()', async ({ uid, nts, dist, expected }) => {
+  const keys = Crypto1.nested({ uid, nts, dist })
+  expect(_.map(keys, key => key.toString('hex'))).toContain(expected)
 })

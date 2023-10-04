@@ -127,21 +127,21 @@ export class Hf14aAntiColl {
   }
 }
 
-export class Mf1StaticNestedArgs {
+export class Mf1AcquireStaticNestedRes {
   uid: Buffer
-  nts: Array<{ nt: Buffer, ntEnc: Buffer }>
+  nts: Array<{ nt1: Buffer, nt2: Buffer }>
 
-  constructor (uid: Buffer, nts: Array<{ nt: Buffer, ntEnc: Buffer }>) {
+  constructor (uid: Buffer, nts: Array<{ nt1: Buffer, nt2: Buffer }>) {
     ;[this.uid, this.nts] = [uid, nts]
   }
 
-  static fromCmd2003 (buf: Buffer): Mf1StaticNestedArgs {
+  static fromCmd2003 (buf: Buffer): Mf1AcquireStaticNestedRes {
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
-    return new Mf1StaticNestedArgs(
+    return new Mf1AcquireStaticNestedRes(
       buf.subarray(0, 4), // uid
       _.map(buf.subarray(4).chunk(8), chunk => ({
-        nt: buf.subarray(0, 4),
-        ntEnc: buf.subarray(4, 8),
+        nt1: chunk.subarray(0, 4),
+        nt2: chunk.subarray(4, 8),
       })), // nts
     )
   }
@@ -191,10 +191,10 @@ export class Mf1DarksideArgs {
 
 export class Mf1NtDistanceArgs {
   uid: Buffer
-  distance: Buffer
+  dist: Buffer
 
-  constructor (uid: Buffer, distance: Buffer) {
-    ;[this.uid, this.distance] = [uid, distance]
+  constructor (uid: Buffer, dist: Buffer) {
+    ;[this.uid, this.dist] = [uid, dist]
   }
 
   static fromCmd2005 (buf: Buffer): Mf1NtDistanceArgs {
@@ -207,7 +207,7 @@ export class Mf1NtDistanceArgs {
 }
 
 /** Answer the random number parameters required for Nested attack */
-export class Mf1NestedArgs {
+export class Mf1NestedRes {
   nt1: Buffer // Unblocked explicitly random number
   nt2: Buffer // Random number of nested verification encryption
   par: number // The puppet test of the communication process of nested verification encryption, only the 'low 3 digits', that is, the right 3
@@ -216,9 +216,9 @@ export class Mf1NestedArgs {
     ;[this.nt1, this.nt2, this.par] = [nt1, nt2, par]
   }
 
-  static fromCmd2006 (buf: Buffer): Mf1NestedArgs[] {
+  static fromCmd2006 (buf: Buffer): Mf1NestedRes[] {
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
-    return _.map(buf.chunk(9), chunk => new Mf1NestedArgs(
+    return _.map(buf.chunk(9), chunk => new Mf1NestedRes(
       chunk.subarray(0, 4), // nt1
       chunk.subarray(4, 8), // nt2
       chunk[8], // par
