@@ -4,6 +4,7 @@
  */
 import _ from 'lodash'
 import { Buffer } from './buffer'
+import { Mf1KeyType } from './ChameleonUltra'
 
 const LF_POLY_ODD = 0x29CE5C
 const LF_POLY_EVEN = 0x870804
@@ -48,20 +49,39 @@ const C2 = [0x1A822E0, 0x21A822E0, 0x21A822E0]
 
 /**
  * JavaScript implementation of the Crypto1 cipher.
- * @param {object} [args={}] args
- * @param {number} args.even The even bits of lfsr.
- * @param {number} args.odd The odd bits of lfsr.
- * @see {@link https://github.com/RfidResearchGroup/proxmark3/tree/master/tools/mfkey|mfkey source code from RfidResearchGroup/proxmark3}
- * @example
- * const { Crypto1 } = window
- *
- * const state1 = new Crypto1()
- * const state2 = new Crypto1({ even: 0, odd: 0 })
  */
 export default class Crypto1 {
+  /**
+   * @internal
+   * @group Internal
+   */
+  static evenParityCache: number[] = []
+
+  /**
+   * @internal
+   * @group Internal
+   */
   even: number = 0
+
+  /**
+   * @internal
+   * @group Internal
+   */
   odd: number = 0
 
+  /**
+   * @param args
+   * @param args.even The even bits of lfsr.
+   * @param args.odd The odd bits of lfsr.
+   * @see [mfkey source code from RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/tree/master/tools/mfkey)
+   * @example
+   * ```js
+   * const { Crypto1 } = window
+   *
+   * const state1 = new Crypto1()
+   * const state2 = new Crypto1({ even: 0, odd: 0 })
+   * ```
+   */
   constructor ({ even = 0, odd = 0 }: { even?: number, odd?: number } = {}) {
     if (!_.isNil(even) && !_.isNil(odd)) {
       ;[this.even, this.odd] = [even, odd]
@@ -70,12 +90,13 @@ export default class Crypto1 {
 
   /**
    * Reset the internal lfsr.
-   * @returns {this} `this`
    * @example
+   * ```js
    * const { Crypto1 } = window
    *
    * const state1 = new Crypto1({ even: 1, odd: 1 })
    * state1.reset()
+   * ```
    */
   reset (): this {
     ;[this.odd, this.even] = [0, 0]
@@ -84,13 +105,14 @@ export default class Crypto1 {
 
   /**
    * Set the internal lfsr with the key.
-   * @param {Buffer} key The key to set the internal lfsr.
-   * @returns {this} `this`
+   * @param key The key to set the internal lfsr.
    * @example
+   * ```js
    * const { Buffer, Crypto1 } = window
    *
    * const state1 = new Crypto1()
    * state1.setLfsr(new Buffer('FFFFFFFFFFFF'))
+   * ```
    */
   setLfsr (key: Buffer): this {
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key must be 6 bytes')
@@ -105,29 +127,30 @@ export default class Crypto1 {
   }
 
   /**
-   * Get the internal lfsr.
-   * @returns {Buffer} The internal lfsr.
+   * Get the value of lfsr.
+   * @returns lfsr.
    * @example
+   * ```js
    * const { Buffer, Crypto1 } = window
    *
    * const state1 = new Crypto1()
-   * console.log(state1.setLfsr(new Buffer('FFFFFFFFFFFF')).getLfsr().hex) // 'FFFFFFFFFFFF'
+   * console.log(state1.setLfsr(new Buffer('FFFFFFFFFFFF')).getLfsr().toString(16)) // 'FFFFFFFFFFFF'
+   * ```
    */
-  getLfsr (): Buffer {
+  getLfsr (): number {
     const { bit } = Crypto1
-    const lfsr = new Buffer(6)
-    for (let i = 23; i >= 0; i--) {
-      lfsr.writeBitMSB(46 - 2 * i, bit(this.odd, i ^ 3))
-      lfsr.writeBitMSB(47 - 2 * i, bit(this.even, i ^ 3))
+    let lfsr = 0
+    for (let i = 23, j = (i ^ 3); i >= 0; i--, j = (i ^ 3)) {
+      lfsr = lfsr * 4 + (bit(this.odd, j) as unknown as boolean ? 2 : 0) + bit(this.even, j)
     }
     return lfsr
   }
 
   /**
    * Get the lfsr output bit and update lfsr by input bit.
-   * @param {number} input The input bit.
-   * @param {number} isEncrypted Indicates whether the input bit is encrypted or not.
-   * @returns {number} The lfsr output bit.
+   * @param input The input bit.
+   * @param isEncrypted Indicates whether the input bit is encrypted or not.
+   * @returns The lfsr output bit.
    */
   lfsrBit (input: number, isEncrypted: number): number {
     const { evenParity32, filter, toBool, toUint32 } = Crypto1
@@ -148,9 +171,9 @@ export default class Crypto1 {
 
   /**
    * Get the lfsr output byte and update lfsr by input byte.
-   * @param {number} input The input byte.
-   * @param {number} isEncrypted Indicates whether the input byte is encrypted or not.
-   * @returns {number} The lfsr output byte.
+   * @param input The input byte.
+   * @param isEncrypted Indicates whether the input byte is encrypted or not.
+   * @returns The lfsr output byte.
    */
   lfsrByte (input: number, isEncrypted: number): number {
     const { bit } = Crypto1
@@ -161,9 +184,9 @@ export default class Crypto1 {
 
   /**
    * Get the lfsr 32-bit output word and update lfsr by 32-bit input word.
-   * @param {number} input The 32-bit input word.
-   * @param {number} isEncrypted Indicates whether the 32-bit input word is encrypted or not.
-   * @returns {number} The lfsr 32-bit output word.
+   * @param input The 32-bit input word.
+   * @param isEncrypted Indicates whether the 32-bit input word is encrypted or not.
+   * @returns The lfsr 32-bit output word.
    */
   lfsrWord (input: number, isEncrypted: number): number {
     const { beBit } = Crypto1
@@ -174,9 +197,9 @@ export default class Crypto1 {
 
   /**
    * Rollback the lfsr in order to get previous states
-   * @param {number} input The input bit.
-   * @param {number} isEncrypted Indicates whether the input bit is encrypted or not.
-   * @returns {number} The lfsr output bit.
+   * @param input The input bit.
+   * @param isEncrypted Indicates whether the input bit is encrypted or not.
+   * @returns The lfsr output bit.
    */
   lfsrRollbackBit (input: number, isEncrypted: number): number {
     const { evenParity32, filter, toBit, toBool, toUint24, toUint32 } = Crypto1
@@ -194,9 +217,9 @@ export default class Crypto1 {
 
   /**
    * Rollback the lfsr in order to get previous states
-   * @param {number} input The input byte.
-   * @param {number} isEncrypted Indicates whether the input byte is encrypted or not.
-   * @returns {number} The lfsr output byte.
+   * @param input The input byte.
+   * @param isEncrypted Indicates whether the input byte is encrypted or not.
+   * @returns The lfsr output byte.
    */
   lfsrRollbackByte (input: number, isEncrypted: number): number {
     const { bit } = Crypto1
@@ -207,9 +230,9 @@ export default class Crypto1 {
 
   /**
    * Rollback the lfsr in order to get previous states
-   * @param {number} input The 32-bit input word.
-   * @param {number} isEncrypted Indicates whether the 32-bit input word is encrypted or not.
-   * @returns {number} The lfsr 32-bit output word.
+   * @param input The 32-bit input word.
+   * @param isEncrypted Indicates whether the 32-bit input word is encrypted or not.
+   * @returns The lfsr 32-bit output word.
    */
   lfsrRollbackWord (input: number, isEncrypted: number): number {
     const { beBit } = Crypto1
@@ -220,89 +243,133 @@ export default class Crypto1 {
 
   /**
    * Get bit of the unsigned reversed endian 32-bit integer `x` at position `n`.
-   * @param {number} x The reversed endian unsigned 32-bit integer.
-   * @param {number} n The bit position.
-   * @returns {number} The bit at position `n`.
+   * @param x The reversed endian unsigned 32-bit integer.
+   * @param n The bit position.
+   * @returns The bit at position `n`.
+   * @internal
+   * @group Internal
    * @example
+   * ```js
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.beBit(0x01000000, 0)) // 1
+   * ```
    */
   static beBit (x: number, n: number): number { return Crypto1.bit(x, n ^ 24) }
 
   /**
    * Get bit of the unsigned 32-bit integer `x` at position `n`.
-   * @param {number} x The unsigned 32-bit integer.
-   * @param {number} n The bit position.
-   * @returns {number} The bit at position `n`.
+   * @param x The unsigned 32-bit integer.
+   * @param n The bit position.
+   * @returns The bit at position `n`.
+   * @internal
+   * @group Internal
    * @example
+   * ```js
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.bit(0x1, 0)) // 1
+   * ```
    */
   static bit (x: number, n: number): number { return Crypto1.toBit(x >>> n) }
 
   /**
    * Cast the number `x` to bit.
-   * @param {number} x The number.
-   * @returns {number} The casted bit.
+   * @param x The number.
+   * @returns The casted bit.
+   * @internal
+   * @group Internal
    * @example
+   * ```js
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.toBit(1)) // 1
    * console.log(Crypto1.toBit(2)) // 0
+   * ```
    */
   static toBit (x: number): number { return x & 1 }
 
   /**
    * Indicates whether the number is truly or not.
-   * @param {number} x The number.
-   * @returns {number} Return `1` if the number is not falsey, otherwise return `0`.
+   * @param x The number.
+   * @returns Return `1` if the number is not falsey, otherwise return `0`.
+   * @internal
+   * @group Internal
    * @example
+   * ```js
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.toBool(1)) // 1
    * console.log(Crypto1.toBool(2)) // 1
+   * ```
    */
   static toBool (x: number): number { return x !== 0 ? 1 : 0 }
 
   /**
    * Cast the number `x` to unsigned 24-bit integer.
-   * @param {number} x The number.
-   * @returns {number} The casted unsigned 24-bit integer.
+   * @param x The number.
+   * @returns The casted unsigned 24-bit integer.
+   * @internal
+   * @group Internal
    * @example
+   * ```
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.toUint24(-1).toString(16)) // 'ffffff'
+   * ```
    */
   static toUint24 (x: number): number { return x & 0xFFFFFF }
 
   /**
    * Cast the number `x` to unsigned 32-bit integer.
-   * @param {number} x The number.
-   * @returns {number} The casted unsigned 32-bit integer.
+   * @param x The number.
+   * @returns The casted unsigned 32-bit integer.
+   * @internal
+   * @group Internal
    * @example
+   * ```js
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.toUint32(-1).toString(16)) // 'ffffffff'
+   * ```
    */
   static toUint32 (x: number): number { return x >>> 0 }
 
   /**
+   * Cast Buffer, hex string or number to UInt32
+   * @param x Buffer, string or number
+   * @returns UInt32
+   * @internal
+   * @group Internal
+   */
+  static castToUint32 (x: UInt32Like): number {
+    const { toUint32 } = Crypto1
+    if (_.isSafeInteger(x)) return toUint32(x as number)
+    if (_.isString(x)) return Buffer.from(x, 'hex').readUInt32BE(0)
+    return Buffer.from(x as any).readUInt32BE(0)
+  }
+
+  /**
    * Cast the number `x` to unsigned 8-bit integer.
-   * @param {number} x The number.
-   * @returns {number} The casted unsigned 8-bit integer.
+   * @param x The number.
+   * @returns The casted unsigned 8-bit integer.
+   * @internal
+   * @group Internal
    * @example
+   * ```js
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.toUint8(-1).toString(16)) // 'ff'
+   * ```
    */
   static toUint8 (x: number): number { return x & 0xFF }
 
   /**
    * The filter function of Crypto1.
-   * @param {number} x The unsigned 32-bit integer.
-   * @returns {number} The filtered bit.
+   * @param x The unsigned 32-bit integer.
+   * @returns The filtered bit.
+   * @internal
+   * @group Internal
    */
   static filter (x: number): number {
     let f = 0
@@ -316,19 +383,41 @@ export default class Crypto1 {
 
   /**
    * Return the even parity of the unsigned 8-bit integer `x`.
-   * @param {number} x The unsigned 8-bit integer.
-   * @returns {number} The even parity of `x`.
+   * @param x The unsigned 8-bit integer.
+   * @returns The even parity of `x`.
+   * @internal
+   * @group Internal
    */
   static evenParity8 (x: number): number {
-    x ^= x >>> 4
-    x ^= x >>> 2
-    return Crypto1.toBit(x ^ (x >>> 1))
+    const { evenParityCache, toBit } = Crypto1
+    if (evenParityCache.length !== 256) {
+      for (let i = 0; i < 256; i++) {
+        let tmp = i
+        tmp ^= tmp >>> 4
+        tmp ^= tmp >>> 2
+        Crypto1.evenParityCache[i] = toBit(tmp ^ (tmp >>> 1))
+      }
+    }
+    return evenParityCache[x & 0xFF]
+  }
+
+  /**
+   * Return the odd parity of the unsigned 8-bit integer `x`.
+   * @param x The unsigned 8-bit integer.
+   * @returns The odd parity of `x`.
+   * @internal
+   * @group Internal
+   */
+  static oddParity8 (x: number): number {
+    return 1 - Crypto1.evenParity8(x)
   }
 
   /**
    * Return the even parity of the unsigned 32-bit integer `x`.
-   * @param {number} x The unsigned 32-bit integer.
-   * @returns {number} The even parity of `x`.
+   * @param x The unsigned 32-bit integer.
+   * @returns The even parity of `x`.
+   * @internal
+   * @group Internal
    */
   static evenParity32 (x: number): number {
     x ^= x >>> 16
@@ -337,12 +426,16 @@ export default class Crypto1 {
 
   /**
    * Swap endian of the unsigned 32-bit integer `x`.
-   * @param {number} x The unsigned 32-bit integer.
-   * @returns {number} The unsigned 32-bit integer after swap endian.
+   * @param x The unsigned 32-bit integer.
+   * @returns The unsigned 32-bit integer after swap endian.
+   * @internal
+   * @group Internal
    * @example
+   * ```js
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.swapEndian(0x12345678).toString(16)) // '78563412'
+   * ```
    */
   static swapEndian (x: number): number {
     swapEndianTmp.setUint32(0, x, false)
@@ -351,9 +444,9 @@ export default class Crypto1 {
 
   /**
    * Generate the new prng state from the current prng state `x` by `n` times.
-   * @param {number} x The current prng state.
-   * @param {number} n The number of times to generate the new prng state.
-   * @returns {number} The new prng state.
+   * @param x The current prng state.
+   * @param n The number of times to generate the new prng state.
+   * @returns The new prng state.
    */
   static prngSuccessor (x: number, n: number): number {
     const { swapEndian } = Crypto1
@@ -364,10 +457,11 @@ export default class Crypto1 {
 
   /**
    * A helper function to calculates the partial linear feedback contributions and puts in MSB (Most Significant Bit).
-   * @param {number} item The input number.
-   * @param {number} mask1
-   * @param {number} mask2
-   * @returns {number}
+   * @param item The input number.
+   * @param mask1
+   * @param mask2
+   * @internal
+   * @group Internal
    */
   static updateContribution (item: number, mask1: number, mask2: number): number {
     const { evenParity32, toUint32 } = Crypto1
@@ -379,13 +473,15 @@ export default class Crypto1 {
 
   /**
    * Using a bit of the keystream extend the table of possible lfsr states. (complex version)
-   * @param {Uint32Array} tbl An array of the even/odd bits of lfsr.
-   * @param {number} size Size of array.
-   * @param {number} bit The bit of the keystream.
-   * @param {number} m1 mask1
-   * @param {number} m2 mask2
-   * @param {number} input The value that was fed into the lfsr at the time the keystream was generated.
-   * @returns {number} The new size of array.
+   * @param tbl An array of the even/odd bits of lfsr.
+   * @param size Size of array.
+   * @param bit The bit of the keystream.
+   * @param m1 mask1
+   * @param m2 mask2
+   * @param input The value that was fed into the lfsr at the time the keystream was generated.
+   * @returns The new size of array.
+   * @internal
+   * @group Internal
    */
   static extendTable (tbl: Uint32Array, size: number, bit: number, m1: number, m2: number, input: number): number {
     const { filter, toUint32, updateContribution } = Crypto1
@@ -405,10 +501,12 @@ export default class Crypto1 {
 
   /**
    * Using a bit of the keystream extend the table of possible lfsr states. (simple version)
-   * @param {Uint32Array} tbl An array of the even/odd bits of lfsr.
-   * @param {number} size Size of array.
-   * @param {number} bit The bit of the keystream.
-   * @returns {number} The new size of array.
+   * @param tbl An array of the even/odd bits of lfsr.
+   * @param size Size of array.
+   * @param bit The bit of the keystream.
+   * @returns The new size of array.
+   * @internal
+   * @group Internal
    */
   static extendTableSimple (tbl: Uint32Array, size: number, bit: number): number {
     const { filter } = Crypto1
@@ -426,10 +524,12 @@ export default class Crypto1 {
 
   /**
    * Recursively narrow down the search space, 4 bits of keystream at a time.
-   * @param {object} ctx
-   * @param {object} ctx.evens The array of even bits of possible lfsr states.
-   * @param {object} ctx.odds The array of odd bits of possible lfsr states.
-   * @param {Crypto1[]} ctx.states The array of recovered lfsr states.
+   * @param ctx
+   * @param ctx.evens The array of even bits of possible lfsr states.
+   * @param ctx.odds The array of odd bits of possible lfsr states.
+   * @param ctx.states The array of recovered lfsr states.
+   * @internal
+   * @group Internal
    */
   static recover (ctx: RecoverContext): void {
     const { evenParity32, extendTable, recover, toBit, toBool, toUint32 } = Crypto1
@@ -488,12 +588,14 @@ export default class Crypto1 {
   /**
    * Recover the state of the lfsr given 32 bits of the keystream.
    * Additionally you can use the in parameter to specify the value that was fed into the lfsr at the time the keystream was generated
-   * @param {number} ks2
-   * @param {number} input
-   * @returns {Crypto1[]} The array of recovered lfsr states.
+   * @param ks2
+   * @param input
+   * @returns The array of recovered lfsr states.
+   * @internal
+   * @group Internal
    */
   static lfsrRecovery32 (ks2: number, input: number): Crypto1[] {
-    const { beBit, extendTableSimple, filter, recover, swapEndian, toBit, toUint32 } = Crypto1
+    const { beBit, extendTableSimple, filter, recover, toBit, toUint32 } = Crypto1
     const evens = { s: 0, d: new Uint32Array(1 << 21) } // possible evens for ks2
     const odds = { s: 0, d: new Uint32Array(1 << 21) } // possible odds for ks2
     const states: Crypto1[] = [] // possible states for ks2
@@ -515,7 +617,7 @@ export default class Crypto1 {
       odds.s = extendTableSimple(odds.d, odds.s, toBit(oks))
     }
 
-    input = swapEndian(input) // swap endian
+    input = (input << 16) | (input >> 16 & 0xff) | (input & 0xff00) // Byte swapping
     recover({ eks, evens, odds, oks, states, rem: 11, input: input << 1 })
     return states
   }
@@ -523,9 +625,11 @@ export default class Crypto1 {
   /**
    * Reverse 64 bits of keystream into possible lfsr states.
    * Variation mentioned in the paper. Somewhat optimized version
-   * @param {number} ks2 keystream 2
-   * @param {number} ks3 keystream 3
-   * @returns {Crypto1} The recovered lfsr state.
+   * @param ks2 keystream 2
+   * @param ks3 keystream 3
+   * @returns The recovered lfsr state.
+   * @internal
+   * @group Internal
    */
   static lfsrRecovery64 (ks2: number, ks3: number): Crypto1 | undefined {
     const { beBit, evenParity32, extendTableSimple, filter } = Crypto1
@@ -579,16 +683,10 @@ export default class Crypto1 {
 
   /**
    * Recover the key with the two authentication attempts from reader.
-   * @param {object} args
-   * @param {number|Buffer|string} args.uid The 4-bytes uid in the authentication attempt.
-   * @param {number|Buffer|string} args.nt0 The nonce from tag in the first authentication attempt.
-   * @param {number|Buffer|string} args.nr0 The calculated nonce response from reader in the first authentication attempt.
-   * @param {number|Buffer|string} args.ar0 The random challenge from reader in the first authentication attempt.
-   * @param {number|Buffer|string} args.nt1 The nonce from tag in the second authentication attempt.
-   * @param {number|Buffer|string} args.nr1 The calculated nonce response from reader in the second authentication attempt.
-   * @param {number|Buffer|string} args.ar1 The random challenge from reader in the second authentication attempt.
-   * @returns {Buffer} The recovered key.
+   * @param args
+   * @returns The recovered key.
    * @example
+   * ```js
    * const { Buffer, Crypto1 } = window
    *
    * console.log(Crypto1.mfkey32v2({
@@ -618,10 +716,11 @@ export default class Crypto1 {
    *   nr1: '6FB8B4A8',
    *   ar1: 'EF4039FB',
    * }).hex) // A9AC67832330
+   * ```
    */
   static mfkey32v2 (args: Mfkey32v2Args): Buffer {
-    const [uid, nt0, nr0, ar0, nt1, nr1, ar1] = _.map(['uid', 'nt0', 'nr0', 'ar0', 'nt1', 'nr1', 'ar1'] as Array<keyof Mfkey32v2Args>, k => castToInteger(args[k]))
-    const { lfsrRecovery32, prngSuccessor, toUint32 } = Crypto1
+    const { castToUint32, lfsrRecovery32, prngSuccessor, toUint32 } = Crypto1
+    const [uid, nt0, nr0, ar0, nt1, nr1, ar1] = _.map(['uid', 'nt0', 'nr0', 'ar0', 'nt1', 'nr1', 'ar1'] as const, k => castToUint32(args[k]))
     const p640 = prngSuccessor(nt0, 64)
     const p641 = prngSuccessor(nt1, 64)
 
@@ -633,21 +732,17 @@ export default class Crypto1 {
       const key = state.getLfsr()
       state.lfsrWord(uid ^ nt1, 0)
       state.lfsrWord(nr1, 1)
-      if (toUint32(state.lfsrWord(0, 0) ^ p641) === ar1) return key
+      if (toUint32(state.lfsrWord(0, 0) ^ p641) === ar1) return new Buffer(6).writeUIntBE(key, 0, 6)
     }
     throw new Error('failed to recover key')
   }
 
   /**
    * Recover the key with the successfully authentication between the reader and the tag.
-   * @param {object} args
-   * @param {number|Buffer|string} args.uid The 4-bytes uid in the authentication.
-   * @param {number|Buffer|string} args.nt The nonce from tag in the authentication.
-   * @param {number|Buffer|string} args.nr The calculated response of `args.nt` from reader in the authentication.
-   * @param {number|Buffer|string} args.ar The random challenge from reader in the authentication.
-   * @param {number|Buffer|string} args.at The calculated response of `args.ar` from tag in the authentication.
-   * @returns {Buffer} The recovered key.
+   * @param args
+   * @returns The recovered key.
    * @example
+   * ```js
    * const { Buffer, Crypto1 } = window
    *
    * console.log(Crypto1.mfkey32v2({
@@ -671,10 +766,11 @@ export default class Crypto1 {
    *   ar: 'CF0A3C7E',
    *   at: 'F4A81AF8',
    * }).hex) // A9AC67832330
+   * ```
    */
   static mfkey64 (args: Mfkey64Args): Buffer {
-    const [uid, nt, nr, ar, at] = _.map(['uid', 'nt', 'nr', 'ar', 'at'] as Array<keyof Mfkey64Args>, k => castToInteger(args[k]))
-    const { lfsrRecovery64, prngSuccessor } = Crypto1
+    const { castToUint32, lfsrRecovery64, prngSuccessor } = Crypto1
+    const [uid, nt, nr, ar, at] = _.map(['uid', 'nt', 'nr', 'ar', 'at'] as const, k => castToUint32(args[k]))
     const p64 = prngSuccessor(nt, 64)
     const [ks2, ks3] = [ar ^ p64, at ^ prngSuccessor(p64, 32)]
     const state = lfsrRecovery64(ks2, ks3)
@@ -684,23 +780,19 @@ export default class Crypto1 {
     state.lfsrRollbackWord(0, 0)
     state.lfsrRollbackWord(nr, 1)
     state.lfsrRollbackWord(uid ^ nt, 0)
-    return state.getLfsr()
+    return new Buffer(6).writeUIntBE(state.getLfsr(), 0, 6)
   }
 
   /**
    * Decrypt the data.
-   * @param {object} args
-   * @param {number|Buffer|string} args.nr The calculated response of `args.nt` from reader in the authentication.
-   * @param {number|Buffer|string} args.nt The nonce from tag in the authentication.
-   * @param {number|Buffer|string} args.uid The 4-bytes uid in the authentication.
-   * @param {Buffer} args.data The encrypted data.
-   * @param {Buffer} args.key The 6-bytes key to decrypt the data.
-   * @returns {Buffer} The decrypted data.
+   * @param args
+   * @returns The decrypted data.
    */
   static decrypt (args: DecryptArgs): Buffer {
+    const { castToUint32 } = Crypto1
     if (!Buffer.isBuffer(args.key) || args.key.length !== 6) throw new TypeError('invalid args.key')
     if (!Buffer.isBuffer(args.data)) throw new TypeError('invalid args.data')
-    const [uid, nt, nr] = _.map(['uid', 'nt', 'nr'] as Array<'uid' | 'nt' | 'nr'>, k => castToInteger(args[k]))
+    const [uid, nt, nr] = _.map(['uid', 'nt', 'nr'] as const, k => castToUint32(args[k]))
     const data = args.data.slice() // clone data
 
     const state = new Crypto1()
@@ -712,13 +804,130 @@ export default class Crypto1 {
     for (let i = 0; i < data.length; i++) data[i] ^= state.lfsrByte(0, 0)
     return data
   }
+
+  /**
+   * @internal
+   * @group Internal
+   */
+  static nestedRecover (args: NestedRecoverArgs): Buffer[] {
+    const { lfsrRecovery32, toUint32 } = Crypto1
+
+    // ntpks1 to keys
+    const ntpks1ToKeys = (ntpks1: { ks1: number, ntp: number }): Set<number> => {
+      const tmp = toUint32(ntpks1.ntp ^ args.uid)
+      const states = lfsrRecovery32(ntpks1.ks1, tmp)
+      return new Set(_.map(states, state => {
+        state.lfsrRollbackWord(tmp, 0)
+        return state.getLfsr()
+      }))
+    }
+
+    const keyCnt = new Map<number, number>()
+    for (let i = 0; i < args.ntpks1s.length; i++) {
+      const keys = ntpks1ToKeys(args.ntpks1s[i])
+      keys.forEach(key => { keyCnt.set(key, (keyCnt.get(key) ?? 0) + 1) })
+    }
+    return _.chain([...keyCnt.entries()])
+      .orderBy([1], ['desc'])
+      .take(50)
+      .map(key => new Buffer(6).writeUIntBE(key[0], 0, 6))
+      .value()
+  }
+
+  /**
+   * Recover key from mifare tags with static nonce
+   * @param args
+   * @returns candidates keys
+   * @example
+   * ```js
+   * const { Mf1KeyType } = window.ChameleonUltraJS
+   * const args = {
+   *   uid: 'b908a16d',
+   *   keyType: Mf1KeyType.KEY_A,
+   *   nts: [
+   *     { nt1: '01200145', nt2: '81901975' },
+   *     { nt1: '01200145', nt2: 'cdd400f3' },
+   *   ],
+   * }
+   * const keys = Crypto1.staticnested(args)
+   * console.log(`keys = ${JSON.stringify(_.map(keys, key => key.toString('hex')))}`)
+   * ```
+   */
+  static staticnested (args: StaticNestedArgs): Buffer[] {
+    const { castToUint32, nestedRecover, prngSuccessor, toUint32 } = Crypto1
+
+    // dist
+    const firstNt = castToUint32(args.nts[0].nt1)
+    let dist = 0
+    // st gen1: There is no loophole in this generation. This tag can be decrypted with the default parameter value 160!
+    if (firstNt === 0x01200145) dist = 160
+    // st gen2: tag is vulnerable too but parameter must be adapted depending on the attacked key type
+    else if (firstNt === 0x009080A2) dist = args.keyType === Mf1KeyType.KEY_A ? 160 : 161
+    if (dist === 0) throw new Error('unknown static nonce')
+
+    return nestedRecover({
+      uid: castToUint32(args.uid),
+      ntpks1s: _.map(args.nts, tmp => {
+        const [nt1, nt2] = _.map([tmp.nt1, tmp.nt2], castToUint32)
+        const ntp = prngSuccessor(nt1, dist)
+        const ks1 = toUint32(nt2 ^ ntp)
+        dist += 160
+        return { ntp, ks1 }
+      }),
+    })
+  }
+
+  /**
+   * Recover key from mifare tags with weak prng
+   * @param args
+   * @returns candidates keys
+   * @example
+   * ```js
+   * const args = {
+   *   uid: '877209e1',
+   *   dist: '00000080',
+   *   nts: [
+   *     { nt1: 'b4a08a09', nt2: '8a15bbf2', par: 5 },
+   *     { nt1: '1613293d', nt2: '912e6760', par: 7 }
+   *   ]
+   * }
+   * const keys = Crypto1.nested(args)
+   * console.log(`keys = ${JSON.stringify(_.map(keys, key => key.toString('hex')))}`)
+   * ```
+   */
+  static nested (args: NestedArgs): Buffer[] {
+    const { castToUint32, nestedIsValidNonce, nestedRecover, prngSuccessor, toUint32 } = Crypto1
+
+    const dist = castToUint32(args.dist)
+    const ntpks1s: NestedRecoverArgs['ntpks1s'] = []
+
+    for (let i = 0; i < args.nts.length; i++) {
+      const tmp = args.nts[i]
+      const [nt1, nt2, par] = _.map([tmp.nt1, tmp.nt2, tmp.par], castToUint32)
+      let ntp = prngSuccessor(nt1, dist - 14)
+      for (let j = 0; j < 29; j++, ntp = prngSuccessor(ntp, 1)) {
+        const ks1 = toUint32(nt2 ^ ntp)
+        if (nestedIsValidNonce(ntp, nt2, ks1, par)) ntpks1s.push({ ntp, ks1 })
+      }
+    }
+
+    return nestedRecover({ uid: castToUint32(args.uid), ntpks1s })
+  }
+
+  /**
+   * @internal
+   * @group Internal
+   */
+  static nestedIsValidNonce (nt1: number, nt2: number, ks1: number, par: number): boolean {
+    const { evenParity8, bit } = Crypto1
+    if (evenParity8((nt1 >>> 24) & 0xFF) !== (bit(par, 0) ^ evenParity8((nt2 >>> 24) & 0xFF) ^ bit(ks1, 16))) return false
+    if (evenParity8((nt1 >>> 16) & 0xFF) !== (bit(par, 1) ^ evenParity8((nt2 >>> 16) & 0xFF) ^ bit(ks1, 8))) return false
+    if (evenParity8((nt1 >>> 8) & 0xFF) !== (bit(par, 2) ^ evenParity8((nt2 >>> 8) & 0xFF) ^ bit(ks1, 0))) return false
+    return true
+  }
 }
 
-function castToInteger (x: number | Buffer | string): number {
-  if (_.isSafeInteger(x)) return x as number
-  if (_.isString(x)) return Buffer.from(x, 'hex').readUInt32BE(0)
-  return Buffer.from(x as any).readUInt32BE(0)
-}
+type UInt32Like = Buffer | number | string
 
 interface RecoverContext {
   eks: number
@@ -736,27 +945,73 @@ interface RecoverContextUint32Array {
 }
 
 export interface Mfkey32v2Args {
-  uid: Buffer | number | string
-  nt0: Buffer | number | string
-  nr0: Buffer | number | string
-  ar0: Buffer | number | string
-  nt1: Buffer | number | string
-  nr1: Buffer | number | string
-  ar1: Buffer | number | string
+  /** The 4-bytes uid in the authentication attempt. */
+  uid: UInt32Like
+  /** The nonce from tag in the first authentication attempt. */
+  nt0: UInt32Like
+  /** The calculated nonce response from reader in the first authentication attempt. */
+  nr0: UInt32Like
+  /** The random challenge from reader in the first authentication attempt. */
+  ar0: UInt32Like
+  /** The nonce from tag in the second authentication attempt. */
+  nt1: UInt32Like
+  /** The calculated nonce response from reader in the second authentication attempt. */
+  nr1: UInt32Like
+  /** The random challenge from reader in the second authentication attempt. */
+  ar1: UInt32Like
 }
 
 export interface Mfkey64Args {
-  uid: Buffer | number | string
-  nt: Buffer | number | string
-  nr: Buffer | number | string
-  ar: Buffer | number | string
-  at: Buffer | number | string
+  /** The 4-bytes uid in the authentication. */
+  uid: UInt32Like
+  /** The nonce from tag in the authentication. */
+  nt: UInt32Like
+  /** The calculated response of `args.nt` from reader in the authentication. */
+  nr: UInt32Like
+  /** The random challenge from reader in the authentication. */
+  ar: UInt32Like
+  /** The calculated response of `args.ar` from tag in the authentication. */
+  at: UInt32Like
 }
 
 export interface DecryptArgs {
-  uid: Buffer | number | string
-  nt: Buffer | number | string
-  nr: Buffer | number | string
+  /** The 4-bytes uid in the authentication. */
+  uid: UInt32Like
+  /** The nonce from tag in the authentication. */
+  nt: UInt32Like
+  /** The calculated response of `args.nt` from reader in the authentication. */
+  nr: UInt32Like
+  /** The encrypted data. */
   data: Buffer
+  /** The 6-bytes key to decrypt the data. */
   key: Buffer
+}
+
+export interface NestedRecoverArgs {
+  uid: number
+  ntpks1s: Array<{
+    ntp: number
+    ks1: number
+  }>
+}
+
+export interface StaticNestedArgs {
+  /** The 4-bytes uid in the authentication. */
+  uid: UInt32Like
+  keyType: Mf1KeyType
+  nts: Array<{
+    nt1: UInt32Like
+    nt2: UInt32Like
+  }>
+}
+
+export interface NestedArgs {
+  /** The 4-bytes uid in the authentication. */
+  uid: UInt32Like
+  dist: UInt32Like
+  nts: Array<{
+    nt1: UInt32Like
+    nt2: UInt32Like
+    par: UInt32Like
+  }>
 }
