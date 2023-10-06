@@ -8,7 +8,6 @@ import { Mf1KeyType } from './ChameleonUltra'
 
 const LF_POLY_ODD = 0x29CE5C
 const LF_POLY_EVEN = 0x870804
-const swapEndianTmp = new DataView(new ArrayBuffer(4))
 
 const S1 = [
   0x62141, 0x310A0, 0x18850, 0x0C428, 0x06214,
@@ -56,6 +55,12 @@ export default class Crypto1 {
    * @group Internal
    */
   static evenParityCache: number[] = []
+
+  /**
+   * @internal
+   * @group Internal
+   */
+  static lfsrBuf = new Buffer(6)
 
   /**
    * @internal
@@ -114,13 +119,14 @@ export default class Crypto1 {
    * state1.setLfsr(new Buffer('FFFFFFFFFFFF'))
    * ```
    */
-  setLfsr (key: Buffer): this {
-    if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key must be 6 bytes')
+  setLfsr (key: number): this {
+    const { lfsrBuf } = Crypto1
     this.reset()
+    lfsrBuf.writeUIntBE(key, 0, 6)
     for (let i = 47; i > 0; i -= 2) {
       ;[this.odd, this.even] = [
-        (this.odd << 1) | key.readBitLSB((i - 1) ^ 7),
-        (this.even << 1) | key.readBitLSB(i ^ 7),
+        (this.odd << 1) | lfsrBuf.readBitLSB((i - 1) ^ 7),
+        (this.even << 1) | lfsrBuf.readBitLSB(i ^ 7),
       ]
     }
     return this
@@ -141,7 +147,7 @@ export default class Crypto1 {
     const { bit } = Crypto1
     let lfsr = 0
     for (let i = 23, j = (i ^ 3); i >= 0; i--, j = (i ^ 3)) {
-      lfsr = lfsr * 4 + (bit(this.odd, j) as unknown as boolean ? 2 : 0) + bit(this.even, j)
+      lfsr = lfsr * 4 + (bit(this.odd, j) > 0 ? 2 : 0) + bit(this.even, j)
     }
     return lfsr
   }
@@ -438,8 +444,7 @@ export default class Crypto1 {
    * ```
    */
   static swapEndian (x: number): number {
-    swapEndianTmp.setUint32(0, x, false)
-    return swapEndianTmp.getUint32(0, true)
+    return Crypto1.lfsrBuf.writeUInt32BE(x, 0).readUInt32LE(0)
   }
 
   /**
@@ -466,8 +471,7 @@ export default class Crypto1 {
   static updateContribution (item: number, mask1: number, mask2: number): number {
     const { evenParity32, toUint32 } = Crypto1
     let p = item >>> 25
-    p = p << 1 | evenParity32(item & mask1)
-    p = p << 1 | evenParity32(item & mask2)
+    p = p << 2 | (evenParity32(item & mask1) > 0 ? 2 : 0) | evenParity32(item & mask2)
     return toUint32(p << 24 | item & 0xFFFFFF)
   }
 
@@ -560,28 +564,21 @@ export default class Crypto1 {
 
     while ((odds.s + evens.s) !== 0) {
       const [oddBucket, evenBucket] = _.map([odds.d[odds.s - 1], evens.d[evens.s - 1]], num => toUint32(num & 0xFF000000))
-      if (oddBucket === evenBucket) {
-        const [evenStart, oddStart] = [
-          _.sortedIndex(evens.d.subarray(0, evens.s), oddBucket),
-          _.sortedIndex(odds.d.subarray(0, odds.s), evenBucket),
-        ]
-        recover({
-          ...ctx,
-          evens: {
-            d: new Uint32Array(evens.d.buffer, evens.d.byteOffset + evenStart * 4),
-            s: evens.s - evenStart,
-          },
-          odds: {
-            d: new Uint32Array(odds.d.buffer, odds.d.byteOffset + oddStart * 4),
-            s: odds.s - oddStart,
-          },
-        })
-        ;[evens.s, odds.s] = [evenStart, oddStart]
-      } else if (oddBucket > evenBucket) {
-        odds.s = _.sortedIndex(odds.d.subarray(0, odds.s), oddBucket)
-      } else {
-        evens.s = _.sortedIndex(evens.d.subarray(0, evens.s), evenBucket)
+      if (oddBucket !== evenBucket) {
+        if (oddBucket > evenBucket) odds.s = _.sortedIndex(odds.d.subarray(0, odds.s), oddBucket)
+        else evens.s = _.sortedIndex(evens.d.subarray(0, evens.s), evenBucket)
+        continue
       }
+      const [evenStart, oddStart] = [
+        _.sortedIndex(evens.d.subarray(0, evens.s), oddBucket),
+        _.sortedIndex(odds.d.subarray(0, odds.s), evenBucket),
+      ]
+      recover({
+        ...ctx,
+        evens: { d: evens.d.subarray(evenStart), s: evens.s - evenStart },
+        odds: { d: odds.d.subarray(oddStart), s: odds.s - oddStart },
+      })
+      ;[evens.s, odds.s] = [evenStart, oddStart]
     }
   }
 
@@ -631,7 +628,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrRecovery64 (ks2: number, ks3: number): Crypto1 | undefined {
+  static lfsrRecovery64 (ks2: number, ks3: number): Crypto1 {
     const { beBit, evenParity32, extendTableSimple, filter } = Crypto1
     const oks = new Uint8Array(32)
     const eks = new Uint8Array(32)
@@ -679,6 +676,7 @@ export default class Crypto1 {
         }
       }
     }
+    throw new Error('failed to recover lfsr')
   }
 
   /**
@@ -774,8 +772,6 @@ export default class Crypto1 {
     const p64 = prngSuccessor(nt, 64)
     const [ks2, ks3] = [ar ^ p64, at ^ prngSuccessor(p64, 32)]
     const state = lfsrRecovery64(ks2, ks3)
-    if (_.isNil(state)) throw new Error('failed to recover key')
-
     state.lfsrRollbackWord(0, 0)
     state.lfsrRollbackWord(0, 0)
     state.lfsrRollbackWord(nr, 1)
@@ -796,7 +792,7 @@ export default class Crypto1 {
     const data = args.data.slice() // clone data
 
     const state = new Crypto1()
-    state.setLfsr(args.key)
+    state.setLfsr(args.key.readUIntBE(0, 6))
     state.lfsrWord(uid ^ nt, 0)
     state.lfsrWord(nr, 1)
     for (let i = 0; i < 2; i++) state.lfsrWord(0, 0)
@@ -811,21 +807,15 @@ export default class Crypto1 {
    */
   static nestedRecover (args: NestedRecoverArgs): Buffer[] {
     const { lfsrRecovery32, toUint32 } = Crypto1
-
-    // ntpks1 to keys
-    const ntpks1ToKeys = (ntpks1: { ks1: number, ntp: number }): Set<number> => {
-      const tmp = toUint32(ntpks1.ntp ^ args.uid)
-      const states = lfsrRecovery32(ntpks1.ks1, tmp)
-      return new Set(_.map(states, state => {
-        state.lfsrRollbackWord(tmp, 0)
-        return state.getLfsr()
-      }))
-    }
-
     const keyCnt = new Map<number, number>()
-    for (let i = 0; i < args.ntpks1s.length; i++) {
-      const keys = ntpks1ToKeys(args.ntpks1s[i])
-      keys.forEach(key => { keyCnt.set(key, (keyCnt.get(key) ?? 0) + 1) })
+    for (const { ntp, ks1 } of args.ntpks1s) {
+      const tmp = toUint32(ntp ^ args.uid)
+      const states = lfsrRecovery32(ks1, tmp)
+      for (const state of states) {
+        state.lfsrRollbackWord(tmp, 0)
+        const key = state.getLfsr()
+        keyCnt.set(key, (keyCnt.get(key) ?? 0) + 1)
+      }
     }
     return _.chain([...keyCnt.entries()])
       .orderBy([1], ['desc'])
