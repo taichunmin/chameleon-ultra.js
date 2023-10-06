@@ -4,7 +4,7 @@ import Crypto1 from './Crypto1'
 
 test('#reset()', async () => {
   const crypto = new Crypto1()
-  crypto.setLfsr(Buffer.from('FFFFFFFFFFFF', 'hex'))
+  crypto.setLfsr(Buffer.from('FFFFFFFFFFFF', 'hex').readUIntBE(0, 6))
   crypto.reset()
   expect(crypto.odd).toEqual(0)
   expect(crypto.even).toEqual(0)
@@ -16,7 +16,7 @@ test.each([
   { key: '555555555555', odd: 0, even: 0xFFFFFF },
 ])('#setLfsr(Buffer.from($key, \'hex\')) = { odd: $odd, even: $even }', async ({ key, odd, even }) => {
   const crypto = new Crypto1()
-  crypto.setLfsr(Buffer.from(key, 'hex'))
+  crypto.setLfsr(Buffer.from(key, 'hex').readUIntBE(0, 6))
   expect(crypto.odd).toEqual(odd)
   expect(crypto.even).toEqual(even)
 })
@@ -29,7 +29,7 @@ test.each([
   { key: 'abcdefabcdef' },
 ])('#setLfsr(Buffer.from($key, \'hex\'))#getLfsr() = $key', async ({ key }) => {
   const crypto1 = new Crypto1()
-  crypto1.setLfsr(Buffer.from(key, 'hex'))
+  crypto1.setLfsr(Buffer.from(key, 'hex').readUIntBE(0, 6))
   expect(crypto1.getLfsr()).toEqual(_.parseInt(key, 16))
 })
 
@@ -239,7 +239,7 @@ test.each([
   expect(_.map(keys, key => key.toString('hex'))).toContain(expected)
 })
 
-test.skip.each([
+test.each([
   {
     dist: '00000080',
     expected: 'ffffffffffff',
