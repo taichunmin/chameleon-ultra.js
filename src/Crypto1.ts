@@ -46,6 +46,11 @@ const T2 = [
 const C1 = [0x00846B5, 0x0004235A, 0x000211AD]
 const C2 = [0x1A822E0, 0x21A822E0, 0x21A822E0]
 
+const fastfwd = [
+  0, 0x4BC53, 0xECB1, 0x450E2, 0x25E29, 0x6E27A, 0x2B298, 0x60ECB,
+  0, 0x1D962, 0x4BC53, 0x56531, 0xECB1, 0x135D3, 0x450E2, 0x58980,
+]
+
 /**
  * JavaScript implementation of the Crypto1 cipher.
  */
@@ -614,7 +619,7 @@ export default class Crypto1 {
       odds.s = extendTableSimple(odds.d, odds.s, toBit(oks))
     }
 
-    input = (input << 16) | (input >> 16 & 0xff) | (input & 0xff00) // Byte swapping
+    input = (input << 16) | (input >>> 16 & 0xff) | (input & 0xff00) // Byte swapping
     mfkeyRecoverState({ eks, evens, odds, oks, states, rem: 11, input: input << 1 })
     return states
   }
@@ -914,6 +919,151 @@ export default class Crypto1 {
     if (evenParity8((nt1 >>> 16) & 0xFF) !== (bit(par, 1) ^ evenParity8((nt2 >>> 16) & 0xFF) ^ bit(ks1, 8))) return false
     if (evenParity8((nt1 >>> 8) & 0xFF) !== (bit(par, 2) ^ evenParity8((nt2 >>> 8) & 0xFF) ^ bit(ks1, 0))) return false
     return true
+  }
+
+  /**
+   * @internal
+   * @group Internal
+   */
+  static lfsrPrefixKs (ks: Buffer, isOdd: boolean): number[] {
+    const { bit, filter, toUint32 } = Crypto1
+    const candidates: number[] = []
+    for (let i = 0; i < 2097152; i++) { // 2**21 = 2097152
+      let isCandidate = true
+      for (let j = 0; isCandidate && j < 8; j++) {
+        const tmp = toUint32(i ^ fastfwd[isOdd ? (8 + j) : j])
+        isCandidate = bit(ks[j], isOdd ? 1 : 0) === filter(tmp >>> 1) && bit(ks[j], isOdd ? 3 : 2) === filter(tmp)
+      }
+      if (isCandidate) candidates.push(i)
+    }
+    return candidates
+  }
+
+  /**
+   * helper function which eliminates possible secret states using parity bits
+   * @internal
+   * @group Internal
+   */
+  static checkPfxParity (pfx: number, ar: number, par: number[][], odd: number, even: number, isZeroPar: boolean): Crypto1 | undefined {
+    const { evenParity32, bit, toUint32 } = Crypto1
+    const state = new Crypto1()
+    for (let i = 0; i < 8; i++) {
+      ;[state.odd, state.even] = [toUint32(odd ^ fastfwd[8 + i]), toUint32(even ^ fastfwd[i])]
+      state.lfsrRollbackBit(0, 0)
+      state.lfsrRollbackBit(0, 0)
+      const ks3 = state.lfsrRollbackBit(0, 0)
+      const ks2 = state.lfsrRollbackWord(0, 0)
+      const ks1 = state.lfsrRollbackWord(pfx | (i << 5), 1)
+      if (isZeroPar) return state
+
+      const nr = toUint32(ks1 ^ (pfx | (i << 5)))
+      const arEnc = toUint32(ks2 ^ ar)
+
+      if ((evenParity32(nr & 0x000000FF) ^ par[i][3] ^ bit(ks2, 24)) < 1) return
+      if ((evenParity32(arEnc & 0xFF000000) ^ par[i][4] ^ bit(ks2, 16)) < 1) return
+      if ((evenParity32(arEnc & 0x00FF0000) ^ par[i][5] ^ bit(ks2, 8)) < 1) return
+      if ((evenParity32(arEnc & 0x0000FF00) ^ par[i][6] ^ bit(ks2, 0)) < 1) return
+      if ((evenParity32(arEnc & 0x000000FF) ^ par[i][7] ^ ks3) < 1) return
+    }
+    return state
+  }
+
+  /**
+   * @internal
+   * @group Internal
+   */
+  static lfsrCommonPrefix (pfx: number, ar: number, ks: Buffer, par: number[][], isZeroPar: boolean): Crypto1[] {
+    const { lfsrPrefixKs, checkPfxParity } = Crypto1
+    const odds = lfsrPrefixKs(ks, true)
+    const evens = lfsrPrefixKs(ks, false)
+
+    const states: Crypto1[] = []
+    for (let odd of odds) {
+      for (let even of evens) {
+        for (let i = 0; i < 64; i++) {
+          odd += 2097152
+          even += (i & 0x7) > 0 ? 2097152 : 4194304
+          const tmp = checkPfxParity(pfx, ar, par, odd, even, isZeroPar)
+          if (!_.isNil(tmp)) states.push(tmp)
+        }
+      }
+    }
+    return states
+  }
+
+  /**
+   * Recover the key from the tag with the darkside attack.
+   * @param fnAcquire An async function to acquire the darkside attack data.
+   * @param fnCheckKey An async function to check the key.
+   * @param attempts The maximum number of attempts to try.
+   * @returns The recovered key.
+   * @example
+   * ```js
+   * const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const block = 0
+   *   const keyType = Mf1KeyType.KEY_A
+   *   const key = await Crypto1.darkside(
+   *     async attempt => {
+   *       const accquired = await ultra.cmdMf1AcquireDarkside(block, keyType, attempt === 0)
+   *       console.log(_.mapValues(accquired, buf => Buffer.isBuffer(buf) ? buf.toString('hex') : buf))
+   *       if (acquired.status === DarksideStatus.LUCKY_AUTH_OK) throw new Error('LUCKY_AUTH_OK')
+   *       if (acquired.status !== DarksideStatus.OK) throw new Error('card is not vulnerable to Darkside attack')
+   *       return accquired
+   *     },
+   *     async key => {
+   *       return await ultra.cmdMf1CheckBlockKey({ block, keyType, key })
+   *     },
+   *   )
+   *   console.log(`key founded: ${key.toString('hex')}`)
+   * }
+   * ```
+   */
+  static async darkside (
+    fnAcquire: (attempt: number) => Promise<{ uid: Buffer, nt: Buffer, nr: Buffer, ar: Buffer, par: Buffer, ks: Buffer }>,
+    fnCheckKey: (key: Buffer) => Promise<boolean>,
+    attempts: number = 256,
+  ): Promise<Buffer> {
+    const { bit, lfsrCommonPrefix, toUint32 } = Crypto1
+    const checkedKeys = new Set<number>()
+    let prevKeys = new Set<number>()
+    for (let i = 0; i < attempts; i++) {
+      const acquired = await fnAcquire(i)
+
+      const [uid, nt, ar] = _.map(['uid', 'nt', 'ar'] as const, k => {
+        if (!Buffer.isBuffer(acquired[k]) || acquired[k].length !== 4) throw new TypeError(`Failed to acquire darkside result: invalid ${k}`)
+        return acquired[k].readUInt32BE(0)
+      })
+      if (!Buffer.isBuffer(acquired.nr) || acquired.nr.length !== 4) throw new TypeError('Failed to acquire darkside result: invalid nr')
+      const nr = acquired.nr.readUInt32BE(0) & 0xFFFFFF1F
+      if (!Buffer.isBuffer(acquired.ks) || acquired.ks.length !== 8) throw new TypeError('Failed to acquire darkside result: invalid ks')
+      const ks = new Buffer(_.map(acquired.ks, u8 => u8 & 0x0F))
+      if (!Buffer.isBuffer(acquired.par) || acquired.par.length !== 8) throw new TypeError('Failed to acquire darkside result: invalid par')
+      const par = _.map(acquired.par, u8 => _.times(8, j => bit(u8, j)))
+      const isZeroPar = acquired.par.readBigUInt64BE(0) === 0n
+      let keys = new Set<number>()
+      const tmp = toUint32(uid ^ nt)
+
+      const states = lfsrCommonPrefix(nr, ar, ks, par, isZeroPar)
+      for (const state of states) {
+        state.lfsrRollbackWord(tmp, 0)
+        keys.add(state.getLfsr())
+      }
+      if (keys.size === 0) continue // no candidates, need to try with a different reader nonce
+      if (isZeroPar) { // no parity bits
+        ;[prevKeys, keys] = [keys, prevKeys] // swap
+        keys.forEach(key => { if (!prevKeys.has(key)) keys.delete(key) }) // keys intersection
+      }
+      for (const keyUint32 of [...keys]) {
+        if (checkedKeys.has(keyUint32)) continue
+        checkedKeys.add(keyUint32)
+        const key = new Buffer(6).writeUIntBE(keyUint32, 0, 6)
+        if (await fnCheckKey(key)) return key
+      }
+    }
+    throw new Error(`failed to find key, darkside attempts = ${attempts}, keys checked = ${checkedKeys.size}`)
   }
 }
 

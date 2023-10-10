@@ -150,26 +150,26 @@ export class Mf1AcquireStaticNestedRes {
 export class Mf1DarksideRes {
   status: DarksideStatus
   uid?: Buffer
-  nt1?: Buffer
+  nt?: Buffer
   par?: Buffer
-  ks1?: Buffer
+  ks?: Buffer
   nr?: Buffer
   ar?: Buffer
 
   constructor (
     status: DarksideStatus,
     uid?: Buffer,
-    nt1?: Buffer,
+    nt?: Buffer,
     par?: Buffer,
-    ks1?: Buffer,
+    ks?: Buffer,
     nr?: Buffer,
     ar?: Buffer
   ) {
     this.status = status
     this.uid = uid
-    this.nt1 = nt1
+    this.nt = nt
     this.par = par
-    this.ks1 = ks1
+    this.ks = ks
     this.nr = nr
     this.ar = ar
   }
@@ -180,9 +180,9 @@ export class Mf1DarksideRes {
     return new Mf1DarksideRes(
       buf[0], // status
       buf.subarray(1, 5), // uid
-      buf.subarray(5, 9), // nt1
+      buf.subarray(5, 9), // nt
       buf.subarray(9, 17), // par
-      buf.subarray(17, 25), // ks1
+      buf.subarray(17, 25), // ks
       buf.subarray(25, 29), // nr
       buf.subarray(29, 33), // ar
     )
