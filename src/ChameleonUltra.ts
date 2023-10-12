@@ -2621,10 +2621,16 @@ export enum ButtonType {
 export const isButtonType = createIsEnum(ButtonType)
 
 export enum ButtonAction {
+  /** No Function */
   DISABLE = 0,
+  /** Select next slot */
   CYCLE_SLOT_INC = 1,
+  /** Select previous slot */
   CYCLE_SLOT_DEC = 2,
+  /** Read then simulate the ID/UID card number */
   CLONE_IC_UID = 3,
+  /** Show Battery Level */
+  BATTERY = 4,
 }
 export const isButtonAction = createIsEnumInteger(ButtonAction)
 
