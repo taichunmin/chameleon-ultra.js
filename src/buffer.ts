@@ -634,7 +634,15 @@ export class Buffer extends Uint8Array {
   write (val: string, offset?: number, encoding?: Encoding): number
   write (val: string, offset?: number, end?: number, encoding?: Encoding): number
 
-  write (val: any, offset: any = 0, length: any = this.length - offset, encoding: Encoding = 'utf8'): number {
+  write (val: any, offset: any = 0, length: any = this.length - offset, encoding: any = 'utf8'): number {
+    if (_.isString(offset)) [offset, length, encoding] = [0, this.length, offset]
+    else if (_.isString(length)) [length, encoding] = [this.length - offset, length]
+
+    if (!_.isString(val)) throw new TypeError('Invalid type of val')
+    if (!_.isSafeInteger(offset)) throw new TypeError('Invalid type of offset')
+    if (!_.isSafeInteger(length)) throw new TypeError('Invalid type of length')
+    if (!Buffer.isEncoding(encoding)) throw new TypeError(`Unknown encoding: ${encoding as string}`)
+
     const buf = Buffer.fromString(val, encoding)
     length = Math.min(buf.length, length, this.length - offset)
     this.set(buf.subarray(0, length), offset)

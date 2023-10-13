@@ -962,10 +962,13 @@ export class ChameleonUltra {
     if (!isButtonAction(action)) throw new TypeError('Invalid button action')
     this._clearRxBufs()
     const cmd = Cmd.SET_BUTTON_PRESS_CONFIG // cmd = 1027
-    const data = new Buffer(2)
-    data.write(btn, 0, 'utf8')
-    data[1] = action
-    await this._writeCmd({ cmd, data })
+    await this._writeCmd({
+      cmd,
+      data: Buffer.concat([
+        Buffer.fromUtf8String(btn),
+        new Buffer([action]),
+      ]),
+    })
     await this._readRespTimeout({ cmd })
   }
 
@@ -1011,10 +1014,13 @@ export class ChameleonUltra {
     if (!isButtonAction(action)) throw new TypeError('Invalid button action')
     this._clearRxBufs()
     const cmd = Cmd.SET_LONG_BUTTON_PRESS_CONFIG // cmd = 1029
-    const data = new Buffer(2)
-    data.write(btn, 0)
-    data[1] = action
-    await this._writeCmd({ cmd, data })
+    await this._writeCmd({
+      cmd,
+      data: Buffer.concat([
+        Buffer.fromUtf8String(btn),
+        new Buffer([action]),
+      ]),
+    })
     await this._readRespTimeout({ cmd })
   }
 
