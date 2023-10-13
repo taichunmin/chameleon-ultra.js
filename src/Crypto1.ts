@@ -695,7 +695,7 @@ export default class Crypto1 {
    *   nt1: 0x1E6D9228,
    *   nr1: 0x6FB8B4A8,
    *   ar1: 0xEF4039FB,
-   * }).hex) // A9AC67832330
+   * }).toString('hex')) // A9AC67832330
    * console.log(Crypto1.mfkey32v2({
    *   uid: Buffer.fromHex('65535D33'),
    *   nt0: Buffer.fromHex('CB7B9ED9'),
@@ -704,7 +704,7 @@ export default class Crypto1 {
    *   nt1: Buffer.fromHex('1E6D9228'),
    *   nr1: Buffer.fromHex('6FB8B4A8'),
    *   ar1: Buffer.fromHex('EF4039FB'),
-   * }).hex) // A9AC67832330
+   * }).toString('hex')) // A9AC67832330
    * console.log(Crypto1.mfkey32v2({
    *   uid: '65535D33',
    *   nt0: 'CB7B9ED9',
@@ -713,7 +713,7 @@ export default class Crypto1 {
    *   nt1: '1E6D9228',
    *   nr1: '6FB8B4A8',
    *   ar1: 'EF4039FB',
-   * }).hex) // A9AC67832330
+   * }).toString('hex')) // A9AC67832330
    * ```
    */
   static mfkey32v2 (args: Mfkey32v2Args): Buffer {
@@ -749,21 +749,21 @@ export default class Crypto1 {
    *   nr: 0xFEDAC6D2,
    *   ar: 0xCF0A3C7E,
    *   at: 0xF4A81AF8,
-   * }).hex) // A9AC67832330
+   * }).toString('hex')) // A9AC67832330
    * console.log(Crypto1.mfkey32v2({
    *   uid: Buffer.fromHex('65535D33'),
    *   nt: Buffer.fromHex('2C198BE4'),
    *   nr: Buffer.fromHex('FEDAC6D2'),
    *   ar: Buffer.fromHex('CF0A3C7E'),
    *   at: Buffer.fromHex('F4A81AF8'),
-   * }).hex) // A9AC67832330
+   * }).toString('hex')) // A9AC67832330
    * console.log(Crypto1.mfkey32v2({
    *   uid: '65535D33',
    *   nt: '2C198BE4',
    *   nr: 'FEDAC6D2',
    *   ar: 'CF0A3C7E',
    *   at: 'F4A81AF8',
-   * }).hex) // A9AC67832330
+   * }).toString('hex')) // A9AC67832330
    * ```
    */
   static mfkey64 (args: Mfkey64Args): Buffer {
