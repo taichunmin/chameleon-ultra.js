@@ -66,7 +66,7 @@ block content
             option(value="1") From block 0
         .input-group.input-group-sm.letter-spacing-n1px.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center write
-          select.form-control.form-control-sm(v-model.number="ss.antiColl")
+          select.form-control.form-control-sm(v-model.number="ss.write")
             option(value="0") Normal
             option(value="1") Denied
             option(value="2") Deceive
@@ -193,7 +193,7 @@ block script
         },
         ss: {
           antiColl: 0,
-          atqa: '0400',
+          atqa: '0004',
           ats: '',
           body: getEmptyCardBody(),
           detection: 0,
@@ -604,7 +604,7 @@ block script
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             const tmp = {
               uid: 'deadbeef',
-              atqa: '0400',
+              atqa: '0004',
               sak: '08',
               ats: '',
               body: getEmptyCardBody(),
