@@ -2155,8 +2155,10 @@ export class ChameleonUltra {
     try {
       await this.mf1Halt()
       const resp1 = await this.cmdHf14aRaw({ data: new Buffer([0x40]), dataBitLength: 7, keepRfField: true }) // 0x40 (7)
+        .catch(err => { throw _.merge(new Error(`Gen1a auth failed 1: ${err.message}`), { originalError: err }) })
       if (resp1[0] !== 0x0A) throw new Error('Gen1a auth failed 1')
       const resp2 = await this.cmdHf14aRaw({ data: new Buffer([0x43]), keepRfField: true }) // 0x43
+        .catch(err => { throw _.merge(new Error(`Gen1a auth failed 2: ${err.message}`), { originalError: err }) })
       if (resp2[0] !== 0x0A) throw new Error('Gen1a auth failed 2')
       return await cb()
     } finally {

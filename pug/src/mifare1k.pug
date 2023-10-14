@@ -249,12 +249,11 @@ block script
               ...this.ss,
               name: await ultra.cmdSlotGetFreqName(this.ss.slot, FreqType.HF),
               ..._.mapValues(await ultra.cmdMf1GetEmuSettings(), _.toInteger), // antiColl, detection, gen1a, gen2, write
-              ..._.mapValues(await ultra.cmdHf14aGetAntiCollData(), (buf, key) => (key === 'atqa' ? buf.reverse() : buf).toString('hex')),
             })
+            this.mfCardSetAntiColl(await ultra.cmdHf14aGetAntiCollData())
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              const sectorData = await ultra.cmdMf1EmuReadBlock(i << 2, 4)
-              this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
+              this.mfCardSetSector(i, await ultra.cmdMf1EmuReadBlock(i << 2, 4))
             }
             await Swal.fire({ icon: 'success', title: 'Load success' })
           } catch (err) {
@@ -318,10 +317,10 @@ block script
             this.showLoading(genSwalCfg(0))
             const ultra = this.ultra
             await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+            this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              const sectorData = await ultra.mf1Gen1aReadBlocks(i << 2, 4)
-              this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
+              this.mfCardSetSector(i, await ultra.mf1Gen1aReadBlocks(i << 2, 4))
               this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
@@ -360,20 +359,22 @@ block script
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
             })
             this.showLoading(genSwalCfg(0))
+            const keys = this.mfCardGetKeys()
             const ultra = this.ultra
             await ultra.cmdChangeDeviceMode(DeviceMode.READER)
-            const keys = _.chain(Buffer.from(this.ss.keys, 'hex').chunk(6))
-              .filter(key => Buffer.isBuffer(key) && key.length === 6)
-              .uniqBy(key => key.toString('hex'))
-              .value()
-            if (keys.length === 0) throw new Error('No keys found')
+            this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
             const failed = []
             for (let i = 0; i < 16; i++) {
               try {
                 if (!this.ss.toggle[i]) continue
                 const { data: sectorData, success } = await ultra.mf1ReadSectorByKeys(i, keys)
-                this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
+                this.mfCardSetSector(i, sectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
+                // reorder keys: found key will be put to first of keys
+                for (const key1 of _.map([48, 58], i => sectorData.subarray(i, i + 6))) {
+                  const idx = _.findIndex(keys, key2 => key1.equals(key2))
+                  if (idx >= 0) keys.unshift(...keys.splice(idx, 1))
+                }
               } catch (err) {
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
                 console.error(err)
@@ -396,13 +397,9 @@ block script
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Writing Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
             })
             this.showLoading(genSwalCfg(0))
+            const keys = this.mfCardGetKeys()
             const ultra = this.ultra
             await ultra.cmdChangeDeviceMode(DeviceMode.READER)
-            const keys = _.chain(Buffer.from(this.ss.keys, 'hex').chunk(6))
-              .filter(key => Buffer.isBuffer(key) && key.length === 6)
-              .uniqBy(key => key.toString('hex'))
-              .value()
-            if (keys.length === 0) throw new Error('No keys found')
             const failed = []
             for (let i = 0; i < 16; i++) {
               try {
@@ -510,7 +507,7 @@ block script
                 if (blockbuf.length !== 16) continue
                 blockbuf.copy(sectorData, j * 16)
               }
-              this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
+              this.mfCardSetSector(i, sectorData)
             }
           }
         },
@@ -537,10 +534,7 @@ block script
               blockNo++
             }
           }
-          for (let i = 0; i < 16; i++) {
-            const sectorData = buf.subarray(i * 64, (i + 1) * 64)
-            this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
-          }
+          for (let i = 0; i < 16; i++) this.mfCardSetSector(i, buf.subarray(i * 64))
         },
         async btnCardExport () {
           const card = new Buffer(1024)
@@ -633,6 +627,26 @@ block script
             }
             Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
           })
+        },
+        mfCardSetAntiColl (hf14aAntiColl) {
+          for (const k of ['uid', 'atqa', 'sak', 'ats']) {
+            let buf = hf14aAntiColl?.[k] ?? new Buffer()
+            if (k === 'atqa') buf = buf.reverse()
+            this.$set(this.ss, k, buf.toString('hex'))
+          }
+        },
+        mfCardSetSector (sectorNo, sectorData) {
+          const blocks = _.times(4, i => sectorData.subarray(i * 16, i * 16 + 16))
+          const sectorEml = _.map(blocks, block => block.toString('hex')).join('\n')
+          this.$set(this.ss.body, sectorNo, sectorEml)
+        },
+        mfCardGetKeys () {
+          const keys = _.chain(Buffer.from(this.ss.keys, 'hex').chunk(6))
+            .filter(key => Buffer.isBuffer(key) && key.length === 6)
+            .uniqBy(key => key.toString('hex'))
+            .value()
+          if (keys.length === 0) throw new Error('No keys found')
+          return keys
         },
         isValidBlock (str) {
           return /^([\dA-Fa-f]{32}\s*){4}$/.test(str)
