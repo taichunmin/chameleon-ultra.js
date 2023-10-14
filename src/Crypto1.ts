@@ -535,8 +535,8 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static recover (ctx: RecoverContext): void {
-    const { evenParity32, extendTable, recover, toBit, toBool, toUint32 } = Crypto1
+  static mfkeyRecoverState (ctx: MfkeyRecoverContext): void {
+    const { evenParity32, extendTable, mfkeyRecoverState, toBit, toBool, toUint32 } = Crypto1
     const { evens, odds, states } = ctx
     if (ctx.rem < 0) {
       for (let i = 0; i < evens.s; i++) {
@@ -573,7 +573,7 @@ export default class Crypto1 {
         _.sortedIndex(evens.d.subarray(0, evens.s), oddBucket),
         _.sortedIndex(odds.d.subarray(0, odds.s), evenBucket),
       ]
-      recover({
+      mfkeyRecoverState({
         ...ctx,
         evens: { d: evens.d.subarray(evenStart), s: evens.s - evenStart },
         odds: { d: odds.d.subarray(oddStart), s: odds.s - oddStart },
@@ -592,7 +592,7 @@ export default class Crypto1 {
    * @group Internal
    */
   static lfsrRecovery32 (ks2: number, input: number): Crypto1[] {
-    const { beBit, extendTableSimple, filter, recover, toBit, toUint32 } = Crypto1
+    const { beBit, extendTableSimple, filter, mfkeyRecoverState, toBit, toUint32 } = Crypto1
     const evens = { s: 0, d: new Uint32Array(1 << 21) } // possible evens for ks2
     const odds = { s: 0, d: new Uint32Array(1 << 21) } // possible odds for ks2
     const states: Crypto1[] = [] // possible states for ks2
@@ -615,7 +615,7 @@ export default class Crypto1 {
     }
 
     input = (input << 16) | (input >> 16 & 0xff) | (input & 0xff00) // Byte swapping
-    recover({ eks, evens, odds, oks, states, rem: 11, input: input << 1 })
+    mfkeyRecoverState({ eks, evens, odds, oks, states, rem: 11, input: input << 1 })
     return states
   }
 
@@ -805,10 +805,10 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static nestedRecover (args: NestedRecoverArgs): Buffer[] {
+  static nestedRecoverState (args: NestedRecoverStateArgs): Buffer[] {
     const { lfsrRecovery32, toUint32 } = Crypto1
     const keyCnt = new Map<number, number>()
-    for (const { ntp, ks1 } of args.ntpks1s) {
+    for (const { ntp, ks1 } of args.atks) {
       const tmp = toUint32(ntp ^ args.uid)
       const states = lfsrRecovery32(ks1, tmp)
       for (const state of states) {
@@ -834,7 +834,7 @@ export default class Crypto1 {
    * const args = {
    *   uid: 'b908a16d',
    *   keyType: Mf1KeyType.KEY_A,
-   *   nts: [
+   *   atks: [
    *     { nt1: '01200145', nt2: '81901975' },
    *     { nt1: '01200145', nt2: 'cdd400f3' },
    *   ],
@@ -844,10 +844,10 @@ export default class Crypto1 {
    * ```
    */
   static staticnested (args: StaticNestedArgs): Buffer[] {
-    const { castToUint32, nestedRecover, prngSuccessor, toUint32 } = Crypto1
+    const { castToUint32, nestedRecoverState, prngSuccessor, toUint32 } = Crypto1
 
     // dist
-    const firstNt = castToUint32(args.nts[0].nt1)
+    const firstNt = castToUint32(args.atks[0].nt1)
     let dist = 0
     // st gen1: There is no loophole in this generation. This tag can be decrypted with the default parameter value 160!
     if (firstNt === 0x01200145) dist = 160
@@ -855,9 +855,9 @@ export default class Crypto1 {
     else if (firstNt === 0x009080A2) dist = args.keyType === Mf1KeyType.KEY_A ? 160 : 161
     if (dist === 0) throw new Error('unknown static nonce')
 
-    return nestedRecover({
+    return nestedRecoverState({
       uid: castToUint32(args.uid),
-      ntpks1s: _.map(args.nts, tmp => {
+      atks: _.map(args.atks, tmp => {
         const [nt1, nt2] = _.map([tmp.nt1, tmp.nt2], castToUint32)
         const ntp = prngSuccessor(nt1, dist)
         const ks1 = toUint32(nt2 ^ ntp)
@@ -876,7 +876,7 @@ export default class Crypto1 {
    * const args = {
    *   uid: '877209e1',
    *   dist: '00000080',
-   *   nts: [
+   *   atks: [
    *     { nt1: 'b4a08a09', nt2: '8a15bbf2', par: 5 },
    *     { nt1: '1613293d', nt2: '912e6760', par: 7 }
    *   ]
@@ -886,22 +886,22 @@ export default class Crypto1 {
    * ```
    */
   static nested (args: NestedArgs): Buffer[] {
-    const { castToUint32, nestedIsValidNonce, nestedRecover, prngSuccessor, toUint32 } = Crypto1
+    const { castToUint32, nestedIsValidNonce, nestedRecoverState, prngSuccessor, toUint32 } = Crypto1
 
     const dist = castToUint32(args.dist)
-    const ntpks1s: NestedRecoverArgs['ntpks1s'] = []
+    const atks: NestedRecoverStateArgs['atks'] = []
 
-    for (let i = 0; i < args.nts.length; i++) {
-      const tmp = args.nts[i]
+    for (let i = 0; i < args.atks.length; i++) {
+      const tmp = args.atks[i]
       const [nt1, nt2, par] = _.map([tmp.nt1, tmp.nt2, tmp.par], castToUint32)
       let ntp = prngSuccessor(nt1, dist - 14)
       for (let j = 0; j < 29; j++, ntp = prngSuccessor(ntp, 1)) {
         const ks1 = toUint32(nt2 ^ ntp)
-        if (nestedIsValidNonce(ntp, nt2, ks1, par)) ntpks1s.push({ ntp, ks1 })
+        if (nestedIsValidNonce(ntp, nt2, ks1, par)) atks.push({ ntp, ks1 })
       }
     }
 
-    return nestedRecover({ uid: castToUint32(args.uid), ntpks1s })
+    return nestedRecoverState({ uid: castToUint32(args.uid), atks })
   }
 
   /**
@@ -919,7 +919,7 @@ export default class Crypto1 {
 
 type UInt32Like = Buffer | number | string
 
-interface RecoverContext {
+interface MfkeyRecoverContext {
   eks: number
   evens: RecoverContextUint32Array
   input: number
@@ -977,9 +977,9 @@ export interface DecryptArgs {
   key: Buffer
 }
 
-export interface NestedRecoverArgs {
+export interface NestedRecoverStateArgs {
   uid: number
-  ntpks1s: Array<{
+  atks: Array<{
     ntp: number
     ks1: number
   }>
@@ -989,7 +989,7 @@ export interface StaticNestedArgs {
   /** The 4-bytes uid in the authentication. */
   uid: UInt32Like
   keyType: Mf1KeyType
-  nts: Array<{
+  atks: Array<{
     nt1: UInt32Like
     nt2: UInt32Like
   }>
@@ -999,7 +999,7 @@ export interface NestedArgs {
   /** The 4-bytes uid in the authentication. */
   uid: UInt32Like
   dist: UInt32Like
-  nts: Array<{
+  atks: Array<{
     nt1: UInt32Like
     nt2: UInt32Like
     par: UInt32Like

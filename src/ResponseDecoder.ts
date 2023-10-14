@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { type AnimationMode, type ButtonAction, type DarksideStatus, type EmuMf1WriteMode, type Mf1PrngType, type TagType } from './ChameleonUltra'
+import { type AnimationMode, type ButtonAction, type DarksideStatus, type Mf1EmuWriteMode, type Mf1PrngType, type TagType } from './ChameleonUltra'
 
 export class SlotInfo {
   hfTagType: TagType
@@ -129,10 +129,10 @@ export class Hf14aAntiColl {
 
 export class Mf1AcquireStaticNestedRes {
   uid: Buffer
-  nts: Array<{ nt1: Buffer, nt2: Buffer }>
+  atks: Array<{ nt1: Buffer, nt2: Buffer }>
 
-  constructor (uid: Buffer, nts: Array<{ nt1: Buffer, nt2: Buffer }>) {
-    ;[this.uid, this.nts] = [uid, nts]
+  constructor (uid: Buffer, atks: Array<{ nt1: Buffer, nt2: Buffer }>) {
+    ;[this.uid, this.atks] = [uid, atks]
   }
 
   static fromCmd2003 (buf: Buffer): Mf1AcquireStaticNestedRes {
@@ -142,12 +142,12 @@ export class Mf1AcquireStaticNestedRes {
       _.map(buf.subarray(4).chunk(8), chunk => ({
         nt1: chunk.subarray(0, 4),
         nt2: chunk.subarray(4, 8),
-      })), // nts
+      })), // atks
     )
   }
 }
 
-export class Mf1DarksideArgs {
+export class Mf1DarksideRes {
   status: DarksideStatus
   uid?: Buffer
   nt1?: Buffer
@@ -174,10 +174,10 @@ export class Mf1DarksideArgs {
     this.ar = ar
   }
 
-  static fromCmd2004 (buf: Buffer): Mf1DarksideArgs {
+  static fromCmd2004 (buf: Buffer): Mf1DarksideRes {
     if (!Buffer.isBuffer(buf) || !_.includes([1, 33], buf.length)) throw new TypeError('buf should be a Buffer with length 1 or 33')
-    if (buf.length === 1) return new Mf1DarksideArgs(buf[0])
-    return new Mf1DarksideArgs(
+    if (buf.length === 1) return new Mf1DarksideRes(buf[0])
+    return new Mf1DarksideRes(
       buf[0], // status
       buf.subarray(1, 5), // uid
       buf.subarray(5, 9), // nt1
@@ -189,7 +189,7 @@ export class Mf1DarksideArgs {
   }
 }
 
-export class Mf1NtDistanceArgs {
+export class Mf1NtDistanceRes {
   uid: Buffer
   dist: Buffer
 
@@ -197,9 +197,9 @@ export class Mf1NtDistanceArgs {
     ;[this.uid, this.dist] = [uid, dist]
   }
 
-  static fromCmd2005 (buf: Buffer): Mf1NtDistanceArgs {
+  static fromCmd2005 (buf: Buffer): Mf1NtDistanceRes {
     if (!Buffer.isBuffer(buf) || buf.length !== 8) throw new TypeError('buf should be a Buffer with length 8')
-    return new Mf1NtDistanceArgs(
+    return new Mf1NtDistanceRes(
       buf.subarray(0, 4), // uid
       buf.subarray(4, 8), // distance
     )
@@ -284,9 +284,9 @@ export class Mf1EmuSettings {
   gen1a: boolean
   gen2: boolean
   antiColl: boolean
-  write: EmuMf1WriteMode
+  write: Mf1EmuWriteMode
 
-  constructor (detection: boolean, gen1a: boolean, gen2: boolean, antiColl: boolean, write: EmuMf1WriteMode) {
+  constructor (detection: boolean, gen1a: boolean, gen2: boolean, antiColl: boolean, write: Mf1EmuWriteMode) {
     this.detection = detection
     this.gen1a = gen1a
     this.gen2 = gen2
