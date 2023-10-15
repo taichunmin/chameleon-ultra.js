@@ -280,11 +280,18 @@ export class ChameleonUltra {
 
   /**
    * Send a command to device.
-   * @param args
+   * @param opts.cmd The command to be sent to device.
+   * @param opts.status The status is always `0x0000`.
+   * @param opts.data `<= 512 bytes`, the data to be sent. This payload depends on the exact command being used. See [Packet payloads](https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/docs/protocol.md#packet-payloads) for more infomation.
    * @internal
    * @group Internal
    */
-  async _writeCmd ({ cmd, status = 0, data = Buffer.allocUnsafe(0) }: WriteCmdArgs): Promise<void> {
+  async _writeCmd (opts: {
+    cmd: Cmd
+    status?: RespStatus
+    data?: Buffer
+  }): Promise<void> {
+    const { cmd, status = 0, data = Buffer.allocUnsafe(0) } = opts
     const buf = Buffer.allocUnsafe(data.length + 10)
     START_OF_FRAME.copy(buf, 0) // SOF + SOF LRC Byte
     // head info
@@ -1276,9 +1283,15 @@ export class ChameleonUltra {
   }
 
   /**
-   * Check if the tag is suffer from mifare darkside attack.
-   * @param args
-   * @returns The detect result of mifare darkside attack.
+   * Use a known key to do the mifare static nested attack.
+   * @param known The info of known key.
+   * @param known.block The block of known key.
+   * @param known.key The known key.
+   * @param known.keyType The key type of known key.
+   * @param target The info of target key to be attack.
+   * @param target.block The block of target key.
+   * @param target.keyType The key type of target key.
+   * @returns The result of mifare static nested attack.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1288,17 +1301,21 @@ export class ChameleonUltra {
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1AcquireStaticNested({
-   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
-   *     dst: { block: 4, keyType: Mf1KeyType.KEY_A },
+   *     block: 0,
+   *     keyType: Mf1KeyType.KEY_A,
+   *     key
+   *   }, {
+   *     block: 4,
+   *     keyType: Mf1KeyType.KEY_A
    *   })
    *   const res = {
    *     uid: res1.uid.toString('hex'),
-   *     nts: _.map(res1.nts, item => ({ nt1: item.nt1.toString('hex'), nt2: item.nt2.toString('hex') })),
+   *     atks: _.map(res1.atks, item => ({ nt1: item.nt1.toString('hex'), nt2: item.nt2.toString('hex') })),
    *   }
    *   console.log(res)
    *   // {
    *   //   uid: 'b908a16d',
-   *   //   nts: [
+   *   //   atks: [
    *   //     { nt1: '01200145', nt2: '81901975' },
    *   //     { nt1: '01200145', nt2: 'cdd400f3' },
    *   //   ],
@@ -1306,21 +1323,25 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1AcquireStaticNested ({
-    src: { block: srcBlock, keyType: srcKeyType, key: srcKey },
-    dst: { block: dstBlock, keyType: dstKeyType },
-  }: CmdMf1AcquireStaticNestedArgs): Promise<Decoder.Mf1AcquireStaticNestedRes> {
-    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('src.key should be a Buffer with length 6')
-    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid src.keyType')
-    if (!isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dst.keyType')
+  async cmdMf1AcquireStaticNested (known: {
+    block: number
+    key: Buffer
+    keyType: Mf1KeyType
+  }, target: {
+    block: number
+    keyType: Mf1KeyType
+  }): Promise<Decoder.Mf1AcquireStaticNestedRes> {
+    if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
+    if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_STATIC_NESTED_ACQUIRE // cmd = 2003
     await this._writeCmd({
       cmd,
       data: Buffer.concat([
-        new Buffer([srcKeyType, srcBlock]),
-        srcKey,
-        new Buffer([dstKeyType, dstBlock]),
+        new Buffer([known.keyType, known.block]),
+        known.key,
+        new Buffer([target.keyType, target.block]),
       ]),
     })
     return Decoder.Mf1AcquireStaticNestedRes.fromCmd2003((await this._readRespTimeout({ cmd }))?.data)
@@ -1336,17 +1357,20 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @alpha
    */
-  async cmdMf1AcquireDarkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax: number = 15): Promise<Decoder.Mf1DarksideArgs> {
+  async cmdMf1AcquireDarkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax: number = 15): Promise<Decoder.Mf1DarksideRes> {
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_DARKSIDE_ACQUIRE // cmd = 2004
     await this._writeCmd({ cmd, data: new Buffer([keyType, block, isFirst ? 1 : 0, syncMax]) })
-    return Decoder.Mf1DarksideArgs.fromCmd2004((await this._readRespTimeout({ cmd, timeout: syncMax * 1e4 }))?.data)
+    return Decoder.Mf1DarksideRes.fromCmd2004((await this._readRespTimeout({ cmd, timeout: syncMax * 1e4 }))?.data)
   }
 
   /**
    * Dectect the nt distance of mifare protocol.
-   * @param args
+   * @param known The info of known key.
+   * @param known.block The block of known key.
+   * @param known.key The known key.
+   * @param known.keyType The key type of known key.
    * @returns The nt distance of mifare protocol.
    * @group Mifare Classic Related
    * @example
@@ -1356,17 +1380,19 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
-   *   const res1 = await ultra.cmdMf1TestNtDistance({
-   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
-   *   })
+   *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
    *   const res2 = await ultra.cmdMf1AcquireNested({
-   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
-   *     dst: { block: 4, keyType: Mf1KeyType.KEY_A },
+   *     block: 0,
+   *     keyType: Mf1KeyType.KEY_A,
+   *     key
+   *   }, {
+   *     block: 4,
+   *     keyType: Mf1KeyType.KEY_A
    *   })
    *   const res = {
    *     uid: res1.uid.toString('hex'),
    *     dist: res1.dist.toString('hex'),
-   *     nts: _.map(res2, item => ({
+   *     atks: _.map(res2, item => ({
    *       nt1: item.nt1.toString('hex'),
    *       nt2: item.nt2.toString('hex'),
    *       par: item.par,
@@ -1376,7 +1402,7 @@ export class ChameleonUltra {
    *   // {
    *   //   uid: '877209e1',
    *   //   dist: '00000080',
-   *   //   nts: [
+   *   //   atks: [
    *   //     { nt1: '35141fcb', nt2: '40430522', par: 7 },
    *   //     { nt1: 'cff2b3ef', nt2: '825ba8ea', par: 5 },
    *   //   ]
@@ -1384,21 +1410,29 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1TestNtDistance ({
-    src: { block: srcBlock, keyType: srcKeyType, key: srcKey },
-  }: CmdTestMf1NtDistanceArgs): Promise<Decoder.Mf1NtDistanceArgs> {
-    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid src.keyType')
-    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('src.key should be a Buffer with length 6')
+  async cmdMf1TestNtDistance (known: {
+    block: number
+    key: Buffer
+    keyType: Mf1KeyType
+  }): Promise<Decoder.Mf1NtDistanceRes> {
+    if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
     this._clearRxBufs()
     const cmd = Cmd.MF1_DETECT_NT_DIST // cmd = 2005
-    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([srcKeyType, srcBlock]), srcKey]) })
-    return Decoder.Mf1NtDistanceArgs.fromCmd2005((await this._readRespTimeout({ cmd }))?.data)
+    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([known.keyType, known.block]), known.key]) })
+    return Decoder.Mf1NtDistanceRes.fromCmd2005((await this._readRespTimeout({ cmd }))?.data)
   }
 
   /**
-   * Acquire the data from mifare nested attack.
-   * @param args
-   * @returns The data from mifare nested attack.
+   * Use a known key to do the mifare nested attack.
+   * @param known The info of known key.
+   * @param known.block The block of known key.
+   * @param known.key The known key.
+   * @param known.keyType The key type of known key.
+   * @param target The info of target key to be attack.
+   * @param target.block The block of target key.
+   * @param target.keyType The key type of target key.
+   * @returns The result of mifare nested attack.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1417,7 +1451,7 @@ export class ChameleonUltra {
    *   const res = {
    *     uid: res1.uid.toString('hex'),
    *     dist: res1.dist.toString('hex'),
-   *     nts: _.map(res2, item => ({
+   *     atks: _.map(res2, item => ({
    *       nt1: item.nt1.toString('hex'),
    *       nt2: item.nt2.toString('hex'),
    *       par: item.par,
@@ -1427,7 +1461,7 @@ export class ChameleonUltra {
    *   // {
    *   //   uid: '877209e1',
    *   //   dist: '00000080',
-   *   //   nts: [
+   *   //   atks: [
    *   //     { nt1: '35141fcb', nt2: '40430522', par: 7 },
    *   //     { nt1: 'cff2b3ef', nt2: '825ba8ea', par: 5 },
    *   //   ]
@@ -1435,21 +1469,25 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1AcquireNested ({
-    src: { block: srcBlock, keyType: srcKeyType, key: srcKey },
-    dst: { block: dstBlock, keyType: dstKeyType },
-  }: CmdMf1AcquireNestedArgs): Promise<Decoder.Mf1NestedRes[]> {
-    if (!Buffer.isBuffer(srcKey) || srcKey.length !== 6) throw new TypeError('src.key should be a Buffer with length 6')
-    if (!isMf1KeyType(srcKeyType)) throw new TypeError('Invalid src.keyType')
-    if (!isMf1KeyType(dstKeyType)) throw new TypeError('Invalid dst.keyType')
+  async cmdMf1AcquireNested (known: {
+    block: number
+    key: Buffer
+    keyType: Mf1KeyType
+  }, target: {
+    block: number
+    keyType: Mf1KeyType
+  }): Promise<Decoder.Mf1NestedRes[]> {
+    if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
+    if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_NESTED_ACQUIRE // cmd = 2006
     await this._writeCmd({
       cmd,
       data: Buffer.concat([
-        new Buffer([srcKeyType, srcBlock]),
-        srcKey,
-        new Buffer([dstKeyType, dstBlock]),
+        new Buffer([known.keyType, known.block]),
+        known.key,
+        new Buffer([target.keyType, target.block]),
       ]),
     })
     return Decoder.Mf1NestedRes.fromCmd2006((await this._readRespTimeout({ cmd }))?.data)
@@ -1457,7 +1495,10 @@ export class ChameleonUltra {
 
   /**
    * Check if the key is valid for specified block and key type.
-   * @param args
+   * @param opts The info of key to be checked.
+   * @param opts.block The block of key to be checked.
+   * @param opts.keyType The type of key to be checked.
+   * @param opts.key The key to be checked.
    * @returns `true` if the key is valid for specified block and key type.
    * @group Mifare Classic Related
    * @example
@@ -1475,7 +1516,12 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1CheckBlockKey ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdCheckMf1BlockKeyArgs = {}): Promise<boolean> {
+  async cmdMf1CheckBlockKey (opts: {
+    block: number
+    keyType: Mf1KeyType
+    key: Buffer
+  }): Promise<boolean> {
+    const { block, keyType, key } = opts
     try {
       if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
       if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
@@ -1491,9 +1537,12 @@ export class ChameleonUltra {
   }
 
   /**
-   * Read data from specified block.
-   * @param args
-   * @returns The data read from specified block.
+   * Read block data from a mifare tag.
+   * @param opts The block to be read and the key info of the block.
+   * @param opts.block The block to be read.
+   * @param opts.keyType The key type of the block.
+   * @param opts.key The key of the block.
+   * @returns The block data read from a mifare tag.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1511,7 +1560,12 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1ReadBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex') }: CmdReadMf1BlockArgs = {}): Promise<Buffer> {
+  async cmdMf1ReadBlock (opts: {
+    block: number
+    keyType: Mf1KeyType
+    key: Buffer
+  }): Promise<Buffer> {
+    const { block, keyType, key } = opts
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
     this._clearRxBufs()
@@ -1521,8 +1575,12 @@ export class ChameleonUltra {
   }
 
   /**
-   * Write data to specified block.
-   * @param args
+   * Write data to a mifare tag.
+   * @param opts The block to be written and the key info of the block.
+   * @param opts.block The block to be written.
+   * @param opts.keyType The key type of the block.
+   * @param opts.key The key of the block.
+   * @param opts.data The block data to be written.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1541,7 +1599,13 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1WriteBlock ({ block = 0, keyType = Mf1KeyType.KEY_A, key = Buffer.from('FFFFFFFFFFFF', 'hex'), data }: CmdWriteMf1BlockArgs = {}): Promise<void> {
+  async cmdMf1WriteBlock (opts: {
+    block: number
+    keyType: Mf1KeyType
+    key: Buffer
+    data: Buffer
+  }): Promise<void> {
+    const { block, keyType, key, data } = opts
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
     if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
@@ -1584,21 +1648,40 @@ export class ChameleonUltra {
 
   /**
    * Send raw NfcA data to a tag and receive the response.
-   * @param args
+   * @param opts.activateRfField Set `true` to activate RF field. If `data` is not empty or `autoSelect` is true, `activateRfField` will be set to `true`.
+   * @param opts.appendCrc Set `true` to add CRC before sending data.
+   * @param opts.autoSelect Set `true` to automatically select card before sending data.
+   * @param opts.checkResponseCrc Set `true` to verify CRC of response and remove. If CRC of response is valid, CRC will be removed from response, otherwise will throw HF_ERR_CRC error.
+   * @param opts.data The data to be send. If `appendCrc` is `true`, the maximum length of data is `62`, otherwise is `64`.
+   * @param opts.dataBitLength Number of bits to send. Useful for send partial byte. `dataBitLength` is incompatible with `appendCrc`.
+   * @param opts.keepRfField Set `true` to keep the RF field active after sending.
+   * @param opts.waitResponse Default value is `true`. Set `false` to skip reading tag response.
+   * @param opts.timeout Default value is `1000 ms`. Maximum timeout for reading tag response in ms while `waitResponse` is `true`.
    * @returns The response from tag.
    * @group Reader Related
    */
-  async cmdHf14aRaw ({
-    activateRfField = false,
-    waitResponse = true,
-    appendCrc = false,
-    autoSelect = false,
-    keepRfField = false,
-    checkResponseCrc = false,
-    dataBitLength = 0,
-    timeout = 1000,
-    data = new Buffer(),
-  }: CmdHf14aRawArgs): Promise<Buffer> {
+  async cmdHf14aRaw (opts: {
+    activateRfField?: boolean
+    appendCrc?: boolean
+    autoSelect?: boolean
+    checkResponseCrc?: boolean
+    data?: Buffer
+    dataBitLength?: number
+    keepRfField?: boolean
+    waitResponse?: boolean
+    timeout?: number
+  }): Promise<Buffer> {
+    let {
+      activateRfField = false,
+      waitResponse = true,
+      appendCrc = false,
+      autoSelect = false,
+      keepRfField = false,
+      checkResponseCrc = false,
+      dataBitLength = 0,
+      timeout = 1000,
+      data = new Buffer(),
+    } = opts
     const buf1 = new Buffer(data.length + 5)
 
     // options
@@ -1695,7 +1778,10 @@ export class ChameleonUltra {
 
   /**
    * Set the mifare anti-collision data of actived slot.
-   * @param args
+   * @param opts.uid The new uid to be set.
+   * @param opts.atqa `2 bytes`, the new atqa to be set.
+   * @param opts.sak `1 byte`, the new sak to be set.
+   * @param opts.ats The new ats to be set.
    * @group Emulator Related
    * @example
    * ```js
@@ -1708,7 +1794,13 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdHf14aSetAntiCollData ({ uid, atqa, sak, ats = new Buffer() }: Decoder.Hf14aAntiColl): Promise<void> {
+  async cmdHf14aSetAntiCollData (opts: {
+    uid: Buffer
+    atqa: Buffer
+    sak: Buffer
+    ats?: Buffer
+  }): Promise<void> {
+    const { uid, atqa, sak, ats = new Buffer() } = opts
     if (!Buffer.isBuffer(uid) || !_.includes([4, 7, 10], uid.length)) throw new TypeError('uid should be a Buffer with length 4, 7 or 10')
     if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
     if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
@@ -1972,7 +2064,7 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1GetWriteMode (): Promise<EmuMf1WriteMode> {
+  async cmdMf1GetWriteMode (): Promise<Mf1EmuWriteMode> {
     this._clearRxBufs()
     const cmd = Cmd.MF1_GET_WRITE_MODE // cmd = 4016
     await this._writeCmd({ cmd })
@@ -1990,8 +2082,8 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1SetWriteMode (mode: EmuMf1WriteMode): Promise<void> {
-    if (!isEmuMf1WriteMode(mode)) throw new TypeError('Invalid emu write mode')
+  async cmdMf1SetWriteMode (mode: Mf1EmuWriteMode): Promise<void> {
+    if (!isMf1EmuWriteMode(mode)) throw new TypeError('Invalid emu write mode')
     this._clearRxBufs()
     const cmd = Cmd.MF1_SET_WRITE_MODE // cmd = 4017
     await this._writeCmd({ cmd, data: new Buffer([mode]) })
@@ -2080,8 +2172,7 @@ export class ChameleonUltra {
 
   /**
    * Read 4 pages (16 bytes) from Mifare Ultralight
-   * @param args
-   * @param args.pageOffset page number to read
+   * @param opts.pageOffset page number to read
    * @returns 4 pages (16 bytes)
    * @group Mifare Ultralight Related
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=16)
@@ -2095,7 +2186,8 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async mfuReadPages ({ pageOffset }: { pageOffset: number }): Promise<Buffer> {
+  async mfuReadPages (opts: { pageOffset: number }): Promise<Buffer> {
+    const { pageOffset } = opts
     return await this.cmdHf14aRaw({
       appendCrc: true,
       autoSelect: true,
@@ -2106,9 +2198,8 @@ export class ChameleonUltra {
 
   /**
    * Write 1 page (4 bytes) to Mifare Ultralight
-   * @param args
-   * @param args.pageOffset page number to read
-   * @param args.data 1 page data (4 bytes)
+   * @param opts.pageOffset page number to read
+   * @param opts.data `4 bytes`, the page data to be written.
    * @group Mifare Ultralight Related
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=17)
    * @example
@@ -2120,7 +2211,8 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async mfuWritePage ({ pageOffset, data }: { pageOffset: number, data: Buffer }): Promise<void> {
+  async mfuWritePage (opts: { pageOffset: number, data: Buffer }): Promise<void> {
+    const { pageOffset, data } = opts
     if (!Buffer.isBuffer(data) || data.length !== 4) throw new TypeError('data should be a Buffer with length 4')
     await this.cmdHf14aRaw({
       appendCrc: true,
@@ -2380,27 +2472,6 @@ export class ChameleonUltra {
  */
 export type Logger = Debugger | ((...args: any[]) => void)
 
-/**
- * @internal
- * @group Internal
- */
-export type WriteCmdArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  /**
-   * The command to be sent to device.
-   */
-  cmd: Cmd
-
-  /**
-   * The data of command.
-   */
-  status?: number
-
-  /**
-   * The data of command.
-   */
-  data?: Buffer
-}
-
 export enum Cmd {
   GET_APP_VERSION = 1000,
   CHANGE_DEVICE_MODE = 1001,
@@ -2573,7 +2644,7 @@ export enum RespStatus {
   FLASH_READ_FAIL = 0x71,
 }
 
-export const RespStatusMsg = new Map([
+const RespStatusMsg = new Map([
   [RespStatus.HF_TAG_OK, 'HF tag operation succeeded'],
   [RespStatus.HF_TAG_NOT_FOUND, 'HF tag not found error'],
   [RespStatus.HF_ERR_STAT, 'HF tag status error'],
@@ -2596,13 +2667,7 @@ export const RespStatusMsg = new Map([
   [RespStatus.FLASH_READ_FAIL, 'Flash read failed'],
 ])
 
-export const RespStatusSuccess = new Set([
-  RespStatus.DEVICE_SUCCESS,
-  RespStatus.HF_TAG_OK,
-  RespStatus.LF_TAG_OK,
-])
-
-export const RespStatusFail = new Set([
+const RespStatusFail = new Set([
   RespStatus.HF_TAG_NOT_FOUND,
   RespStatus.HF_ERR_STAT,
   RespStatus.HF_ERR_CRC,
@@ -2681,7 +2746,7 @@ export interface ChameleonPlugin {
   install: <T extends PluginInstallContext>(context: T, pluginOption: any) => Promise<unknown>
 }
 
-export class ChameleonUltraFrame {
+class ChameleonUltraFrame {
   buf: Buffer
 
   constructor (buf: Buffer) {
@@ -2736,31 +2801,12 @@ export enum Mf1KeyType {
 }
 export const isMf1KeyType = createIsEnumInteger(Mf1KeyType)
 
-export type CmdReadMf1BlockArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  block?: number
-  keyType?: Mf1KeyType
-  key?: Buffer
-}
-
-export type CmdCheckMf1BlockKeyArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  block?: number
-  keyType?: Mf1KeyType
-  key?: Buffer
-}
-
-export type CmdWriteMf1BlockArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  block?: number
-  keyType?: Mf1KeyType
-  key?: Buffer
-  data?: Buffer
-}
-
 export enum DeviceModel {
   ULTRA = 0,
   LITE = 1,
 }
 
-export enum EmuMf1WriteMode {
+export enum Mf1EmuWriteMode {
   /** Normal write as standard mifare */
   NORMAL = 0,
   /** Send NACK to write attempts */
@@ -2772,7 +2818,7 @@ export enum EmuMf1WriteMode {
   /** Shadow requested, will be changed to SHADOW and stored to ROM */
   SHADOW_REQ = 4,
 }
-export const isEmuMf1WriteMode = createIsEnumInteger(EmuMf1WriteMode)
+export const isMf1EmuWriteMode = createIsEnumInteger(Mf1EmuWriteMode)
 
 export enum AnimationMode {
   FULL = 0,
@@ -2781,63 +2827,10 @@ export enum AnimationMode {
 }
 export const isAnimationMode = createIsEnumInteger(AnimationMode)
 
-export type CmdTestMf1NtDistanceArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  src: {
-    keyType: Mf1KeyType
-    block: number
-    key: Buffer
-  }
-}
-
-export type CmdMf1AcquireStaticNestedArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  src: {
-    block: number
-    key: Buffer
-    keyType: Mf1KeyType
-  }
-  dst: {
-    block: number
-    keyType: Mf1KeyType
-  }
-}
-
-export type CmdMf1AcquireNestedArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  src: {
-    block: number
-    key: Buffer
-    keyType: Mf1KeyType
-  }
-  dst: {
-    block: number
-    keyType: Mf1KeyType
-  }
-}
-
-export type CmdHf14aRawArgs = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  /** Set `true` to activate RF field. If `data` is not empty or `autoSelect` is true, `activateRfField` will be set to `true`. */
-  activateRfField?: boolean
-  /** Set `true` to add CRC before sending data. */
-  appendCrc?: boolean
-  /** Set `true` to automatically select card before sending data */
-  autoSelect?: boolean
-  /** Set `true` to verify CRC of response and remove. If CRC of response is valid, CRC will be removed from response, otherwise will throw HF_ERR_CRC error. */
-  checkResponseCrc?: boolean
-  /** The data to be send. If `appendCrc` is `true`, the maximum length of data is `62`, otherwise is `64`. */
-  data?: Buffer
-  /** Number of bits to send. Useful for send partial byte. `dataBitLength` is incompatible with `appendCrc`. */
-  dataBitLength?: number
-  /** Set `true` to keep the RF field on after sending. */
-  keepRfField?: boolean
-  /** Default value is `true`. Set `false` to skip reading tag response. */
-  waitResponse?: boolean
-  /** Default value is `1000 ms`. Maximum timeout for reading tag response in ms while `waitResponse` is `true`. */
-  timeout?: number
-}
-
 /**
  * @see [MIFARE type identification procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
  */
-export const NxpTypeBySak = new Map([
+const NxpTypeBySak = new Map([
   [0x00, 'MIFARE Ultralight Classic/C/EV1/Nano | NTAG 2xx'],
   [0x08, 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'],
   [0x09, 'MIFARE Mini 0.3k'],

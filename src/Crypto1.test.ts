@@ -225,17 +225,17 @@ test.each([
   {
     expected: 'ffffffffffff',
     isKeyB: false,
-    nts: [{ nt1: '01200145', nt2: '81901975' }, { nt1: '01200145', nt2: 'cdd400f3' }],
+    atks: [{ nt1: '01200145', nt2: '81901975' }, { nt1: '01200145', nt2: 'cdd400f3' }],
     uid: 'b908a16d',
   },
   {
     expected: 'ffffffffffff',
     isKeyB: false,
-    nts: [{ nt1: '009080a2', nt2: '40d0d735' }, { nt1: '009080a2', nt2: '664a1da0' }],
+    atks: [{ nt1: '009080a2', nt2: '40d0d735' }, { nt1: '009080a2', nt2: '664a1da0' }],
     uid: '03bb67a0',
   },
-])('.staticnested()', async ({ uid, nts, isKeyB, expected }) => {
-  const keys = Crypto1.staticnested({ uid, nts, keyType: isKeyB ? 97 : 96 })
+])('.staticnested()', async ({ uid, atks, isKeyB, expected }) => {
+  const keys = Crypto1.staticnested({ uid, atks, keyType: isKeyB ? 97 : 96 })
   expect(_.map(keys, key => key.toString('hex'))).toContain(expected)
 })
 
@@ -244,12 +244,12 @@ test.each([
     dist: '00000080',
     expected: 'ffffffffffff',
     uid: '877209e1',
-    nts: [
+    atks: [
       { nt1: 'b4a08a09', nt2: '8a15bbf2', par: 5 },
       { nt1: '1613293d', nt2: '912e6760', par: 7 },
     ],
   },
-])('.nested()', async ({ uid, nts, dist, expected }) => {
-  const keys = Crypto1.nested({ uid, nts, dist })
+])('.nested()', async ({ uid, atks, dist, expected }) => {
+  const keys = Crypto1.nested({ uid, atks, dist })
   expect(_.map(keys, key => key.toString('hex'))).toContain(expected)
 })
