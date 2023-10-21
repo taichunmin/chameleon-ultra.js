@@ -253,3 +253,20 @@ test.each([
   const keys = Crypto1.nested({ uid, atks, dist })
   expect(_.map(keys, key => key.toString('hex'))).toContain(expected)
 })
+
+test.each([
+  {
+    expected: 'ffffffffffff',
+    acquires: [
+      { uid: 'd3efed0c', nt: 'b346fc3d', ks: '0c0508080f04050a', par: '0000000000000000', nr: '00000000', ar: '00000000' },
+      { uid: 'd3efed0c', nt: 'a932c381', ks: '060907020c0b0e00', par: '0000000000000000', nr: '00000000', ar: '00000000' },
+    ],
+  },
+])('.darkside()', async opts => {
+  const fnAcquire = jest.fn().mockRejectedValue(new Error('No record can be acqured'))
+  for (const acquired of opts.acquires) fnAcquire.mockResolvedValueOnce(_.mapValues(acquired, Buffer.fromHexString))
+  const expected = Buffer.from(opts.expected, 'hex')
+  const fnCheckKey = async (key: Buffer): Promise<boolean> => { return key.equals(expected) }
+  const actual = await Crypto1.darkside(fnAcquire, fnCheckKey)
+  expect(actual.toString('hex')).toEqual(opts.expected)
+})
