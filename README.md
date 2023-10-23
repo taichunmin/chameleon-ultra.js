@@ -131,7 +131,7 @@ ultraBle.use(new WebbleAdapter())
 ### Slot Enable and Emulate Mifare 1K
 
 ```js
-const { Buffer, ChameleonUltra, DeviceMode, Slot, TagType, WebserialAdapter } = window.ChameleonUltraJS
+const { Buffer, ChameleonUltra, DeviceMode, FreqType, Slot, TagType, WebserialAdapter } = window.ChameleonUltraJS
 
 const ultraUsb = new ChameleonUltra()
 ultraUsb.use(new WebserialAdapter())
@@ -141,7 +141,7 @@ async function run (ultra) {
   await ultra.cmdSlotChangeTagType(Slot.SLOT_8, TagType.MIFARE_1024)
   await ultra.cmdSlotResetTagType(Slot.SLOT_8, TagType.MIFARE_1024)
   // enable slot
-  await ultra.cmdSlotSetEnable(Slot.SLOT_8, true)
+  await ultra.cmdSlotSetEnable(Slot.SLOT_8, FreqType.HF, true)
   // set active slot
   await ultra.cmdSlotSetActive(Slot.SLOT_8)
   // set anti-collision and write emu block
