@@ -552,6 +552,7 @@ export class ChameleonUltra {
   async cmdSlotSetFreqName (slot: Slot, freq: FreqType, name: string): Promise<void> {
     if (!isSlot(slot)) throw new TypeError('Invalid slot')
     if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+    if (!_.isString(name)) throw new TypeError('name should be a string')
     const data = Buffer.concat([new Buffer([slot, freq]), Buffer.from(name)])
     if (!_.inRange(data.length, 3, 35)) throw new TypeError('byteLength of name should between 1 and 32')
     this._clearRxBufs()
@@ -1334,8 +1335,10 @@ export class ChameleonUltra {
     block: number
     keyType: Mf1KeyType
   }): Promise<Decoder.Mf1AcquireStaticNestedRes> {
+    if (!_.isSafeInteger(known.block)) throw new TypeError('Invalid known.block')
     if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
     if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_STATIC_NESTED_ACQUIRE // cmd = 2003
@@ -1413,11 +1416,19 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1AcquireDarkside (block: number, keyType: Mf1KeyType, isFirst: boolean, syncMax: number = 30): Promise<Decoder.Mf1DarksideRes> {
+  async cmdMf1AcquireDarkside (
+    block: number,
+    keyType: Mf1KeyType,
+    isFirst: boolean | number,
+    syncMax: number = 30
+  ): Promise<Decoder.Mf1DarksideRes> {
+    if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
+    if (_.isNil(isFirst)) throw new TypeError('Invalid isFirst')
+    if (!_.isSafeInteger(syncMax)) throw new TypeError('Invalid syncMax')
     this._clearRxBufs()
     const cmd = Cmd.MF1_DARKSIDE_ACQUIRE // cmd = 2004
-    await this._writeCmd({ cmd, data: new Buffer([keyType, block, isFirst ? 1 : 0, syncMax]) })
+    await this._writeCmd({ cmd, data: new Buffer([keyType, block, Boolean(isFirst) ? 1 : 0, syncMax]) })
     return Decoder.Mf1DarksideRes.fromCmd2004((await this._readRespTimeout({ cmd, timeout: syncMax * 1e4 }))?.data)
   }
 
@@ -1471,8 +1482,9 @@ export class ChameleonUltra {
     key: Buffer
     keyType: Mf1KeyType
   }): Promise<Decoder.Mf1NtDistanceRes> {
-    if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    if (!_.isSafeInteger(known.block)) throw new TypeError('Invalid known.block')
     if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
+    if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_DETECT_NT_DIST // cmd = 2005
     await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([known.keyType, known.block]), known.key]) })
@@ -1533,8 +1545,10 @@ export class ChameleonUltra {
     block: number
     keyType: Mf1KeyType
   }): Promise<Decoder.Mf1NestedRes[]> {
+    if (!_.isSafeInteger(known.block)) throw new TypeError('Invalid known.block')
     if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
     if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_NESTED_ACQUIRE // cmd = 2006
@@ -1579,8 +1593,9 @@ export class ChameleonUltra {
   }): Promise<boolean> {
     const { block, keyType, key } = opts
     try {
-      if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
+      if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
       if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
+      if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
       this._clearRxBufs()
       const cmd = Cmd.MF1_AUTH_ONE_KEY_BLOCK // cmd = 2007
       await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([keyType, block]), key]) })
@@ -1622,6 +1637,7 @@ export class ChameleonUltra {
     key: Buffer
   }): Promise<Buffer> {
     const { block, keyType, key } = opts
+    if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
     this._clearRxBufs()
@@ -1662,6 +1678,7 @@ export class ChameleonUltra {
     data: Buffer
   }): Promise<void> {
     const { block, keyType, key, data } = opts
+    if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
     if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
@@ -1738,6 +1755,11 @@ export class ChameleonUltra {
       timeout = 1000,
       data = new Buffer(),
     } = opts
+
+    if (!Buffer.isBuffer(data)) throw new TypeError('data should be a Buffer')
+    if (!_.isSafeInteger(timeout)) throw new TypeError('Invalid timeout')
+    if (!_.isSafeInteger(dataBitLength)) throw new TypeError('Invalid dataBitLength')
+
     const buf1 = new Buffer(data.length + 5)
 
     // options
@@ -1814,7 +1836,7 @@ export class ChameleonUltra {
 
   /**
    * Set the mifare block data of actived slot.
-   * @param blockStart The start block of actived slot.
+   * @param offset The start block of actived slot.
    * @param data The data to be set. the length of data should be multiples of 16.
    * @group Mifare Classic Related
    * @example
@@ -1824,11 +1846,12 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1EmuWriteBlock (blockStart: number = 0, data: Buffer): Promise<void> {
+  async cmdMf1EmuWriteBlock (offset: number = 0, data: Buffer): Promise<void> {
+    if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
     if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
     this._clearRxBufs()
     const cmd = Cmd.MF1_WRITE_EMU_BLOCK_DATA // cmd = 4000
-    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([blockStart]), data]) })
+    await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([offset]), data]) })
     await this._readRespTimeout({ cmd })
   }
 
@@ -1906,7 +1929,7 @@ export class ChameleonUltra {
 
   /**
    * Get the data of mifare MFKey32 detections.
-   * @param index The start index of detections to be get.
+   * @param offset The start log of detections to be get.
    * @returns The mifare MFKey32 detections.
    * @group Mifare Classic Related
    * @example
@@ -1928,10 +1951,11 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1GetDetectionLogs (index: number = 0): Promise<Decoder.Mf1DetectionLog[]> {
+  async cmdMf1GetDetectionLogs (offset: number = 0): Promise<Decoder.Mf1DetectionLog[]> {
+    if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
     this._clearRxBufs()
     const cmd = Cmd.MF1_GET_DETECTION_LOG // cmd = 4006
-    await this._writeCmd({ cmd, data: new Buffer(4).writeUInt32BE(index) })
+    await this._writeCmd({ cmd, data: new Buffer(4).writeUInt32BE(offset) })
     return Decoder.Mf1DetectionLog.fromCmd4006((await this._readRespTimeout({ cmd }))?.data)
   }
 
@@ -2248,6 +2272,7 @@ export class ChameleonUltra {
    */
   async mfuReadPages (opts: { pageOffset: number }): Promise<Buffer> {
     const { pageOffset } = opts
+    if (!_.isSafeInteger(pageOffset)) throw new TypeError('Invalid pageOffset')
     return await this.cmdHf14aRaw({
       appendCrc: true,
       autoSelect: true,
@@ -2273,6 +2298,7 @@ export class ChameleonUltra {
    */
   async mfuWritePage (opts: { pageOffset: number, data: Buffer }): Promise<void> {
     const { pageOffset, data } = opts
+    if (!_.isSafeInteger(pageOffset)) throw new TypeError('Invalid pageOffset')
     if (!Buffer.isBuffer(data) || data.length !== 4) throw new TypeError('data should be a Buffer with length 4')
     await this.cmdHf14aRaw({
       appendCrc: true,
@@ -2305,6 +2331,7 @@ export class ChameleonUltra {
    */
   async _mf1Gen1aAuth<T extends (...args: any) => any> (cb: T): Promise<Awaited<ReturnType<T>>> {
     try {
+      if (_.isNil(cb)) throw new TypeError('cb is required')
       await this.mf1Halt()
       const resp1 = await this.cmdHf14aRaw({ data: new Buffer([0x40]), dataBitLength: 7, keepRfField: true }) // 0x40 (7)
         .catch(err => { throw _.merge(new Error(`Gen1a auth failed 1: ${err.message}`), { originalError: err }) })
@@ -2336,6 +2363,8 @@ export class ChameleonUltra {
    * ```
    */
   async mf1Gen1aReadBlocks (offset: number, length: number = 1): Promise<Buffer> {
+    if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
+    if (!_.isSafeInteger(length)) throw new TypeError('Invalid length')
     return await this._mf1Gen1aAuth(async () => {
       const buf = new Buffer(length * 16)
       for (let i = 0; i < length; i++) {
@@ -2366,6 +2395,7 @@ export class ChameleonUltra {
    * ```
    */
   async mf1Gen1aWriteBlocks (offset: number, data: Buffer): Promise<void> {
+    if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
     if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
     await this._mf1Gen1aAuth(async () => {
       const blocks = data.chunk(16)
@@ -2397,6 +2427,7 @@ export class ChameleonUltra {
    * }
    */
   async mf1CheckSectorKeys (sector: number, keys: Buffer[]): Promise<Partial<Record<Mf1KeyType, Buffer>>> {
+    if (!_.isSafeInteger(sector)) throw new TypeError('Invalid sector')
     keys = _.chain(keys)
       .filter(key => Buffer.isBuffer(key) && key.length === 6)
       .uniqBy(key => key.toString('hex'))
