@@ -301,7 +301,7 @@ block script
             // reset slot
             await ultra.cmdSlotChangeTagType(this.ss.slot, TagType.MIFARE_1024)
             await ultra.cmdSlotResetTagType(this.ss.slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotSetEnable(this.ss.slot, true)
+            await ultra.cmdSlotSetEnable(this.ss.slot, FreqType.HF, true)
             await ultra.cmdSlotSetActive(this.ss.slot)
             await Swal.fire({ icon: 'success', title: 'Reset success' })
           } catch (err) {

@@ -517,15 +517,17 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot } = window.ChameleonUltraJS
+   * const { FreqType, Slot } = window.ChameleonUltraJS
    *
    * async function run (ultra) {
-   *   await ultra.cmdSlotSetEnable(Slot.SLOT_1, true)
+   *   await ultra.cmdSlotSetEnable(Slot.SLOT_1, FreqType.HF, true)
    * }
    * ```
    */
   async cmdSlotSetEnable (slot: Slot, freq: FreqType, enable: number | boolean): Promise<void> {
     if (!isSlot(slot)) throw new TypeError('Invalid slot')
+    if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+    if (_.isNil(enable)) throw new TypeError('enable is required')
     this._clearRxBufs()
     const cmd = Cmd.SET_SLOT_ENABLE // cmd = 1006
     await this._writeCmd({ cmd, data: new Buffer([slot, freq, Boolean(enable) ? 1 : 0]) })
@@ -1204,6 +1206,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdBleSetPairingMode (enable: number | boolean): Promise<void> {
+    if (_.isNil(enable)) throw new TypeError('enable is required')
     this._clearRxBufs()
     const cmd = Cmd.SET_BLE_PAIRING_ENABLE // cmd = 1037
     await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
@@ -1876,6 +1879,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1SetDetectionEnable (enable: number | boolean): Promise<void> {
+    if (_.isNil(enable)) throw new TypeError('enable is required')
     this._clearRxBufs()
     const cmd = Cmd.MF1_SET_DETECTION_ENABLE // cmd = 4004
     await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
@@ -2028,6 +2032,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1SetGen1aMode (enable: number | boolean): Promise<void> {
+    if (_.isNil(enable)) throw new TypeError('enable is required')
     this._clearRxBufs()
     const cmd = Cmd.MF1_SET_GEN1A_MODE // cmd = 4011
     await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
@@ -2064,6 +2069,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1SetGen2Mode (enable: number | boolean): Promise<void> {
+    if (_.isNil(enable)) throw new TypeError('enable is required')
     this._clearRxBufs()
     const cmd = Cmd.MF1_SET_GEN2_MODE // cmd = 4013
     await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
@@ -2100,6 +2106,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1SetAntiCollMode (enable: number | boolean): Promise<void> {
+    if (_.isNil(enable)) throw new TypeError('enable is required')
     this._clearRxBufs()
     const cmd = Cmd.HF14A_SET_BLOCK_ANTI_COLL_MODE // cmd = 4015
     await this._writeCmd({ cmd, data: new Buffer([Boolean(enable) ? 1 : 0]) })
