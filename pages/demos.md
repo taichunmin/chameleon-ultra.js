@@ -1,5 +1,15 @@
 # Demos
 
+- [Demos](#demos)
+  - [device-settings.html](#device-settingshtml)
+    - [Features](#features)
+  - [mfkey32.html](#mfkey32html)
+    - [Features](#features-1)
+    - [Related links](#related-links)
+  - [mifare1k.html](#mifare1khtml)
+    - [Features](#features-2)
+  - [mifare-value.html](#mifare-valuehtml)
+
 ## [device-settings.html](https://taichunmin.idv.tw/chameleon-ultra.js/device-settings.html)
 
 A ChameleonUltra tool to management the device info and settings.
@@ -50,3 +60,13 @@ A ChameleonUltra tool for mifare class 1k.
 - Read/Write from Mifare Gen1a Tag (UID).
 - Read/Write from Mifare Classic 1k, Gen2 Tag (CUID, FUID, UFUID).
 - Import/Export from `.json`, `.bin`, `.eml`, `.mct` files.
+
+- - -
+
+## [mifare-value.html](https://taichunmin.idv.tw/chameleon-ultra.js/mifare-value.html)
+
+![](https://i.imgur.com/jJ3pNvn.png)
+
+在台灣有些 MIFARE Classic 卡片使用 value block 來儲存卡片的餘額，但是有些中國魔術卡不支援 value block 指令，所以無法使用這些魔術卡來複製 MIFARE Classic 卡片。這個工具可以讓你測試卡片是否支援 value block 指令。
+
+A ChameleonUltra tool for MIFARE Classic value block commands. Some MIFARE Classic cards in Taiwan are using value block to store the balance of the card. But some chinese magic cards didn't support value block commands. So you can't use these magic cards to clone original MIFARE Classic cards. This tool can help you to test whether the card support value block commands or not.
