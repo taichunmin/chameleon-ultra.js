@@ -82,7 +82,7 @@ export class Buffer extends Uint8Array {
     return new Buffer(size)
   }
 
-  static byteLength (string: TypedArray | DataView | ArrayBufferLike): number
+  static byteLength (string: ArrayBufferView | ArrayBufferLike): number
   static byteLength (string: string, encoding?: Encoding): number
 
   static byteLength (string: any, encoding: Encoding = 'utf8'): number {
@@ -144,9 +144,17 @@ export class Buffer extends Uint8Array {
     return buf
   }
 
-  static copyBytesFrom (view: TypedArray, offset: number = 0, length?: number): Buffer {
-    if (_.isNil(length)) length = view.length - offset
-    return new Buffer(view.buffer, offset * view.BYTES_PER_ELEMENT, (offset + length) * view.BYTES_PER_ELEMENT)
+  static fromView (view: ArrayBufferView, offset?: number, length?: number): Buffer
+  static fromView (view: any, offset: number = 0, length?: number): Buffer {
+    if (!ArrayBuffer.isView(view)) throw new TypeError('invalid view')
+    const bytesPerElement = (view as any)?.BYTES_PER_ELEMENT ?? 1
+    const viewLength = view.byteLength / bytesPerElement
+    if (_.isNil(length)) length = viewLength - offset
+    return new Buffer(view.buffer, view.byteOffset + offset * bytesPerElement, length * bytesPerElement)
+  }
+
+  static copyBytesFrom (view: ArrayBufferView, offset: number = 0, length?: number): Buffer {
+    return new Buffer(Buffer.fromView(view, offset, length))
   }
 
   static from (data: WithImplicitCoercion<Uint8Array | Buffer | ArrayLike<number> | Iterable<number>>): Buffer
@@ -154,11 +162,11 @@ export class Buffer extends Uint8Array {
   static from (object: WithImplicitCoercion<string> | { [Symbol.toPrimitive]: (hint: 'string') => string }, encoding?: Encoding): Buffer
 
   static from (val: any, encodingOrOffset?: any, length?: number): Buffer {
-    const valueOfObj = val?.valueOf?.() ?? val?.[Symbol.toPrimitive]?.('string')
+    const valueOfObj = val?.[Symbol.toPrimitive]?.('string') ?? val?.valueOf?.()
     if (!_.isNil(valueOfObj) && valueOfObj !== val) val = valueOfObj
 
-    if (Buffer.isBuffer(val)) return val
-    if (ArrayBuffer.isView(val)) return Buffer.fromView(val)
+    if (Buffer.isBuffer(val)) return new Buffer(val)
+    if (ArrayBuffer.isView(val)) return Buffer.fromView(val as ArrayBufferView)
     if (isInstance(val, ArrayBuffer) || isSharedArrayBuffer(val)) return new Buffer(val, encodingOrOffset, length)
     if (_.isString(val)) return Buffer.fromString(val, encodingOrOffset)
     if (typeof val[Symbol.iterator] === 'function') return Buffer.fromArray([...val])
@@ -243,21 +251,15 @@ export class Buffer extends Uint8Array {
 
   static fromHexString (hex: string): Buffer {
     hex = hex.replace(/[^0-9A-Fa-f]/g, '')
-    if ((hex.length & 1) > 0) throw new TypeError('invalid hex string')
     const buf = new Buffer(hex.length >>> 1)
     for (let i = 0; i < buf.length; i++) buf[i] = HEX_CHAR.get(hex[i * 2]) << 4 | HEX_CHAR.get(hex[i * 2 + 1])
     return buf
   }
 
-  static fromView (view: ArrayBufferView): Buffer {
-    if (!ArrayBuffer.isView(view)) throw new TypeError('invalid view')
-    return new Buffer(view.buffer, view.byteOffset, view.byteLength)
-  }
-
-  static fromArray (arr: ArrayLike<number>): Buffer {
-    if (!_.isArray(arr) || !_.every(arr, _.isSafeInteger)) throw new TypeError('all elements in array must be a integer')
+  static fromArray (arr: ArrayLike<any>): Buffer {
+    if (!_.isArray(arr)) throw new TypeError('arr must be an array')
     const buf = new Buffer(arr.length)
-    for (let i = 0; i < buf.length; i++) buf[i] = arr[i] & 0xFF
+    for (let i = 0; i < buf.length; i++) buf[i] = _.toSafeInteger(arr[i]) & 0xFF
     return buf
   }
 
@@ -355,12 +357,13 @@ export class Buffer extends Uint8Array {
 
   indexOf (val: any, offset: any = 0, encoding: Encoding = 'utf8'): number {
     if (Buffer.isEncoding(offset)) [offset, encoding] = [0, offset]
-    if (!_.isSafeInteger(offset)) throw new RangeError('Invalid type of offset')
+    offset = _.toSafeInteger(offset)
+    if (offset < 0) offset = this.length + offset
 
     if (_.isString(val)) val = Buffer.fromString(val, encoding)
     else if (isInstance(val, Uint8Array)) val = Buffer.fromView(val)
 
-    if (Buffer.isBuffer(val)) { // try to convert Buffer to number
+    if (Buffer.isBuffer(val)) { // try to convert Buffer which length < 2 to number
       if (val.length === 0) return -1
       else if (val.length === 1) val = val[0]
     }
@@ -387,7 +390,8 @@ export class Buffer extends Uint8Array {
 
   lastIndexOf (val: any, offset: any = this.length - 1, encoding: Encoding = 'utf8'): number {
     if (Buffer.isEncoding(offset)) [offset, encoding] = [0, offset]
-    if (!_.isSafeInteger(offset)) throw new RangeError('Invalid type of offset')
+    offset = _.toSafeInteger(offset)
+    if (offset < 0) offset = this.length + offset
 
     if (_.isString(val)) val = Buffer.fromString(val, encoding)
     else if (isInstance(val, Uint8Array)) val = Buffer.fromView(val)
@@ -522,7 +526,7 @@ export class Buffer extends Uint8Array {
   }
 
   slice (start: number = 0, end: number = this.length): Buffer {
-    return Buffer.fromView(super.slice(start, end))
+    return new Buffer(super.subarray(start, end))
   }
 
   reverse (): Buffer {
@@ -799,7 +803,7 @@ export class Buffer extends Uint8Array {
   }
 }
 
-type TypedArray = NodeJS.TypedArray | Buffer
+type ArrayBufferView = NodeJS.ArrayBufferView | Buffer
 
 interface ArrayLike<T> {
   readonly length: number
