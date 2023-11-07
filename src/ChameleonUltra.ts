@@ -1770,7 +1770,7 @@ export class ChameleonUltra {
       [3, autoSelect],
       [4, keepRfField],
       [5, checkResponseCrc],
-    ] as Array<[number, boolean]>) buf1.writeBitMSB(bitOffset, val)
+    ] as Array<[number, boolean]>) buf1.writeBitMSB(val, bitOffset)
 
     buf1.writeUInt16BE(timeout, 1)
     // [8, 1, 2, 3, 4, 5, 6, 7]

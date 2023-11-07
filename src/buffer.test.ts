@@ -23,11 +23,14 @@ describe('Buffer.alloc()', () => {
   })
 })
 
-describe('Buffer.allocUnsafe()', () => {
-  test('should creates an uninitialized buffer of length 10', () => {
-    const actual = Buffer.allocUnsafe(10)
-    expect(actual.length).toEqual(10)
-  })
+test('Buffer.allocUnsafe()', () => {
+  const actual = Buffer.allocUnsafe(10)
+  expect(actual.length).toEqual(10)
+})
+
+test('Buffer.allocUnsafeSlow()', () => {
+  const actual = Buffer.allocUnsafeSlow(10)
+  expect(actual.length).toEqual(10)
 })
 
 describe('Buffer.from()', () => {
@@ -100,13 +103,38 @@ describe('Buffer.from()', () => {
     const actual = Buffer.from(new Foo(), 'utf8')
     expect(actual.toString('hex')).toEqual('7468697320697320612074657374')
   })
+
+  test('should throw a Error', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.from(1 as any)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
-test('Buffer.copyBytesFrom()', () => {
-  const u16 = new Uint16Array([0, 0xffff])
-  const actual = Buffer.copyBytesFrom(u16, 1, 1)
-  u16[1] = 0
-  expect(actual.toString('hex')).toEqual('ffff')
+describe('Buffer.copyBytesFrom()', () => {
+  test('1 arguments', () => {
+    const u16 = new Uint16Array([0, 0xffff])
+    const actual = Buffer.copyBytesFrom(u16)
+    u16[1] = 0
+    expect(actual.toString('hex')).toEqual('0000ffff')
+  })
+
+  test('2 arguments', () => {
+    const u16 = new Uint16Array([0, 0xffff])
+    const actual = Buffer.copyBytesFrom(u16, 1)
+    u16[1] = 0
+    expect(actual.toString('hex')).toEqual('ffff')
+  })
+
+  test('3 arguments', () => {
+    const u16 = new Uint16Array([0, 0xffff])
+    const actual = Buffer.copyBytesFrom(u16, 1, 1)
+    u16[1] = 0
+    expect(actual.toString('hex')).toEqual('ffff')
+  })
 })
 
 test.each([
@@ -145,6 +173,30 @@ describe('Buffer.fromView()', () => {
 })
 
 describe('Buffer#copy()', () => {
+  test('1 arguments', () => {
+    const buf1 = Buffer.from('abc')
+    const buf2 = Buffer.from('123')
+
+    expect(buf1.copy(buf2)).toEqual(3)
+    expect(buf2.toString()).toEqual('abc')
+  })
+
+  test('2 arguments', () => {
+    const buf1 = Buffer.from('abc')
+    const buf2 = Buffer.from('123')
+
+    expect(buf1.copy(buf2, 1)).toEqual(2)
+    expect(buf2.toString()).toEqual('1ab')
+  })
+
+  test('3 arguments', () => {
+    const buf1 = Buffer.from('abc')
+    const buf2 = Buffer.from('123')
+
+    expect(buf1.copy(buf2, 1, 1)).toEqual(2)
+    expect(buf2.toString()).toEqual('1bc')
+  })
+
   test('should copy bytes from buf1 to buf2', () => {
     const buf1 = Buffer.allocUnsafe(26)
     const buf2 = Buffer.allocUnsafe(26).fill('!')
@@ -230,9 +282,10 @@ describe('Buffer#includes()', () => {
     { inputName: 'this', input: 'this', expected: true },
     { inputName: 'is', input: 'is', expected: true },
     { inputName: 'Buffer.from("a buffer")', input: Buffer.from('a buffer'), expected: true },
-    { inputName: 'number', input: 97, expected: true },
+    { inputName: '97', input: 97, expected: true },
     { inputName: 'Buffer#slice', input: Buffer.from('a buffer example').slice(0, 8), expected: true },
     { inputName: 'Buffer.from("a buffer example")', input: Buffer.from('a buffer example'), expected: false },
+    { inputName: '0', input: 0, expected: false },
   ])('Buffer#includes($inputName) = $expected', ({ input, expected }) => {
     const buf = Buffer.from('this is a buffer')
     const actual = buf.includes(input)
@@ -251,7 +304,8 @@ describe('Buffer#indexOf()', () => {
     { inputName: 'this', input: 'this', expected: 0 },
     { inputName: 'is', input: 'is', expected: 2 },
     { inputName: 'Buffer.from("a buffer")', input: Buffer.from('a buffer'), expected: 8 },
-    { inputName: 'number', input: 97, expected: 8 },
+    { inputName: '97', input: 97, expected: 8 },
+    { inputName: '0', input: 0, expected: -1 },
     { inputName: 'Buffer#slice', input: Buffer.from('a buffer example').slice(0, 8), expected: 8 },
     { inputName: 'Buffer.from("a buffer example")', input: Buffer.from('a buffer example'), expected: -1 },
   ])('Buffer#indexOf($inputName) = $expected', ({ input, expected }) => {
@@ -418,6 +472,11 @@ test('Buffer#toString(\'hex\')', async () => {
   expect(actual.toString('hex')).toEqual('000102')
 })
 
+test('Buffer#toString(\'ucs2\')', async () => {
+  const actual = Buffer.from('610062006300', 'hex')
+  expect(actual.toString('ucs2')).toEqual('abc')
+})
+
 test('Buffer#toJSON()', async () => {
   const actual = Buffer.from([0, 1, 2])
   expect(actual.toJSON()).toMatchObject({ type: 'Buffer', data: [0, 1, 2] })
@@ -541,9 +600,10 @@ test.each([
 })
 
 test.each([
+  { str1: 'ABC', str2: 'AB', expected: 1 },
   { str1: 'ABC', str2: 'ABC', expected: 0 },
-  { str1: 'ABC', str2: 'BCD', expected: -1 },
   { str1: 'ABC', str2: 'ABCD', expected: -1 },
+  { str1: 'ABC', str2: 'BCD', expected: -1 },
   { str1: 'BCD', str2: 'ABC', expected: 1 },
   { str1: 'BCD', str2: 'ABCD', expected: 1 },
 ])('Buffer.compare("$str1", "$str2") = $expected', async ({ str1, str2, expected }) => {
@@ -657,4 +717,181 @@ describe('Buffer#write()', () => {
     actual.write('abcd', 8)
     expect(actual.toString('utf8', 8, 10)).toBe('ab')
   })
+})
+
+test.each([
+  { str: 'abc123', encoding: 'ascii', len: 6 },
+  { str: 'abc123', encoding: 'utf16le', len: 12 },
+  { str: 'abc123', encoding: 'hex', len: 3 },
+  { str: 'abc123', encoding: 'base64url', len: 4 },
+  { str: '\u00bd + \u00bc = \u00be', encoding: 'utf8', len: 12 },
+])('Buffer.byteLength("$str", "$encoding") = $len', ({ str, encoding, len }) => {
+  expect(Buffer.byteLength(str, encoding as any)).toBe(len)
+})
+
+test('read/write BigInt64', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeBigInt64BE(1n).readBigInt64BE()).toBe(1n)
+  expect(buf.writeBigInt64LE(1n).readBigInt64LE()).toBe(1n)
+  expect(buf.writeBigInt64BE(1n, 1).readBigInt64BE(1)).toBe(1n)
+  expect(buf.writeBigInt64LE(1n, 1).readBigInt64LE(1)).toBe(1n)
+})
+
+test('read/write BigUInt64', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeBigUInt64BE(1n).readBigUInt64BE()).toBe(1n)
+  expect(buf.writeBigUInt64LE(1n).readBigUInt64LE()).toBe(1n)
+  expect(buf.writeBigUInt64BE(1n, 1).readBigUInt64BE(1)).toBe(1n)
+  expect(buf.writeBigUInt64LE(1n, 1).readBigUInt64LE(1)).toBe(1n)
+})
+
+test('read/write Double', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeDoubleBE(0.5).readDoubleBE()).toBe(0.5)
+  expect(buf.writeDoubleLE(0.5).readDoubleLE()).toBe(0.5)
+  expect(buf.writeDoubleBE(0.5, 1).readDoubleBE(1)).toBe(0.5)
+  expect(buf.writeDoubleLE(0.5, 1).readDoubleLE(1)).toBe(0.5)
+})
+
+test('read/write Float', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeFloatBE(0.5).readFloatBE()).toBe(0.5)
+  expect(buf.writeFloatLE(0.5).readFloatLE()).toBe(0.5)
+  expect(buf.writeFloatBE(0.5, 1).readFloatBE(1)).toBe(0.5)
+  expect(buf.writeFloatLE(0.5, 1).readFloatLE(1)).toBe(0.5)
+})
+
+test('read/write Int8', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeInt8(1).readInt8()).toBe(1)
+  expect(buf.writeInt8(1, 1).readInt8(1)).toBe(1)
+})
+
+test('read/write UInt8', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeUInt8(1).readUInt8()).toBe(1)
+  expect(buf.writeUInt8(1, 1).readUInt8(1)).toBe(1)
+})
+
+test('read/write Int16', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeInt16BE(0x0102).readInt16BE()).toBe(0x0102)
+  expect(buf.writeInt16LE(0x0102).readInt16LE()).toBe(0x0102)
+  expect(buf.writeInt16BE(0x0102, 1).readInt16BE(1)).toBe(0x0102)
+  expect(buf.writeInt16LE(0x0102, 1).readInt16LE(1)).toBe(0x0102)
+})
+
+test('read/write UInt16', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeUInt16BE(0x0102).readUInt16BE()).toBe(0x0102)
+  expect(buf.writeUInt16LE(0x0102).readUInt16LE()).toBe(0x0102)
+  expect(buf.writeUInt16BE(0x0102, 1).readUInt16BE(1)).toBe(0x0102)
+  expect(buf.writeUInt16LE(0x0102, 1).readUInt16LE(1)).toBe(0x0102)
+})
+
+test('read/write Int32', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeInt32BE(0x01020304).readInt32BE()).toBe(0x01020304)
+  expect(buf.writeInt32LE(0x01020304).readInt32LE()).toBe(0x01020304)
+  expect(buf.writeInt32BE(0x01020304, 1).readInt32BE(1)).toBe(0x01020304)
+  expect(buf.writeInt32LE(0x01020304, 1).readInt32LE(1)).toBe(0x01020304)
+})
+
+test('read/write UInt32', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeUInt32BE(0x01020304).readUInt32BE()).toBe(0x01020304)
+  expect(buf.writeUInt32LE(0x01020304).readUInt32LE()).toBe(0x01020304)
+  expect(buf.writeUInt32BE(0x01020304, 1).readUInt32BE(1)).toBe(0x01020304)
+  expect(buf.writeUInt32LE(0x01020304, 1).readUInt32LE(1)).toBe(0x01020304)
+})
+
+describe('read/write Int', () => {
+  test.each([
+    { byteLength: 1, value: 0x01 },
+    { byteLength: 2, value: 0x0102 },
+    { byteLength: 3, value: 0x010203 },
+    { byteLength: 4, value: 0x01020304 },
+    { byteLength: 5, value: 0x0102030405 },
+    { byteLength: 6, value: 0x010203040506 },
+  ])('read/write $byteLength bytes Int', ({ byteLength, value }) => {
+    const buf = Buffer.alloc(10)
+    expect(buf.writeIntBE(value, 0, byteLength).readIntBE(0, byteLength)).toBe(value)
+    expect(buf.writeIntLE(value, 0, byteLength).readIntLE(0, byteLength)).toBe(value)
+    expect(buf.writeIntBE(value, 1, byteLength).readIntBE(1, byteLength)).toBe(value)
+    expect(buf.writeIntLE(value, 1, byteLength).readIntLE(1, byteLength)).toBe(value)
+  })
+
+  test.each([0, 7])('should throw error with byteLength = %j', byteLength => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(10).writeIntBE(0, 0, byteLength)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+})
+
+describe('read/write UInt', () => {
+  test.each([
+    { byteLength: 1, value: 0x01 },
+    { byteLength: 2, value: 0x0102 },
+    { byteLength: 3, value: 0x010203 },
+    { byteLength: 4, value: 0x01020304 },
+    { byteLength: 5, value: 0x0102030405 },
+    { byteLength: 6, value: 0x010203040506 },
+  ])('read/write $byteLength bytes UInt', ({ byteLength, value }) => {
+    const buf = Buffer.alloc(10)
+    expect(buf.writeUIntBE(value, 0, byteLength).readUIntBE(0, byteLength)).toBe(value)
+    expect(buf.writeUIntLE(value, 0, byteLength).readUIntLE(0, byteLength)).toBe(value)
+    expect(buf.writeUIntBE(value, 1, byteLength).readUIntBE(1, byteLength)).toBe(value)
+    expect(buf.writeUIntLE(value, 1, byteLength).readUIntLE(1, byteLength)).toBe(value)
+  })
+
+  test.each([0, 7])('should throw error with byteLength = %j', byteLength => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(10).writeUIntBE(0, 0, byteLength)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+})
+
+test('read/write bit', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeBitMSB(1, 0).readBitMSB(0)).toBe(1)
+  expect(buf.writeBitLSB(1, 0).readBitLSB(0)).toBe(1)
+  expect(buf.writeBitMSB(1, 1).readBitMSB(1)).toBe(1)
+  expect(buf.writeBitLSB(1, 1).readBitLSB(1)).toBe(1)
+})
+
+describe('Buffer#subarray()', () => {
+  test('1 arguments', () => {
+    const buf = Buffer.from('buffer')
+    const actual = buf.subarray(1)
+    expect(actual.toString()).toEqual('uffer')
+  })
+
+  test('should be modified while modify buf1', () => {
+    const buf1 = Buffer.allocUnsafe(26)
+    for (let i = 0; i < 26; i++) buf1[i] = i + 97 // 97 is the decimal ASCII value for 'a'
+    const buf2 = buf1.subarray(0, 3)
+    expect(buf2.toString()).toEqual('abc')
+    buf1[0] = 33
+    expect(buf2.toString()).toEqual('!bc')
+  })
+
+  test('negative indexes', () => {
+    const buf = Buffer.from('buffer')
+    expect(buf.subarray(-6, -1).toString()).toBe('buffe')
+    expect(buf.subarray(-6, -2).toString()).toBe('buff')
+    expect(buf.subarray(-5, -2).toString()).toBe('uff')
+  })
+})
+
+test('Buffer#reverse()', () => {
+  const buf1 = Buffer.from('123')
+  const buf2 = buf1.reverse()
+  expect(buf1.toString()).toEqual('123')
+  expect(buf2.toString()).toEqual('321')
 })
