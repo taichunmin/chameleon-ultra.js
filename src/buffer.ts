@@ -169,8 +169,8 @@ export class Buffer extends Uint8Array {
     if (ArrayBuffer.isView(val)) return Buffer.fromView(val as ArrayBufferView)
     if (isInstance(val, ArrayBuffer) || isSharedArrayBuffer(val)) return new Buffer(val, encodingOrOffset, length)
     if (_.isString(val)) return Buffer.fromString(val, encodingOrOffset)
-    if (typeof val[Symbol.iterator] === 'function') return Buffer.fromArray([...val])
     if (_.isArray(val)) return Buffer.fromArray(val)
+    if (typeof val[Symbol.iterator] === 'function') return Buffer.fromArray([...val])
 
     throw new TypeError(`Invalid type of value: ${typeof val}`)
   }
@@ -277,7 +277,8 @@ export class Buffer extends Uint8Array {
   }
 
   copy (target: Buffer, targetStart: number = 0, sourceStart: number = 0, sourceEnd: number = this.length): number {
-    const buf = this.subarray(sourceStart, sourceEnd)
+    let buf = this.subarray(sourceStart, sourceEnd)
+    if (buf.length > target.length - targetStart) buf = buf.subarray(0, target.length - targetStart)
     target.set(buf, targetStart)
     return buf.length
   }
@@ -777,14 +778,14 @@ export class Buffer extends Uint8Array {
     return this
   }
 
-  writeBitMSB (bitOffset: number, val: number | boolean): this {
+  writeBitMSB (val: number | boolean, bitOffset: number): this {
     const tmp = [bitOffset >>> 3, (bitOffset & 7) ^ 7]
     const oldBit = (this[tmp[0]] >>> tmp[1]) & 1
     if ((oldBit ^ (Boolean(val) ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
     return this
   }
 
-  writeBitLSB (bitOffset: number, val: number | boolean): this {
+  writeBitLSB (val: number | boolean, bitOffset: number): this {
     const tmp = [this.length - (bitOffset >>> 3) - 1, bitOffset & 7]
     const oldBit = (this[tmp[0]] >>> tmp[1]) & 1
     if ((oldBit ^ (Boolean(val) ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
