@@ -1370,13 +1370,15 @@ export class ChameleonUltra {
    *   const res1 = await ultra.cmdMf1AcquireDarkside(0, Mf1KeyType.KEY_A, true)
    *   console.log(res1)
    *   const res2 = {
-   *     ar: res1.ar.toString('hex'),
-   *     ks: res1.ks.toString('hex'),
-   *     nr: res1.nr.toString('hex'),
-   *     nt: res1.nt.toString('hex'),
-   *     par: res1.par.toString('hex'),
    *     status: `${DarksideStatus[res1.status]} (${res1.status})`,
-   *     uid: res1.uid.toString('hex'),
+   *     ...(res1.status !== DarksideStatus.OK ? {} : {
+   *       ar: res1.ar.toString('hex'),
+   *       ks: res1.ks.toString('hex'),
+   *       nr: res1.nr.toString('hex'),
+   *       nt: res1.nt.toString('hex'),
+   *       par: res1.par.toString('hex'),
+   *       uid: res1.uid.toString('hex'),
+   *     }),
    *   }
    *   console.log(res2)
    *   // {

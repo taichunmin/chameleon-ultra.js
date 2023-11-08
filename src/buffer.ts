@@ -67,7 +67,7 @@ export class Buffer extends Uint8Array {
   static alloc (size: number, fill: string, encoding?: Encoding): Buffer
   static alloc (size: number, fill?: Buffer | Uint8Array | number): Buffer
 
-  static alloc (size: number, fill: any = 0, encoding: Encoding = 'utf8'): Buffer {
+  static alloc (size: number, fill?: any, encoding: Encoding = 'utf8'): Buffer {
     if (!_.isSafeInteger(size) || size >= K_MAX_LENGTH) throw new RangeError(`Invalid size: ${size}`)
     const buf = new Buffer(size)
     if (_.isNil(fill)) return buf
@@ -88,28 +88,12 @@ export class Buffer extends Uint8Array {
   static byteLength (string: any, encoding: Encoding = 'utf8'): number {
     if (Buffer.isBuffer(string) || isInstance(string, ArrayBuffer) || isSharedArrayBuffer(string) || ArrayBuffer.isView(string)) return string.byteLength
     if (!_.isString(string)) throw new TypeError(`Invalid type of string: ${typeof string}`)
-    switch (encoding) {
-      case 'ascii':
-      case 'latin1':
-      case 'binary':
-        return string.length
 
-      case 'ucs2':
-      case 'ucs-2':
-      case 'utf16le':
-      case 'utf-16le':
-        return string.length * 2
-
-      case 'hex':
-        return string.length >>> 1
-
-      case 'base64':
-      case 'base64url':
-        return (string.length * 3) >>> 2
-
-      default:
-        return new TextEncoder().encode(string).length // default utf8
-    }
+    if (_.includes(['ascii', 'latin1', 'binary'], encoding)) return string.length
+    if (_.includes(['ucs2', 'ucs-2', 'utf16le', 'utf-16le'], encoding)) return string.length * 2
+    if (encoding === 'hex') return string.length >>> 1
+    if (_.includes(['base64', 'base64url'], encoding)) return (string.replace(/[^A-Za-z0-9/_+-]/g, '').length * 3) >>> 2
+    return new TextEncoder().encode(string).length // default utf8
   }
 
   static compare (buf1: any, buf2: any): number {
@@ -326,7 +310,8 @@ export class Buffer extends Uint8Array {
 
   includes (val: any, offset: any = 0, encoding: Encoding = 'utf8'): boolean {
     if (Buffer.isEncoding(offset)) [offset, encoding] = [0, offset]
-    if (!_.isSafeInteger(offset)) throw new RangeError('Invalid type of offset')
+    offset = _.toSafeInteger(offset)
+    if (offset < 0) offset = this.length + offset
 
     if (_.isString(val)) val = Buffer.fromString(val, encoding)
     else if (isInstance(val, Uint8Array)) val = Buffer.fromView(val)
@@ -390,7 +375,7 @@ export class Buffer extends Uint8Array {
   lastIndexOf (val: string | Buffer | Uint8Array | number, offset?: number | Encoding, encoding?: Encoding): number
 
   lastIndexOf (val: any, offset: any = this.length - 1, encoding: Encoding = 'utf8'): number {
-    if (Buffer.isEncoding(offset)) [offset, encoding] = [0, offset]
+    if (Buffer.isEncoding(offset)) [offset, encoding] = [this.length - 1, offset]
     offset = _.toSafeInteger(offset)
     if (offset < 0) offset = this.length + offset
 
@@ -780,15 +765,15 @@ export class Buffer extends Uint8Array {
 
   writeBitMSB (val: number | boolean, bitOffset: number): this {
     const tmp = [bitOffset >>> 3, (bitOffset & 7) ^ 7]
-    const oldBit = (this[tmp[0]] >>> tmp[1]) & 1
-    if ((oldBit ^ (Boolean(val) ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
+    if (Boolean(val)) this[tmp[0]] |= 1 << tmp[1]
+    else this[tmp[0]] &= ~(1 << tmp[1])
     return this
   }
 
   writeBitLSB (val: number | boolean, bitOffset: number): this {
     const tmp = [this.length - (bitOffset >>> 3) - 1, bitOffset & 7]
-    const oldBit = (this[tmp[0]] >>> tmp[1]) & 1
-    if ((oldBit ^ (Boolean(val) ? 1 : 0)) > 0) this[tmp[0]] ^= 1 << tmp[1]
+    if (Boolean(val)) this[tmp[0]] |= 1 << tmp[1]
+    else this[tmp[0]] &= ~(1 << tmp[1])
     return this
   }
 
