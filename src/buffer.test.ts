@@ -1,6 +1,32 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
 
+describe('new Buffer', () => {
+  test('0 arguments', () => {
+    const actual = new Buffer()
+    expect(actual.length).toEqual(0)
+  })
+
+  test('1 arguments', () => {
+    const actual = new Buffer(10)
+    expect(actual.length).toEqual(10)
+  })
+
+  test('2 arguments', () => {
+    const u8 = new Uint8Array(3)
+    for (let i = 0; i < u8.length; i++) u8[i] = i + 97
+    const actual = new Buffer(u8.buffer, 1)
+    expect(actual.toString()).toEqual('bc')
+  })
+
+  test('2 arguments', () => {
+    const u8 = new Uint8Array(3)
+    for (let i = 0; i < u8.length; i++) u8[i] = i + 97
+    const actual = new Buffer(u8.buffer, 1, 1)
+    expect(actual.toString()).toEqual('b')
+  })
+})
+
 describe('Buffer.alloc()', () => {
   test('should creates a zero-filled Buffer of length 10', () => {
     const actual = Buffer.alloc(10)
@@ -13,13 +39,25 @@ describe('Buffer.alloc()', () => {
   })
 
   test('shoud creates a Buffer of length 5, filled with bytes which all have the value `a`', () => {
-    const actual = Buffer.alloc(5, 'a')
-    expect(actual.toString('hex')).toEqual('6161616161')
+    const buf1 = Buffer.alloc(5, 'a')
+    expect(buf1.toString('hex')).toEqual('6161616161')
+
+    const buf2 = Buffer.alloc(5, 'a', null as any)
+    expect(buf2.toString('hex')).toEqual('6161616161')
   })
 
   test('shoud creates a Buffer, filled with base64 encoded string', () => {
     const actual = Buffer.alloc(11, 'aGVsbG8gd29ybGQ=', 'base64')
     expect(actual.toString('hex')).toEqual('68656c6c6f20776f726c64')
+  })
+
+  test('should throw error with invalid size', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(1.2)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
   })
 })
 
@@ -159,16 +197,25 @@ test.each([
 })
 
 describe('Buffer.fromView()', () => {
-  test('with TypedArray', async () => {
+  test('with TypedArray', () => {
     const view = new Uint8Array([0, 1, 2, 3, 4]).subarray(1, 4)
     const actual = Buffer.fromView(view).toString('hex')
     expect(actual).toEqual('010203')
   })
 
-  test('with DataView', async () => {
+  test('with DataView', () => {
     const view = new DataView(new Uint8Array([0, 1, 2, 3, 4]).buffer, 1, 3)
     const actual = Buffer.fromView(view).toString('hex')
     expect(actual).toEqual('010203')
+  })
+
+  test('should throw error with invalid type of view', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.fromView(1 as any)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
   })
 })
 
@@ -258,6 +305,11 @@ describe('Buffer#fill()', () => {
     expect(actual.toString('hex')).toEqual('0000000000')
   })
 
+  test('should fill with buffer', () => {
+    const actual = Buffer.allocUnsafe(5).fill(Buffer.from('a'))
+    expect(actual.toString()).toEqual('aaaaa')
+  })
+
   test('should fill with character that takes up two bytes in UTF-8', () => {
     const actual = Buffer.allocUnsafe(5).fill('\u0222')
     expect(actual.toString('hex')).toEqual('c8a2c8a2c8')
@@ -275,6 +327,30 @@ describe('Buffer#fill()', () => {
     actual.fill('zz', 'hex')
     expect(actual.toString('hex')).toEqual('0000000000')
   })
+
+  test('should work with val, offset, encoding', () => {
+    const actual = Buffer.alloc(5)
+    actual.fill('a', 1, 'utf8')
+    expect(actual.toString('hex')).toEqual('0061616161')
+  })
+
+  test('should throw error with invalid offset', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.allocUnsafe(5).fill('a', 1.5)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should throw error with invalid end', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.allocUnsafe(5).fill('a', 1, 2.5)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
 describe('Buffer#includes()', () => {
@@ -286,6 +362,8 @@ describe('Buffer#includes()', () => {
     { inputName: 'Buffer#slice', input: Buffer.from('a buffer example').slice(0, 8), expected: true },
     { inputName: 'Buffer.from("a buffer example")', input: Buffer.from('a buffer example'), expected: false },
     { inputName: '0', input: 0, expected: false },
+    { inputName: 'Buffer(1)', input: Buffer.from('a'), expected: true },
+    { inputName: 'Buffer()', input: new Buffer(), expected: false },
   ])('Buffer#includes($inputName) = $expected', ({ input, expected }) => {
     const buf = Buffer.from('this is a buffer')
     const actual = buf.includes(input)
@@ -296,6 +374,18 @@ describe('Buffer#includes()', () => {
     const buf = Buffer.from('this is a buffer')
     const actual = buf.includes('this', 4)
     expect(actual).toBe(false)
+  })
+
+  test('should work with encoding argument', () => {
+    const buf = Buffer.from('\u039a\u0391\u03a3\u03a3\u0395', 'utf16le')
+    expect(buf.includes('\u03a3', 0, 'utf16le')).toBe(true)
+    expect(buf.includes('\u03a3', -4, 'utf16le')).toBe(true)
+  })
+
+  test('should work with val, encoding', () => {
+    const buf = Buffer.from('this is a buffer')
+    const actual = buf.includes('buffer', 'utf8')
+    expect(actual).toBe(true)
   })
 })
 
@@ -308,6 +398,8 @@ describe('Buffer#indexOf()', () => {
     { inputName: '0', input: 0, expected: -1 },
     { inputName: 'Buffer#slice', input: Buffer.from('a buffer example').slice(0, 8), expected: 8 },
     { inputName: 'Buffer.from("a buffer example")', input: Buffer.from('a buffer example'), expected: -1 },
+    { inputName: 'Buffer(1)', input: Buffer.from('a'), expected: 8 },
+    { inputName: 'Buffer()', input: new Buffer(), expected: -1 },
   ])('Buffer#indexOf($inputName) = $expected', ({ input, expected }) => {
     const buf = Buffer.from('this is a buffer')
     const actual = buf.indexOf(input)
@@ -345,6 +437,11 @@ describe('Buffer#indexOf()', () => {
     expect(buf.indexOf('\u03a3', 0, 'utf16le')).toBe(4)
     expect(buf.indexOf('\u03a3', -4, 'utf16le')).toBe(6)
   })
+
+  test('should work with val, encoding', () => {
+    const buf = Buffer.from('this is a buffer')
+    expect(buf.indexOf('buffer', 'utf8')).toBe(10)
+  })
 })
 
 describe('Buffer#lastIndexOf()', () => {
@@ -354,6 +451,8 @@ describe('Buffer#lastIndexOf()', () => {
     { inputName: 'Buffer.from("buffer")', input: Buffer.from('buffer'), expected: 17 },
     { inputName: 'number', input: 97, expected: 15 },
     { inputName: 'Buffer.from("yolo")', input: Buffer.from('yolo'), expected: -1 },
+    { inputName: 'Buffer.from("a")', input: Buffer.from('a'), expected: 15 },
+    { inputName: 'Buffer()', input: new Buffer(), expected: -1 },
   ])('Buffer#lastIndexOf($inputName) = $expected', ({ input, expected }) => {
     const buf = Buffer.from('this buffer is a buffer')
     const actual = buf.lastIndexOf(input)
@@ -391,135 +490,278 @@ describe('Buffer#lastIndexOf()', () => {
     expect(buf.lastIndexOf('\u03a3', undefined, 'utf16le')).toBe(6)
     expect(buf.lastIndexOf('\u03a3', -5, 'utf16le')).toBe(4)
   })
+
+  test('should work with val, encoding', () => {
+    const buf = Buffer.from('this is a buffer')
+    expect(buf.lastIndexOf('buffer', 'utf8')).toBe(10)
+  })
 })
 
-test.each([
-  ['0123456789ABCDEF', '0123456789abcdef'],
-  ['0123456789abcdef', '0123456789abcdef'],
-  ['01 23 45 67 89 AB CD EF', '0123456789abcdef'],
-  ['0 1 2 3 4 5 6 7 8 9 A B C D E F', '0123456789abcdef'],
-  ['01\n23\n45\n67\n89\nAB\nCD\nEF', '0123456789abcdef'],
-  ['1a7', '1a'],
-  ['', ''],
-])('Buffer.from(%j, \'hex\').toString(\'hex\') = %j', async (input, expected) => {
-  const actual = Buffer.from(input, 'hex').toString('hex')
-  expect(actual).toEqual(expected)
+describe('Buffer.from()', () => {
+  test.each([
+    ['0123456789ABCDEF', '0123456789abcdef'],
+    ['0123456789abcdef', '0123456789abcdef'],
+    ['01 23 45 67 89 AB CD EF', '0123456789abcdef'],
+    ['0 1 2 3 4 5 6 7 8 9 A B C D E F', '0123456789abcdef'],
+    ['01\n23\n45\n67\n89\nAB\nCD\nEF', '0123456789abcdef'],
+    ['1a7', '1a'],
+    ['', ''],
+  ])('Buffer.from(%j, \'hex\').toString(\'hex\') = %j', (input, expected) => {
+    const actual = Buffer.from(input, 'hex').toString('hex')
+    expect(actual).toEqual(expected)
+  })
+
+  test.each([
+    ['hello world', '68656c6c6f20776f726c64'],
+    ['', ''],
+  ])('Buffer.from(%j, \'utf8\').toString(\'hex\') = %j', (input, expected) => {
+    const actual = Buffer.from(input, 'utf8').toString('hex')
+    expect(actual).toEqual(expected)
+  })
+
+  test.each([
+    ['68656c6c6f20776f726c64', 'hello world'],
+    ['', ''],
+  ])('Buffer.from(%j, \'hex\').toString(\'utf8\') = %j', (input, expected) => {
+    const actual = Buffer.from(input, 'hex').toString('utf8')
+    expect(actual).toEqual(expected)
+  })
+
+  test('return Buffer with a ArrayBufferView', () => {
+    const actual = Buffer.from(new Uint8Array([0x61, 0x62, 0x63]))
+    expect(actual.toString()).toEqual('abc')
+  })
+
+  test('return Buffer with a iterator', () => {
+    function * fn1 (): Generator<number> {
+      for (let i = 0; i < 3; i++) yield i + 97
+    }
+    const actual = Buffer.from(fn1())
+    expect(actual.toString()).toEqual('abc')
+  })
+
+  test('should throw error with invalid encoding', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.from('abc', 'utf16be' as any)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
-test.each([
-  ['hello world', '68656c6c6f20776f726c64'],
-  ['', ''],
-])('Buffer.from(%j, \'utf8\').toString(\'hex\') = %j', async (input, expected) => {
-  const actual = Buffer.from(input, 'utf8').toString('hex')
-  expect(actual).toEqual(expected)
-})
-
-test.each([
-  ['68656c6c6f20776f726c64', 'hello world'],
-  ['', ''],
-])('Buffer.from(%j, \'hex\').toString(\'utf8\') = %j', async (input, expected) => {
-  const actual = Buffer.from(input, 'hex').toString('utf8')
-  expect(actual).toEqual(expected)
+test('Buffer.fromArray() should throw error with invalid argument', () => {
+  expect.hasAssertions()
+  try {
+    Buffer.fromArray(1 as any)
+  } catch (err) {
+    expect(err).toBeInstanceOf(Error)
+  }
 })
 
 describe('Buffer.concat()', () => {
-  test('return the same Buffer with 1 argument', async () => {
+  test('return the same Buffer with 1 buffer', () => {
     const actual = Buffer.concat([Buffer.from([0, 1])]).toString('hex')
     expect(actual).toEqual('0001')
   })
 
-  test('return the merged Buffer with 2 argument', async () => {
+  test('return the merged Buffer with 2 buffers', () => {
     const actual = Buffer.concat([Buffer.from([0, 1]), Buffer.from([2, 3])]).toString('hex')
     expect(actual).toEqual('00010203')
+  })
+
+  test('return empty buffer with size = 0', () => {
+    const actual = Buffer.concat([Buffer.from('abc')], 0)
+    expect(actual.length).toEqual(0)
+  })
+
+  test('return empty buffer with size = -1', () => {
+    const actual = Buffer.concat([Buffer.from('abc')], -1)
+    expect(actual.length).toEqual(0)
+  })
+
+  test('return truncated buffer', () => {
+    const actual = Buffer.concat([Buffer.from('abc')], 1)
+    expect(actual.toString()).toEqual('a')
   })
 })
 
 describe('Buffer#equals()', () => {
-  test('return false with invalid type', async () => {
+  test('return false with invalid type', () => {
     const actual = Buffer.from([0, 1]).equals('')
     expect(actual).toEqual(false)
   })
 
-  test('return false with different data Buffer', async () => {
+  test('return false with different data Buffer', () => {
     const actual = Buffer.from([0, 1]).equals(Buffer.from([0]))
     expect(actual).toEqual(false)
   })
 
-  test('return false with same length different data Buffer', async () => {
+  test('return false with same length different data Buffer', () => {
     const actual = Buffer.from([0, 1]).equals(Buffer.from([2, 3]))
     expect(actual).toEqual(false)
   })
 
-  test('return true with same data Buffer', async () => {
+  test('return true with same data Buffer', () => {
     const actual = Buffer.from([0, 1]).equals(Buffer.from([0, 1]))
     expect(actual).toEqual(true)
   })
 })
 
-test('Buffer#chunk()', async () => {
-  const actual = Buffer.from('00010203', 'hex').chunk(3)
-  expect(actual[0].toString('hex')).toEqual('000102')
-  expect(actual[1].toString('hex')).toEqual('03')
+describe('Buffer#chunk()', () => {
+  test('return an array of Buffer', () => {
+    const actual = Buffer.from('00010203', 'hex').chunk(3)
+    expect(actual[0].toString('hex')).toEqual('000102')
+    expect(actual[1].toString('hex')).toEqual('03')
+  })
+
+  test('should throw error with invalid bytesPerChunk', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.from('00010203', 'hex').chunk(0)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
-test('Buffer#xor()', async () => {
+test('Buffer#xor()', () => {
   const actual = Buffer.from('01020304', 'hex').xor()
   expect(actual).toEqual(0x04)
 })
 
-test('Buffer#toString(\'hex\')', async () => {
-  const actual = Buffer.from([0, 1, 2])
-  expect(actual.toString('hex')).toEqual('000102')
+describe('Buffer#toString()', () => {
+  test('Buffer#toString(\'hex\')', () => {
+    const actual = Buffer.from([0, 1, 2])
+    expect(actual.toString('hex')).toEqual('000102')
+  })
+
+  test('Buffer#toString(\'ucs2\')', () => {
+    const actual = Buffer.from('610062006300', 'hex')
+    expect(actual.toString('ucs2')).toEqual('abc')
+  })
+
+  test('should throw error with invalid encoding', () => {
+    expect.hasAssertions()
+    try {
+      expect(Buffer.from('abc').toString('utf16be' as any))
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
-test('Buffer#toString(\'ucs2\')', async () => {
-  const actual = Buffer.from('610062006300', 'hex')
-  expect(actual.toString('ucs2')).toEqual('abc')
-})
-
-test('Buffer#toJSON()', async () => {
+test('Buffer#toJSON()', () => {
   const actual = Buffer.from([0, 1, 2])
   expect(actual.toJSON()).toMatchObject({ type: 'Buffer', data: [0, 1, 2] })
 })
 
-test.each([
-  ['000000', 0],
-  ['FFFFFF', 16777215],
-  ['7FFFFF', 8388607],
-  ['800000', 8388608],
-])('Buffer.from(%j, \'hex\').readUIntBE(0, 3) = %j', async (hex, expected) => {
-  const actual = Buffer.from(hex, 'hex').readUIntBE(0, 3)
-  expect(actual).toEqual(expected)
+describe('Buffer#readUIntBE', () => {
+  test.each([
+    ['000000', 0],
+    ['FFFFFF', 16777215],
+    ['7FFFFF', 8388607],
+    ['800000', 8388608],
+  ])('Buffer.from(%j, \'hex\').readUIntBE(0, 3) = %j', (hex, expected) => {
+    const actual = Buffer.from(hex, 'hex').readUIntBE(0, 3)
+    expect(actual).toEqual(expected)
+  })
+
+  test('should work with 0 or 1 arguments', () => {
+    const actual = new Buffer(7)
+    expect(actual.readUIntBE()).toEqual(0)
+    expect(actual.readUIntBE(1)).toEqual(0)
+  })
+
+  test.each([0, 7])('should throw error with invalid byteLength = %j', byteLength => {
+    expect.hasAssertions()
+    try {
+      new Buffer().readUIntBE(0, byteLength)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should throw out of range error', () => {
+    expect.hasAssertions()
+    try {
+      new Buffer().readUIntBE(0, 4)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
-test.each([
-  ['000000', 0],
-  ['FFFFFF', 16777215],
-  ['FFFF7F', 8388607],
-  ['000080', 8388608],
-])('Buffer.from(%j, \'hex\').readUIntLE(0, 3) = %j', async (hex, expected) => {
-  const actual = Buffer.from(hex, 'hex').readUIntLE(0, 3)
-  expect(actual).toEqual(expected)
+describe('Buffer#readUIntLE', () => {
+  test.each([
+    ['000000', 0],
+    ['FFFFFF', 16777215],
+    ['FFFF7F', 8388607],
+    ['000080', 8388608],
+  ])('Buffer.from(%j, \'hex\').readUIntLE(0, 3) = %j', (hex, expected) => {
+    const actual = Buffer.from(hex, 'hex').readUIntLE(0, 3)
+    expect(actual).toEqual(expected)
+  })
+
+  test('should work with 0 or 1 arguments', () => {
+    const actual = new Buffer(7)
+    expect(actual.readUIntLE()).toEqual(0)
+    expect(actual.readUIntLE(1)).toEqual(0)
+  })
+
+  test.each([0, 7])('should throw error with invalid byteLength = %j', byteLength => {
+    expect.hasAssertions()
+    try {
+      new Buffer().readUIntLE(0, byteLength)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should throw out of range error', () => {
+    expect.hasAssertions()
+    try {
+      new Buffer().readUIntLE(0, 4)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
-test.each([
-  ['000000', 0],
-  ['FFFFFF', -1],
-  ['7FFFFF', 8388607],
-  ['800000', -8388608],
-])('Buffer.from(%j, \'hex\').readIntBE(0, 3) = %j', async (hex, expected) => {
-  const actual = Buffer.from(hex, 'hex').readIntBE(0, 3)
-  expect(actual).toEqual(expected)
+describe('Buffer#readIntBE', () => {
+  test.each([
+    ['000000', 0],
+    ['FFFFFF', -1],
+    ['7FFFFF', 8388607],
+    ['800000', -8388608],
+  ])('Buffer.from(%j, \'hex\').readIntBE(0, 3) = %j', (hex, expected) => {
+    const actual = Buffer.from(hex, 'hex').readIntBE(0, 3)
+    expect(actual).toEqual(expected)
+  })
+
+  test('should work with 0 or 1 arguments', () => {
+    const actual = new Buffer(7)
+    expect(actual.readIntBE()).toEqual(0)
+    expect(actual.readIntBE(1)).toEqual(0)
+  })
 })
 
-test.each([
-  ['000000', 0],
-  ['FFFFFF', -1],
-  ['FFFF7F', 8388607],
-  ['000080', -8388608],
-])('Buffer.from(%j, \'hex\').readIntLE(0, 3) = %j', async (hex, expected) => {
-  const actual = Buffer.from(hex, 'hex').readIntLE(0, 3)
-  expect(actual).toEqual(expected)
+describe('Buffer#readIntLE', () => {
+  test.each([
+    ['000000', 0],
+    ['FFFFFF', -1],
+    ['FFFF7F', 8388607],
+    ['000080', -8388608],
+  ])('Buffer.from(%j, \'hex\').readIntLE(0, 3) = %j', (hex, expected) => {
+    const actual = Buffer.from(hex, 'hex').readIntLE(0, 3)
+    expect(actual).toEqual(expected)
+  })
+
+  test('should work with 0 or 1 arguments', () => {
+    const actual = new Buffer(7)
+    expect(actual.readIntLE()).toEqual(0)
+    expect(actual.readIntLE(1)).toEqual(0)
+  })
 })
 
 test.each([
@@ -527,7 +769,7 @@ test.each([
   [16777215, 'ffffff'],
   [8388607, '7fffff'],
   [8388608, '800000'],
-])('Buffer#writeUIntBE(%j, 0, 3), Buffer#toString(\'hex\') = %j', async (num, expected) => {
+])('Buffer#writeUIntBE(%j, 0, 3), Buffer#toString(\'hex\') = %j', (num, expected) => {
   const actual = new Buffer(3)
   actual.writeUIntBE(num, 0, 3)
   expect(actual.toString('hex')).toEqual(expected)
@@ -538,31 +780,9 @@ test.each([
   [16777215, 'ffffff'],
   [8388607, 'ffff7f'],
   [8388608, '000080'],
-])('Buffer#writeUIntLE(%j, 0, 3), Buffer#toString(\'hex\') = %j', async (num, expected) => {
+])('Buffer#writeUIntLE(%j, 0, 3), Buffer#toString(\'hex\') = %j', (num, expected) => {
   const actual = new Buffer(3)
   actual.writeUIntLE(num, 0, 3)
-  expect(actual.toString('hex')).toEqual(expected)
-})
-
-test.each([
-  [0, '000000'],
-  [-1, 'ffffff'],
-  [8388607, '7fffff'],
-  [-8388608, '800000'],
-])('Buffer#writeIntBE(%j, 0, 3), Buffer#toString(\'hex\') = %j', async (num, expected) => {
-  const actual = new Buffer(3)
-  actual.writeIntBE(num, 0, 3)
-  expect(actual.toString('hex')).toEqual(expected)
-})
-
-test.each([
-  [0, '000000'],
-  [-1, 'ffffff'],
-  [8388607, 'ffff7f'],
-  [-8388608, '000080'],
-])('Buffer#writeIntLE(%j, 0, 3), Buffer#toString(\'hex\') = %j', async (num, expected) => {
-  const actual = new Buffer(3)
-  actual.writeIntLE(num, 0, 3)
   expect(actual.toString('hex')).toEqual(expected)
 })
 
@@ -570,7 +790,7 @@ test.each([
   ['1', 'MQ'],
   ['12', 'MTI'],
   ['123', 'MTIz'],
-])('Packet.from(%j, \'utf8\').toString(\'base64url\') = %j', async (str, expected) => {
+])('Packet.from(%j, \'utf8\').toString(\'base64url\') = %j', (str, expected) => {
   const actual = Buffer.from(str, 'utf8').toString('base64url')
   expect(actual).toEqual(expected)
 })
@@ -582,7 +802,7 @@ test.each([
   ['MTI', 'MTI'],
   ['MTIz', 'MTIz'],
   ['SGVs/G8+d29ybGQ', 'SGVs_G8-d29ybGQ'],
-])('Buffer.from(%j, \'base64\').toString(\'base64url\') = %j', async (str, expected) => {
+])('Buffer.from(%j, \'base64\').toString(\'base64url\') = %j', (str, expected) => {
   const actual = Buffer.from(str, 'base64').toString('base64url')
   expect(actual).toEqual(expected)
 })
@@ -594,23 +814,52 @@ test.each([
   ['MTI', 'MTI='],
   ['MTIz', 'MTIz'],
   ['SGVs_G8-d29ybGQ', 'SGVs/G8+d29ybGQ='],
-])('Buffer.from(%j, \'base64url\').toString(\'base64\') = %j', async (str, expected) => {
+])('Buffer.from(%j, \'base64url\').toString(\'base64\') = %j', (str, expected) => {
   const actual = Buffer.from(str, 'base64url').toString('base64')
   expect(actual).toEqual(expected)
 })
 
-test.each([
-  { str1: 'ABC', str2: 'AB', expected: 1 },
-  { str1: 'ABC', str2: 'ABC', expected: 0 },
-  { str1: 'ABC', str2: 'ABCD', expected: -1 },
-  { str1: 'ABC', str2: 'BCD', expected: -1 },
-  { str1: 'BCD', str2: 'ABC', expected: 1 },
-  { str1: 'BCD', str2: 'ABCD', expected: 1 },
-])('Buffer.compare("$str1", "$str2") = $expected', async ({ str1, str2, expected }) => {
-  const buf1 = Buffer.from(str1)
-  const buf2 = Buffer.from(str2)
-  expect(Buffer.compare(buf1, buf2)).toEqual(expected)
-  expect(buf1.compare(buf2)).toEqual(expected)
+describe('Buffer.compare()', () => {
+  test.each([
+    { str1: 'ABC', str2: 'AB', expected: 1 },
+    { str1: 'ABC', str2: 'ABC', expected: 0 },
+    { str1: 'ABC', str2: 'ABCD', expected: -1 },
+    { str1: 'ABC', str2: 'BCD', expected: -1 },
+    { str1: 'BCD', str2: 'ABC', expected: 1 },
+    { str1: 'BCD', str2: 'ABCD', expected: 1 },
+  ])('Buffer.compare("$str1", "$str2") = $expected', ({ str1, str2, expected }) => {
+    const buf1 = Buffer.from(str1)
+    const buf2 = Buffer.from(str2)
+    expect(Buffer.compare(buf1, buf2)).toEqual(expected)
+    expect(buf1.compare(buf2)).toEqual(expected)
+  })
+
+  test('should throw error with invalid type of arg1', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.compare(1 as any, Buffer.from(''))
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should throw error with invalid type of arg2', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.compare(Buffer.from(''), 1 as any)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should throw error with invalid type of target', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.from('').compare(1 as any)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
 test.each([
@@ -618,7 +867,7 @@ test.each([
   { str: 'hex', expected: true },
   { str: 'utf/8', expected: false },
   { str: 'utf8', expected: true },
-])('Buffer.isEncoding("$str") = $expected', async ({ str, expected }) => {
+])('Buffer.isEncoding("$str") = $expected', ({ str, expected }) => {
   const actual = Buffer.isEncoding(str)
   expect(actual).toEqual(expected)
 })
@@ -631,7 +880,7 @@ test.each([
   ['FF', 8],
   ['FFFF', 16],
   ['FFFFFF', 24],
-])('Buffer.from(%j, \'hex\').readBitMSB(offset)', async (hex, bits) => {
+])('Buffer.from(%j, \'hex\').readBitMSB(offset)', (hex, bits) => {
   const buf = Buffer.from(hex, 'hex')
   const actual = _.times(bits, i => `${buf.readBitMSB(i)}`).join('')
   expect(actual).toEqual(BigInt(`0x${hex}`).toString(2).padStart(bits, '0'))
@@ -645,7 +894,7 @@ test.each([
   ['FF', 8],
   ['FFFF', 16],
   ['FFFFFF', 24],
-])('Buffer.from(%j, \'hex\').readBitLSB(offset)', async (hex, bits) => {
+])('Buffer.from(%j, \'hex\').readBitLSB(offset)', (hex, bits) => {
   const buf = Buffer.from(hex, 'hex')
   const actual = _.times(bits, i => `${buf.readBitLSB(i)}`).reverse().join('')
   expect(actual).toEqual(BigInt(`0x${hex}`).toString(2).padStart(bits, '0'))
@@ -717,16 +966,96 @@ describe('Buffer#write()', () => {
     actual.write('abcd', 8)
     expect(actual.toString('utf8', 8, 10)).toBe('ab')
   })
+
+  test('should work with val', () => {
+    const actual = Buffer.alloc(10)
+    actual.write('abc')
+    expect(actual.toString('utf8', 0, 3)).toBe('abc')
+  })
+
+  test('should work with val, encoding', () => {
+    const actual = Buffer.alloc(10)
+    actual.write('abc', 'utf8')
+    expect(actual.toString('utf8', 0, 3)).toBe('abc')
+  })
+
+  test('should work with val, offset, encoding', () => {
+    const actual = Buffer.alloc(10)
+    actual.write('abc', 1, 'utf8')
+    expect(actual.toString('utf8', 1, 4)).toBe('abc')
+  })
+
+  test('should throw error with invalid val', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(10).write(1 as any)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should throw error with invalid offset', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(10).write('abc', 1.5)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should throw error with invalid length', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(10).write('abc', 1, 2.5)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should throw error with invalid encoding', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(10).write('abc', 'utf16be' as any)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
-test.each([
-  { str: 'abc123', encoding: 'ascii', len: 6 },
-  { str: 'abc123', encoding: 'utf16le', len: 12 },
-  { str: 'abc123', encoding: 'hex', len: 3 },
-  { str: 'abc123', encoding: 'base64url', len: 4 },
-  { str: '\u00bd + \u00bc = \u00be', encoding: 'utf8', len: 12 },
-])('Buffer.byteLength("$str", "$encoding") = $len', ({ str, encoding, len }) => {
-  expect(Buffer.byteLength(str, encoding as any)).toBe(len)
+describe('Buffer.byteLength()', () => {
+  test.each([
+    { str: 'abc123', encoding: 'ascii', len: 6 },
+    { str: 'abc123', encoding: 'binary', len: 6 },
+    { str: 'abc123', encoding: 'latin1', len: 6 },
+    { str: 'abc123', encoding: 'ucs-2', len: 12 },
+    { str: 'abc123', encoding: 'ucs2', len: 12 },
+    { str: 'abc123', encoding: 'utf-16le', len: 12 },
+    { str: 'abc123', encoding: 'utf16le', len: 12 },
+    { str: 'abc123', encoding: 'hex', len: 3 },
+    { str: 'abc123', encoding: 'base64', len: 4 },
+    { str: 'abc123==', encoding: 'base64', len: 4 },
+    { str: 'abc123', encoding: 'base64url', len: 4 },
+    { str: '\u00bd + \u00bc = \u00be', encoding: 'utf8', len: 12 },
+    { str: '\u00bd + \u00bc = \u00be', encoding: undefined, len: 12 },
+  ])('Buffer.byteLength("$str", "$encoding") = $len', ({ str, encoding, len }) => {
+    expect(Buffer.byteLength(str, encoding as any)).toBe(len)
+  })
+
+  test.each([
+    { str: new Buffer(1), expected: 1 },
+    { str: new ArrayBuffer(1), expected: 1 },
+  ])('should return byteLength of ArrayBufferView', ({ str, expected }) => {
+    expect(Buffer.byteLength(str)).toBe(expected)
+  })
+
+  test('should throw error with invalid str', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.byteLength(1 as any)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
 test('read/write BigInt64', () => {
@@ -821,10 +1150,73 @@ describe('read/write Int', () => {
     expect(buf.writeIntLE(value, 1, byteLength).readIntLE(1, byteLength)).toBe(value)
   })
 
-  test.each([0, 7])('should throw error with byteLength = %j', byteLength => {
+  test.each([0, 7])('Buffer#writeIntBE() should throw error with byteLength = %j', byteLength => {
     expect.hasAssertions()
     try {
       Buffer.alloc(10).writeIntBE(0, 0, byteLength)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test.each([0, 7])('Buffer#writeIntLE() should throw error with byteLength = %j', byteLength => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(10).writeIntLE(0, 0, byteLength)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test.each([
+    [0, '000000'],
+    [-1, 'ffffff'],
+    [8388607, '7fffff'],
+    [-8388608, '800000'],
+  ])('Buffer#writeIntBE(%j, 0, 3), Buffer#toString(\'hex\') = %j', (num, expected) => {
+    const actual = new Buffer(3)
+    actual.writeIntBE(num, 0, 3)
+    expect(actual.toString('hex')).toEqual(expected)
+  })
+
+  test.each([
+    [0, '000000'],
+    [-1, 'ffffff'],
+    [8388607, 'ffff7f'],
+    [-8388608, '000080'],
+  ])('Buffer#writeIntLE(%j, 0, 3), Buffer#toString(\'hex\') = %j', (num, expected) => {
+    const actual = new Buffer(3)
+    actual.writeIntLE(num, 0, 3)
+    expect(actual.toString('hex')).toEqual(expected)
+  })
+
+  test('should work with 1 arguments', () => {
+    const buf1 = new Buffer(7).writeIntBE(0x010203040506)
+    expect(buf1.toString('hex')).toEqual('01020304050600')
+    const buf2 = new Buffer(7).writeIntLE(0x010203040506)
+    expect(buf2.toString('hex')).toEqual('06050403020100')
+  })
+
+  test('should work with 2 arguments', () => {
+    const buf1 = new Buffer(7).writeIntBE(0x010203040506, 1)
+    expect(buf1.toString('hex')).toEqual('00010203040506')
+    const buf2 = new Buffer(7).writeIntLE(0x010203040506, 1)
+    expect(buf2.toString('hex')).toEqual('00060504030201')
+  })
+
+  test('Buffer#writeIntBE() should throw error with invalid byteLength', () => {
+    expect.hasAssertions()
+    try {
+      new Buffer().writeIntBE(0, 0, 0)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('Buffer#writeIntLE() should throw error with invalid byteLength', () => {
+    expect.hasAssertions()
+    try {
+      new Buffer().writeIntLE(0, 0, 0)
     } catch (err) {
       expect(err).toBeInstanceOf(Error)
     }
@@ -847,7 +1239,7 @@ describe('read/write UInt', () => {
     expect(buf.writeUIntLE(value, 1, byteLength).readUIntLE(1, byteLength)).toBe(value)
   })
 
-  test.each([0, 7])('should throw error with byteLength = %j', byteLength => {
+  test.each([0, 7])('Buffer#writeUIntBE() should throw error with byteLength = %j', byteLength => {
     expect.hasAssertions()
     try {
       Buffer.alloc(10).writeUIntBE(0, 0, byteLength)
@@ -855,17 +1247,74 @@ describe('read/write UInt', () => {
       expect(err).toBeInstanceOf(Error)
     }
   })
+
+  test.each([0, 7])('Buffer#writeUIntLE() should throw error with byteLength = %j', byteLength => {
+    expect.hasAssertions()
+    try {
+      Buffer.alloc(10).writeUIntLE(0, 0, byteLength)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('should work with 1 arguments', () => {
+    const buf1 = new Buffer(7).writeUIntBE(0x010203040506)
+    expect(buf1.toString('hex')).toEqual('01020304050600')
+    const buf2 = new Buffer(7).writeUIntLE(0x010203040506)
+    expect(buf2.toString('hex')).toEqual('06050403020100')
+  })
+
+  test('should work with 2 arguments', () => {
+    const buf1 = new Buffer(7).writeUIntBE(0x010203040506, 1)
+    expect(buf1.toString('hex')).toEqual('00010203040506')
+    const buf2 = new Buffer(7).writeUIntLE(0x010203040506, 1)
+    expect(buf2.toString('hex')).toEqual('00060504030201')
+  })
+
+  test('Buffer#writeUIntBE() should throw out of range error', () => {
+    expect.hasAssertions()
+    try {
+      new Buffer().writeUIntBE(0)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
+
+  test('Buffer#writeUIntLE() should throw out of range error', () => {
+    expect.hasAssertions()
+    try {
+      new Buffer().writeUIntLE(0)
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+    }
+  })
 })
 
-test('read/write bit', () => {
+test('read/write BitMSB', () => {
   const buf = Buffer.alloc(10)
+  expect(buf.writeBitMSB(0, 0).readBitMSB(0)).toBe(0)
+  expect(buf.writeBitMSB(0, 1).readBitMSB(1)).toBe(0)
+
   expect(buf.writeBitMSB(1, 0).readBitMSB(0)).toBe(1)
-  expect(buf.writeBitLSB(1, 0).readBitLSB(0)).toBe(1)
   expect(buf.writeBitMSB(1, 1).readBitMSB(1)).toBe(1)
+})
+
+test('read/write BitLSB', () => {
+  const buf = Buffer.alloc(10)
+  expect(buf.writeBitLSB(0, 0).readBitLSB(0)).toBe(0)
+  expect(buf.writeBitLSB(0, 1).readBitLSB(1)).toBe(0)
+
+  expect(buf.writeBitLSB(1, 0).readBitLSB(0)).toBe(1)
   expect(buf.writeBitLSB(1, 1).readBitLSB(1)).toBe(1)
 })
 
 describe('Buffer#subarray()', () => {
+  test('0 arguments', () => {
+    const buf = Buffer.from('buffer')
+    const actual = buf.subarray()
+    expect(actual.toString()).toEqual('buffer')
+  })
+
   test('1 arguments', () => {
     const buf = Buffer.from('buffer')
     const actual = buf.subarray(1)
@@ -886,6 +1335,20 @@ describe('Buffer#subarray()', () => {
     expect(buf.subarray(-6, -1).toString()).toBe('buffe')
     expect(buf.subarray(-6, -2).toString()).toBe('buff')
     expect(buf.subarray(-5, -2).toString()).toBe('uff')
+  })
+})
+
+describe('Buffer#slice()', () => {
+  test('0 arguments', () => {
+    const buf = Buffer.from('buffer')
+    const actual = buf.slice()
+    expect(actual.toString()).toEqual('buffer')
+  })
+
+  test('1 arguments', () => {
+    const buf = Buffer.from('buffer')
+    const actual = buf.slice(1)
+    expect(actual.toString()).toEqual('uffer')
   })
 })
 
