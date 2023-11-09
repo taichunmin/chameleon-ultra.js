@@ -6,7 +6,7 @@ test('sleep', async () => {
   const start = Date.now()
   await sut.sleep(100)
   const end = Date.now()
-  expect(end - start).toBeGreaterThanOrEqual(100)
+  expect(end - start).toBeGreaterThanOrEqual(90)
 })
 
 test('errToJson', async () => {

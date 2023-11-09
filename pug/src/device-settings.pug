@@ -106,7 +106,7 @@ block content
 block script
   script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/joi@17/dist/joi-browser.min.js")
   script.
-    const { ChameleonUltra, DeviceMode, WebbleAdapter, WebserialAdapter, AnimationMode, ButtonAction } = ChameleonUltraJS // eslint-disable-line
+    const { AnimationMode, ButtonAction, ButtonType, ChameleonUltra, DeviceMode, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
     const ultraUsb = new ChameleonUltra(true)
     ultraUsb.use(new WebserialAdapter())
     const ultraBle = new ChameleonUltra(true)
@@ -193,9 +193,10 @@ block script
               mode: await ultra.cmdGetDeviceMode(),
               model: await ultra.cmdGetDeviceModel(),
             }
-            for (const btn of ['A', 'B']) {
-              ss[`pressBtn${btn}`] = await ultra.cmdGetButtonPressAction(btn)
-              ss[`longPressBtn${btn}`] = await ultra.cmdGetButtonLongPressAction(btn)
+            for (const btn of [ButtonType.BUTTON_A, ButtonType.BUTTON_B]) {
+              const btnName = 'AB'[btn - ButtonType.BUTTON_A]
+              ss[`pressBtn${btnName}`] = await ultra.cmdGetButtonPressAction(btn)
+              ss[`longPressBtn${btnName}`] = await ultra.cmdGetButtonLongPressAction(btn)
             }
             //- console.log(JSON.stringify(device, null, 2))
             this.$set(this, 'ss', { ...this.ss, ...ss, blePairingKeyVisible: false })
@@ -214,9 +215,10 @@ block script
             await ultra.cmdBleSetPairingMode(ss.blePairingMode)
             await ultra.cmdBleSetPairingKey(ss.blePairingKey)
             await ultra.cmdChangeDeviceMode(ss.mode)
-            for (const btn of ['A', 'B']) {
-              await ultra.cmdSetButtonPressAction(btn, ss[`pressBtn${btn}`])
-              await ultra.cmdSetButtonLongPressAction(btn, ss[`longPressBtn${btn}`])
+            for (const btn of [ButtonType.BUTTON_A, ButtonType.BUTTON_B]) {
+              const btnName = 'AB'[btn - ButtonType.BUTTON_A]
+              await ultra.cmdSetButtonPressAction(btn, ss[`pressBtn${btnName}`])
+              await ultra.cmdSetButtonLongPressAction(btn, ss[`longPressBtn${btnName}`])
             }
             await ultra.cmdSaveSettings()
             await Swal.fire({ icon: 'success', text: 'Settings save successfully!' })

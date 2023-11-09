@@ -91,7 +91,8 @@ export function errToJson<T extends Error & { originalError?: any, stack?: any }
 export function jsonStringify (obj: object, space?: number): string {
   try {
     const preventCircular = new Set()
-    return JSON.stringify(obj, (key, value) => {
+    return JSON.stringify(obj, function (this: any, key: string, value: any) {
+      if (Buffer.isBuffer(this[key])) return { type: 'Buffer', hex: this[key].toString('hex') }
       if (value instanceof Map) return _.fromPairs([...value.entries()])
       if (value instanceof Set) return [...value.values()]
       if (_.isObject(value) && !_.isEmpty(value)) {

@@ -26,10 +26,40 @@ function isSharedArrayBuffer (val: any): val is SharedArrayBuffer {
   return typeof SharedArrayBuffer !== 'undefined' && (isInstance(val, SharedArrayBuffer) || isInstance(val?.buffer, SharedArrayBuffer))
 }
 
+function floatU32ToU16 (u32: number): number {
+  // Float32: 1 + 8 + 23, bits = 1 xxxxxxxx 11111111110000000000000
+  //                  0x7FFFFF = 0 00000000 11111111111111111111111
+  // Float16: 1 + 5 + 10, bits = 1    xxxxx 1111111111
+  //                    0x0200 = 0    00000 1000000000
+  //                    0x03FF = 0    00000 1111111111
+  //                    0x7C00 = 0    11111 0000000000
+  //                    0x8000 = 1    00000 0000000000
+  const exp = (u32 >>> 23) & 0xFF
+  if (exp === 0xFF) return ((u32 >>> 16) & 0x8000) + 0x7C00 + ((u32 & 0x7FFFFF) !== 0 ? 0x200 : 0) // +-inf / NaN
+  if (exp === 0) return ((u32 >>> 16) & 0x8000) + ((u32 >>> 13) & 0x3FF)
+  return ((u32 >>> 16) & 0x8000) + (((exp - 112) << 10) & 0x7C00) + ((u32 >>> 13) & 0x3FF)
+}
+
+function floatU16ToU32 (u16: number): number {
+  // Float32: 1 + 8 + 23, bits = 1 xxxxxxxx 11111111110000000000000
+  //                0x00400000 = 0 00000000 10000000000000000000000
+  //                0x007FE000 = 0 00000000 11111111110000000000000
+  //                0x7F800000 = 0 11111111 00000000000000000000000
+  //                0x80000000 = 1 00000000 00000000000000000000000
+  // Float16: 1 + 5 + 10, bits = 1    xxxxx 1111111111
+  //                    0x03FF = 0    00000 1111111111
+  const exp = (u16 >>> 10) & 0x1F
+  if (exp === 0x1F) return ((u16 << 16) & 0x80000000) + 0x7F800000 + ((u16 & 0x3FF) !== 0 ? 0x400000 : 0) // +-inf / NaN
+  if (exp === 0) return ((u16 << 16) & 0x80000000) + ((u16 << 13) & 0x7FE000)
+  return ((u16 << 16) & 0x80000000) + (((exp + 112) << 23) & 0x7F800000) + ((u16 << 13) & 0x7FE000)
+}
+
+const float16Buf = new DataView(new ArrayBuffer(4))
+
 /**
  * @enum
  */
-export const EncodingConst = {
+const EncodingConst = {
   'ucs-2': 'ucs-2',
   'utf-16le': 'utf-16le',
   'utf-8': 'utf-8',
@@ -47,6 +77,56 @@ export const EncodingConst = {
 export type Encoding = keyof typeof EncodingConst
 
 const isEncoding = createIsEnum(EncodingConst)
+
+const isNativeLittleEndian = new Uint8Array(new Uint16Array([0x1234]).buffer)[0] === 0x12
+
+/**
+ * @see [Format Characters](https://docs.python.org/3/library/struct.html#format-characters)
+ */
+const packFromFns = new Map<string, (ctx: PackFromContext) => void>([
+  ['x', packFromPad],
+  ['c', packFromChar],
+  ['b', packFromInt8],
+  ['B', packFromInt8],
+  ['?', packFromBool],
+  ['h', packFromInt16],
+  ['H', packFromInt16],
+  ['i', packFromInt32],
+  ['I', packFromInt32],
+  ['l', packFromInt32],
+  ['L', packFromInt32],
+  ['q', packFromBigInt64],
+  ['Q', packFromBigInt64],
+  ['e', packFromFloat16],
+  ['f', packFromFloat],
+  ['d', packFromDouble],
+  ['s', packFromString],
+  ['p', packFromPascal],
+])
+
+/**
+ * @see [Format Characters](https://docs.python.org/3/library/struct.html#format-characters)
+ */
+const unpackToFns = new Map<string, (ctx: PackFromContext) => void>([
+  ['x', unpackToPad],
+  ['c', unpackToChar],
+  ['b', unpackToInt8],
+  ['B', unpackToInt8],
+  ['?', unpackToBool],
+  ['h', unpackToInt16],
+  ['H', unpackToInt16],
+  ['i', unpackToInt32],
+  ['I', unpackToInt32],
+  ['l', unpackToInt32],
+  ['L', unpackToInt32],
+  ['q', unpackToBigInt64],
+  ['Q', unpackToBigInt64],
+  ['e', unpackToFloat16],
+  ['f', unpackToFloat],
+  ['d', unpackToDouble],
+  ['s', unpackToString],
+  ['p', unpackToPascal],
+])
 
 export class Buffer extends Uint8Array {
   protected readonly dv: DataView
@@ -255,6 +335,79 @@ export class Buffer extends Uint8Array {
     return isEncoding(encoding)
   }
 
+  static packParseFormat (format: string): PackFormat {
+    if (!_.isString(format)) throw new TypeError('Invalid type of format')
+    const matched = /^([@=<>!]?)((?:\d*[xcbB?hHiIlLqQefdsp])+)$/.exec(format)
+    if (_.isNil(matched)) throw new TypeError(`Invalid format: ${format}`)
+    const littleEndian = _.includes(['', '@', '='], matched[1]) ? isNativeLittleEndian : (matched[1] === '<')
+    return {
+      littleEndian,
+      items: _.map([...matched[2].matchAll(/\d*[xcbB?hHiIlLqQefdsp]/g)], ([s]) => {
+        const type = s[s.length - 1]
+        const repeat = s.length > 1 ? _.parseInt(s.slice(0, -1)) : 1
+        return [(type === 'p' && repeat > 255) ? 255 : repeat, type]
+      }),
+    }
+  }
+
+  static packCalcSize (format: string): number
+  static packCalcSize (items: PackFormat['items']): number
+
+  static packCalcSize (formatOrItems: string | PackFormat['items']): number {
+    if (_.isString(formatOrItems)) formatOrItems = Buffer.packParseFormat(formatOrItems)?.items
+    return _.sumBy(formatOrItems, item => {
+      const [repeat, type] = item
+      if ('hHe'.includes(type)) return repeat * 2
+      if ('iIlLf'.includes(type)) return repeat * 4
+      if ('qQd'.includes(type)) return repeat * 8
+      return repeat // xcbB?sp
+    })
+  }
+
+  /**
+   * Return a bytes object containing the values packed according to the format string format. The arguments must match the values required by the format exactly.
+   */
+  static pack (format: string, ...vals: any[]): Buffer
+  static pack (buf: Buffer, format: string, ...vals: any[]): Buffer
+
+  static pack (buf: any, format: any, ...vals: any[]): Buffer {
+    if (_.isString(buf)) { // shift arguments
+      vals.unshift(format)
+      ;[buf, format] = [undefined, buf]
+    }
+
+    const { littleEndian, items } = Buffer.packParseFormat(format)
+    const lenRequired = Buffer.packCalcSize(items)
+    if (_.isNil(buf)) buf = new Buffer(lenRequired)
+    if (!Buffer.isBuffer(buf)) throw new TypeError('Invalid type of buf')
+    if (buf.length < lenRequired) throw new RangeError(`buf.length = ${buf.length}, lenRequired = ${lenRequired}`)
+
+    const ctx = { buf, littleEndian, offset: 0, vals }
+    for (const [repeat, type] of items) {
+      const packFromFn = packFromFns.get(type)
+      if (_.isNil(packFromFn)) throw new Error(`Unknown format: ${repeat}${type}`)
+      packFromFn(_.merge(ctx, { repeat, type }))
+    }
+
+    return buf
+  }
+
+  static unpack <T extends any[]> (buf: Buffer, format: string): T {
+    const { littleEndian, items } = Buffer.packParseFormat(format)
+    const lenRequired = Buffer.packCalcSize(items)
+    if (!Buffer.isBuffer(buf)) throw new TypeError('Invalid type of buf')
+    if (buf.length < lenRequired) throw new RangeError(`buf.length = ${buf.length}, lenRequired = ${lenRequired}`)
+
+    const ctx = { buf, littleEndian, offset: 0, vals: [] }
+    for (const [repeat, type] of items) {
+      const unpackToFn = unpackToFns.get(type)
+      if (_.isNil(unpackToFn)) throw new Error(`Unknown format: ${repeat}${type}`)
+      unpackToFn(_.merge(ctx, { repeat, type }))
+    }
+
+    return ctx.vals as unknown as T
+  }
+
   compare (target: any, targetStart: number = 0, targetEnd: number = target.length, sourceStart: number = 0, sourceEnd: number = this.length): number {
     if (!Buffer.isBuffer(target) && !isInstance(target, Uint8Array)) throw new TypeError('Invalid type of target')
     return Buffer.compare(this.subarray(sourceStart, sourceEnd), target.subarray(targetStart, targetEnd))
@@ -429,6 +582,18 @@ export class Buffer extends Uint8Array {
 
   readFloatLE (offset: number = 0): number {
     return this.dv.getFloat32(offset, true)
+  }
+
+  readFloat16BE (offset: number = 0): number {
+    const u32 = floatU16ToU32(this.readUInt16BE(offset))
+    float16Buf.setUint32(0, u32)
+    return float16Buf.getFloat32(0)
+  }
+
+  readFloat16LE (offset: number = 0): number {
+    const u32 = floatU16ToU32(this.readUInt16LE(offset))
+    float16Buf.setUint32(0, u32)
+    return float16Buf.getFloat32(0)
   }
 
   readInt8 (offset: number = 0): number {
@@ -679,6 +844,18 @@ export class Buffer extends Uint8Array {
     return this
   }
 
+  writeFloat16BE (val: number, offset: number = 0): this {
+    float16Buf.setFloat32(0, val)
+    const u32 = float16Buf.getUint32(0)
+    return this.writeUInt16BE(floatU32ToU16(u32), offset)
+  }
+
+  writeFloat16LE (val: number, offset: number = 0): this {
+    float16Buf.setFloat32(0, val)
+    const u32 = float16Buf.getUint32(0)
+    return this.writeUInt16LE(floatU32ToU16(u32), offset)
+  }
+
   writeInt8 (val: number, offset: number = 0): this {
     this.dv.setInt8(offset, val)
     return this
@@ -787,6 +964,235 @@ export class Buffer extends Uint8Array {
   xor (): number {
     return _.reduce(this, (xor, v) => xor ^ v, 0)
   }
+
+  pack (format: string, ...vals: any[]): this {
+    Buffer.pack(this, format, ...vals)
+    return this
+  }
+
+  unpack <T extends any[]> (format: string): T {
+    return Buffer.unpack<T>(this, format)
+  }
+}
+
+interface PackFromContext {
+  buf: Buffer
+  littleEndian: boolean
+  offset: number
+  repeat: number
+  type: string
+  vals: any[]
+}
+
+function packFromPad (ctx: PackFromContext): void {
+  const { buf, repeat } = ctx
+  for (let i = 0; i < repeat; i++) buf[ctx.offset] = 0
+  ctx.offset += repeat
+}
+
+function unpackToPad (ctx: PackFromContext): void {
+  const { repeat } = ctx
+  ctx.offset += repeat
+}
+
+function packFromChar (ctx: PackFromContext): void {
+  const { buf, repeat, vals } = ctx
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf[ctx.offset] = Buffer.from(vals.shift())?.[0] ?? 0
+    ctx.offset += 1
+  }
+}
+
+function unpackToChar (ctx: PackFromContext): void {
+  const { buf, repeat, vals } = ctx
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf.subarray(ctx.offset, ctx.offset + 1))
+    ctx.offset += 1
+  }
+}
+
+function packFromInt8 (ctx: PackFromContext): void {
+  const { buf, repeat, type, vals } = ctx
+  const fnName = type === 'b' ? 'writeInt8' : 'writeUInt8'
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf[fnName](_.toSafeInteger(vals.shift()), ctx.offset)
+    ctx.offset += 1
+  }
+}
+
+function unpackToInt8 (ctx: PackFromContext): void {
+  const { buf, repeat, type, vals } = ctx
+  const fnName = type === 'b' ? 'readInt8' : 'readUInt8'
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf[fnName](ctx.offset))
+    ctx.offset += 1
+  }
+}
+
+function packFromBool (ctx: PackFromContext): void {
+  const { buf, repeat, vals } = ctx
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf.writeUInt8(Boolean(vals.shift()) ? 1 : 0, ctx.offset)
+    ctx.offset += 1
+  }
+}
+
+function unpackToBool (ctx: PackFromContext): void {
+  const { buf, repeat, vals } = ctx
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf.readUInt8(ctx.offset) !== 0)
+    ctx.offset += 1
+  }
+}
+
+function packFromInt16 (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, type, vals } = ctx
+  const fnName = (['writeUInt16BE', 'writeUInt16LE', 'writeInt16BE', 'writeInt16LE'] as const)[(type === 'h' ? 2 : 0) + (littleEndian ? 1 : 0)]
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf[fnName](_.toSafeInteger(vals.shift()), ctx.offset)
+    ctx.offset += 2
+  }
+}
+
+function unpackToInt16 (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, type, vals } = ctx
+  const fnName = (['readUInt16BE', 'readUInt16LE', 'readInt16BE', 'readInt16LE'] as const)[(type === 'h' ? 2 : 0) + (littleEndian ? 1 : 0)]
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf[fnName](ctx.offset))
+    ctx.offset += 2
+  }
+}
+
+function packFromInt32 (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, type, vals } = ctx
+  const fnName = (['writeUInt32BE', 'writeUInt32LE', 'writeInt32BE', 'writeInt32LE'] as const)[('il'.includes(type) ? 2 : 0) + (littleEndian ? 1 : 0)]
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf[fnName](_.toSafeInteger(vals.shift()), ctx.offset)
+    ctx.offset += 4
+  }
+}
+
+function unpackToInt32 (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, type, vals } = ctx
+  const fnName = (['readUInt32BE', 'readUInt32LE', 'readInt32BE', 'readInt32LE'] as const)[('il'.includes(type) ? 2 : 0) + (littleEndian ? 1 : 0)]
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf[fnName](ctx.offset))
+    ctx.offset += 4
+  }
+}
+
+function packFromBigInt64 (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, type, vals } = ctx
+  const fnName = (['writeBigUInt64BE', 'writeBigUInt64LE', 'writeBigInt64BE', 'writeBigInt64LE'] as const)[(type === 'q' ? 2 : 0) + (littleEndian ? 1 : 0)]
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf[fnName](BigInt(vals.shift()), ctx.offset)
+    ctx.offset += 8
+  }
+}
+
+function unpackToBigInt64 (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, type, vals } = ctx
+  const fnName = (['readBigUInt64BE', 'readBigUInt64LE', 'readBigInt64BE', 'readBigInt64LE'] as const)[(type === 'q' ? 2 : 0) + (littleEndian ? 1 : 0)]
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf[fnName](ctx.offset))
+    ctx.offset += 8
+  }
+}
+
+function packFromFloat16 (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, vals } = ctx
+  const fnName = littleEndian ? 'writeFloat16LE' : 'writeFloat16BE'
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf[fnName](vals.shift(), ctx.offset)
+    ctx.offset += 2
+  }
+}
+
+function unpackToFloat16 (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, vals } = ctx
+  const fnName = littleEndian ? 'readFloat16LE' : 'readFloat16BE'
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf[fnName](ctx.offset))
+    ctx.offset += 2
+  }
+}
+
+function packFromFloat (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, vals } = ctx
+  const fnName = littleEndian ? 'writeFloatLE' : 'writeFloatBE'
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf[fnName](vals.shift(), ctx.offset)
+    ctx.offset += 4
+  }
+}
+
+function unpackToFloat (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, vals } = ctx
+  const fnName = littleEndian ? 'readFloatLE' : 'readFloatBE'
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf[fnName](ctx.offset))
+    ctx.offset += 4
+  }
+}
+
+function packFromDouble (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, vals } = ctx
+  const fnName = littleEndian ? 'writeDoubleLE' : 'writeDoubleBE'
+  for (let i = 0; i < repeat; i++) {
+    if (vals.length === 0) throw new TypeError('Not enough vals')
+    buf[fnName](vals.shift(), ctx.offset)
+    ctx.offset += 8
+  }
+}
+
+function unpackToDouble (ctx: PackFromContext): void {
+  const { buf, littleEndian, repeat, vals } = ctx
+  const fnName = littleEndian ? 'readDoubleLE' : 'readDoubleBE'
+  for (let i = 0; i < repeat; i++) {
+    vals.push(buf[fnName](ctx.offset))
+    ctx.offset += 8
+  }
+}
+
+function packFromString (ctx: PackFromContext): void {
+  const { buf, repeat, vals } = ctx
+  if (vals.length === 0) throw new TypeError('Not enough vals')
+  const val = vals.shift()
+  const buf1 = new Buffer(repeat)
+  Buffer.from(val).copy(buf1, 0, 0, repeat) // padded with null bytes
+  buf1.copy(buf, ctx.offset)
+  ctx.offset += buf1.length
+}
+
+function unpackToString (ctx: PackFromContext): void {
+  const { buf, repeat, vals } = ctx
+  vals.push(buf.subarray(ctx.offset, ctx.offset + repeat))
+  ctx.offset += repeat
+}
+
+function packFromPascal (ctx: PackFromContext): void {
+  const { buf, repeat, vals } = ctx
+  if (vals.length === 0) throw new TypeError('Not enough vals')
+  const val = vals.shift()
+  const buf1 = new Buffer(repeat)
+  buf1[0] = Buffer.from(val).copy(buf1, 1, 0, repeat - 1) // padded with null bytes
+  buf1.copy(buf, ctx.offset)
+  ctx.offset += buf1.length
+}
+
+function unpackToPascal (ctx: PackFromContext): void {
+  const { buf, repeat, vals } = ctx
+  const len = Math.min(buf[ctx.offset], repeat - 1)
+  vals.push(buf.subarray(ctx.offset + 1, ctx.offset + 1 + len))
+  ctx.offset += repeat
 }
 
 type ArrayBufferView = NodeJS.ArrayBufferView | Buffer
@@ -797,3 +1203,8 @@ interface ArrayLike<T> {
 }
 
 type WithImplicitCoercion<T> = T | { valueOf: () => T }
+
+interface PackFormat {
+  littleEndian: boolean
+  items: Array<[number, string]>
+}
