@@ -9,6 +9,12 @@ const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
 const VERSION_SUPPORTED = { gte: '2.0', lt: '3.0' } as const
 
+function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string = ''): void {
+  if (!_.isSafeInteger(block)) throw new TypeError(`${prefix}block should be a integer`)
+  if (!isMf1KeyType(keyType)) throw new TypeError(`${prefix}keyType should be a Mf1KeyType`)
+  if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError(`${prefix}key should be a Buffer(6)`)
+}
+
 /**
  * The core library of "chameleon-ultra.js". The instance of this class must use exactly one adapter plugin to communication to ChameleonUltra.
  */
@@ -1335,9 +1341,7 @@ export class ChameleonUltra {
     block: number
     keyType: Mf1KeyType
   }): Promise<Decoder.Mf1AcquireStaticNestedRes> {
-    if (!_.isSafeInteger(known.block)) throw new TypeError('Invalid known.block')
-    if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
-    if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
     this._clearRxBufs()
@@ -1450,14 +1454,10 @@ export class ChameleonUltra {
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
-   *   const res2 = await ultra.cmdMf1AcquireNested({
-   *     block: 0,
-   *     keyType: Mf1KeyType.KEY_A,
-   *     key
-   *   }, {
-   *     block: 4,
-   *     keyType: Mf1KeyType.KEY_A
-   *   })
+   *   const res2 = await ultra.cmdMf1AcquireNested(
+   *     { block: 0, keyType: Mf1KeyType.KEY_A, key },
+   *     { block: 4, keyType: Mf1KeyType.KEY_A },
+   *   )
    *   const res = {
    *     uid: res1.uid.toString('hex'),
    *     dist: res1.dist.toString('hex'),
@@ -1484,9 +1484,7 @@ export class ChameleonUltra {
     key: Buffer
     keyType: Mf1KeyType
   }): Promise<Decoder.Mf1NtDistanceRes> {
-    if (!_.isSafeInteger(known.block)) throw new TypeError('Invalid known.block')
-    if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
-    if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     this._clearRxBufs()
     const cmd = Cmd.MF1_DETECT_NT_DIST // cmd = 2005
     await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([known.keyType, known.block]), known.key]) })
@@ -1511,13 +1509,11 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
-   *   const res1 = await ultra.cmdMf1TestNtDistance({
-   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
-   *   })
-   *   const res2 = await ultra.cmdMf1AcquireNested({
-   *     src: { block: 0, keyType: Mf1KeyType.KEY_A, key },
-   *     dst: { block: 4, keyType: Mf1KeyType.KEY_A },
-   *   })
+   *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
+   *   const res2 = await ultra.cmdMf1AcquireNested(
+   *     { block: 0, keyType: Mf1KeyType.KEY_A, key },
+   *     { block: 4, keyType: Mf1KeyType.KEY_A },
+   *   )
    *   const res = {
    *     uid: res1.uid.toString('hex'),
    *     dist: res1.dist.toString('hex'),
@@ -1547,9 +1543,7 @@ export class ChameleonUltra {
     block: number
     keyType: Mf1KeyType
   }): Promise<Decoder.Mf1NestedRes[]> {
-    if (!_.isSafeInteger(known.block)) throw new TypeError('Invalid known.block')
-    if (!Buffer.isBuffer(known.key) || known.key.length !== 6) throw new TypeError('known.key should be a Buffer with length 6')
-    if (!isMf1KeyType(known.keyType)) throw new TypeError('Invalid known.keyType')
+    validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
     this._clearRxBufs()
@@ -1595,9 +1589,7 @@ export class ChameleonUltra {
   }): Promise<boolean> {
     const { block, keyType, key } = opts
     try {
-      if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
-      if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
-      if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
+      validateMf1BlockKey(block, keyType, key)
       this._clearRxBufs()
       const cmd = Cmd.MF1_AUTH_ONE_KEY_BLOCK // cmd = 2007
       await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([keyType, block]), key]) })
@@ -1639,9 +1631,7 @@ export class ChameleonUltra {
     key: Buffer
   }): Promise<Buffer> {
     const { block, keyType, key } = opts
-    if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
-    if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
-    if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
+    validateMf1BlockKey(block, keyType, key)
     this._clearRxBufs()
     const cmd = Cmd.MF1_READ_ONE_BLOCK // cmd = 2008
     await this._writeCmd({ cmd, data: Buffer.concat([new Buffer([keyType, block]), key]) })
@@ -1680,9 +1670,7 @@ export class ChameleonUltra {
     data: Buffer
   }): Promise<void> {
     const { block, keyType, key, data } = opts
-    if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
-    if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
-    if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError('key should be a Buffer with length 6')
+    validateMf1BlockKey(block, keyType, key)
     if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
     this._clearRxBufs()
     const cmd = Cmd.MF1_WRITE_ONE_BLOCK // cmd = 2009
@@ -1782,8 +1770,138 @@ export class ChameleonUltra {
 
     this._clearRxBufs()
     const cmd = Cmd.HF14A_RAW // cmd = 2010
-    await this._writeCmd({ cmd, data: buf1 }) // cmd = 2010
+    await this._writeCmd({ cmd, data: buf1 })
     return (await this._readRespTimeout({ cmd, timeout: READ_DEFAULT_TIMEOUT + timeout }))?.data
+  }
+
+  /**
+   * MIFARE Classic manipulate value block
+   *
+   * - Decrement: decrement value by `X` (`0` ~ `2147483647`) from src to dst
+   * - Increment: increment value by `X` (`0` ~ `2147483647`) from src to dst
+   * - Restore: copy value from src to dst (Restore and Transfer)
+   *
+   * @param src The key info of src block.
+   * @param src.key The key of src block.
+   * @param src.keyType The key type of src block.
+   * @param src.block The block of src block.
+   * @param operator The operator of value block.
+   * @param operand The operand of value block.
+   * @param dst The key info of dst block.
+   * @param dst.key The key of dst block.
+   * @param dst.keyType The key type of dst block.
+   * @param dst.block The block of dst block.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
+   *   await ultra.mf1VblockSetValue(src, { value: 2 })
+   *   console.log(await ultra.mf1VblockGetValue(src))
+   *   await ultra.cmdMf1VblockManipulate(
+   *     { block: 4, keyType: Mf1KeyType.KEY_A, key },
+   *     Mf1VblockOperator.DECREMENT, 1,
+   *     { block: 4, keyType: Mf1KeyType.KEY_A, key },
+   *   )
+   *   console.log(await ultra.mf1VblockGetValue(src))
+   * }
+   * ```
+   */
+  async cmdMf1VblockManipulate (
+    src: { block: number, keyType: Mf1KeyType, key: Buffer },
+    operator: Mf1VblockOperator,
+    operand: number,
+    dst: { block: number, keyType: Mf1KeyType, key: Buffer },
+  ): Promise<void> {
+    validateMf1BlockKey(src.block, src.keyType, src.key, 'src.')
+    validateMf1BlockKey(dst.block, dst.keyType, dst.key, 'dst.')
+    if (!isMf1VblockOperator(operator)) throw new TypeError('Invalid operator')
+    if (!_.isSafeInteger(operand)) throw new TypeError('Invalid operand')
+    this._clearRxBufs()
+    const cmd = Cmd.MF1_MANIPULATE_VALUE_BLOCK // cmd = 2011
+    const data = Buffer.concat([
+      new Buffer([src.keyType, src.block]),
+      src.key,
+      new Buffer([operator]),
+      new Buffer(4).writeInt32BE(operand, 0),
+      new Buffer([dst.keyType, dst.block]),
+      dst.key,
+    ])
+    await this._writeCmd({ cmd, data })
+    await this._readRespTimeout({ cmd })
+  }
+
+  /**
+   * Get value from `opts` block (MIFARE Classic value block)
+   * @param opts The key info of `opts` block.
+   * @param opts.block The block of `opts` block.
+   * @param opts.keyType The key type of `opts` block.
+   * @param opts.key The key of `opts` block.
+   * @returns The value and address of `opts` block.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
+   *   await ultra.mf1VblockSetValue(src, { value: 2 })
+   *   console.log(await ultra.mf1VblockGetValue(src))
+   * }
+   * ```
+   */
+  async mf1VblockGetValue (
+    opts: { block: number, keyType: Mf1KeyType, key: Buffer },
+  ): Promise<{ value: number, adr: number }> {
+    const blkDt = await this.cmdMf1ReadBlock(opts)
+    const [val1, val2, val3] = _.times(3, i => blkDt.readInt32LE(i * 4))
+    if (val1 !== val3 || val1 + val2 !== -1) throw new Error(`Invalid value of value block: ${blkDt.toString('hex')}`)
+    const [adr1, adr2, adr3, adr4] = blkDt.subarray(12, 16)
+    if (adr1 !== adr3 || adr2 !== adr4 || adr1 + adr2 !== 0xFF) throw new Error(`Invalid address of value block: ${blkDt.toString('hex')}`)
+    return { adr: adr1, value: val1 }
+  }
+
+  /**
+   * Set value X (-2147483647 ~ 2147483647) to `dst` block (MIFARE Classic value block)
+   * @param dst The key info of `dst` block.
+   * @param dst.block The block of `dst` block.
+   * @param dst.keyType The key type of `dst` block.
+   * @param dst.key The key of `dst` block.
+   * @param val The value and address to be set.
+   * @param val.value The value to be set. Default is `0`.
+   * @param val.adr The address to be set. Default is `dst.block`.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
+   *
+   * async function run (ultra) {
+   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
+   *   await ultra.mf1VblockSetValue(src, { value: 2 })
+   *   console.log(await ultra.mf1VblockGetValue(src))
+   * }
+   * ```
+   */
+  async mf1VblockSetValue (
+    dst: { block: number, keyType: Mf1KeyType, key: Buffer },
+    val: { adr?: number, value?: number },
+  ): Promise<void> {
+    const blkDt = new Buffer(16)
+    const { value: val1 = 0, adr: adr1 = dst.block } = val
+    if (!_.isSafeInteger(val1)) throw new TypeError('Invalid val.value')
+    const [val2, adr2] = [-val1 - 1, 0xFF - adr1]
+    blkDt.writeInt32LE(val1, 0).writeInt32LE(val2, 4).writeInt32LE(val1, 8)
+    blkDt[12] = blkDt[14] = adr1
+    blkDt[13] = blkDt[15] = adr2
+    await this.cmdMf1WriteBlock({ ...dst, data: blkDt })
   }
 
   /**
@@ -2615,6 +2733,7 @@ export enum Cmd {
   MF1_READ_ONE_BLOCK = 2008,
   MF1_WRITE_ONE_BLOCK = 2009,
   HF14A_RAW = 2010,
+  MF1_MANIPULATE_VALUE_BLOCK = 2011,
 
   EM410X_SCAN = 3000,
   EM410X_WRITE_TO_T55XX = 3001,
@@ -2919,6 +3038,19 @@ export enum AnimationMode {
   NONE = 2,
 }
 export const isAnimationMode = createIsEnumInteger(AnimationMode)
+
+/**
+ * Operators of mifare classic value block manipulation.
+ */
+export enum Mf1VblockOperator {
+  /** decrement value by X (0 ~ 2147483647) from src to dst */
+  DECREMENT = 0xC0,
+  /** increment value by X (0 ~ 2147483647) from src to dst */
+  INCREMENT = 0xC1,
+  /** copy value from src to dst (Restore and Transfer) */
+  RESTORE = 0xC2,
+}
+export const isMf1VblockOperator = createIsEnumInteger(Mf1VblockOperator)
 
 /**
  * @see [MIFARE type identification procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
