@@ -1,6 +1,11 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
 import { type AnimationMode, type ButtonAction, type DarksideStatus, type Mf1EmuWriteMode, type Mf1PrngType, type TagType } from './ChameleonUltra'
+import { type Class } from 'utility-types'
+
+function bufUnpackToClass <T> (buf: Buffer, format: string, Type: Class<T>): T {
+  return new Type(...buf.unpack<ConstructorParameters<typeof Type>>(format))
+}
 
 export class SlotInfo {
   hfTagType: TagType
@@ -13,10 +18,7 @@ export class SlotInfo {
 
   static fromCmd1019 (buf: Buffer): SlotInfo[] {
     if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('buf should be a Buffer with length 16')
-    return _.times(8, i => new SlotInfo(
-      buf.readUInt16BE(i * 4), // hfTagType
-      buf.readUInt16BE(i * 4 + 2), // lfTagType
-    ))
+    return _.times(8, i => bufUnpackToClass(buf.subarray(i * 4), '!HH', SlotInfo))
   }
 }
 
@@ -25,12 +27,12 @@ export class SlotFreqIsEnable {
   lf: boolean
 
   constructor (hf: boolean, lf: boolean) {
-    ;[this.hf, this.lf] = [hf, lf]
+    ;[this.hf, this.lf] = _.map([hf, lf], Boolean)
   }
 
   static fromCmd1023 (buf: Buffer): SlotFreqIsEnable[] {
     if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('buf should be a Buffer with length 16')
-    return _.times(8, i => new SlotFreqIsEnable(buf[i << 1] === 1, buf[(i << 1) + 1] === 1))
+    return _.times(8, i => bufUnpackToClass(buf.subarray(i * 2), '!??', SlotFreqIsEnable))
   }
 }
 
@@ -44,10 +46,7 @@ export class BatteryInfo {
 
   static fromCmd1025 (buf: Buffer): BatteryInfo {
     if (!Buffer.isBuffer(buf) || buf.length !== 3) throw new TypeError('buf should be a Buffer with length 3')
-    return new BatteryInfo(
-      buf.readUInt16BE(0), // voltage
-      buf[2], // level
-    )
+    return bufUnpackToClass(buf, '!HB', BatteryInfo)
   }
 }
 
@@ -62,29 +61,24 @@ export class DeviceSettings {
   constructor (
     version: number,
     animation: AnimationMode,
-    buttonPressAction: ButtonAction[],
-    buttonLongPressAction: ButtonAction[],
+    btnPressA: ButtonAction,
+    btnPressB: ButtonAction,
+    btnLongPressA: ButtonAction,
+    btnLongPressB: ButtonAction,
     blePairingMode: boolean,
     blePairingKey: string
   ) {
     this.version = version
     this.animation = animation
-    this.buttonPressAction = buttonPressAction
-    this.buttonLongPressAction = buttonLongPressAction
-    this.blePairingMode = blePairingMode
+    this.buttonPressAction = [btnPressA, btnPressB]
+    this.buttonLongPressAction = [btnLongPressA, btnLongPressB]
+    this.blePairingMode = Boolean(blePairingMode)
     this.blePairingKey = blePairingKey
   }
 
   static fromCmd1034 (buf: Buffer): DeviceSettings {
-    if (!Buffer.isBuffer(buf) || buf.length !== 12) throw new TypeError('buf should be a Buffer with length 12')
-    return new DeviceSettings(
-      buf[0], // version
-      buf[1], // animation
-      [...buf.subarray(2, 4).values()], // buttonPressAction
-      [...buf.subarray(4, 6).values()], // buttonLongPressAction
-      buf[6] === 1, // blePairingMode
-      buf.subarray(7, 13).toString('utf8'), // blePairingKey
-    )
+    if (!Buffer.isBuffer(buf) || buf.length !== 13) throw new TypeError('buf should be a Buffer with length 13')
+    return bufUnpackToClass(buf, '!6B?6s', DeviceSettings)
   }
 }
 
@@ -107,12 +101,7 @@ export class Hf14aAntiColl {
     if (buf.length < uidLen + 4) throw new Error('invalid length of uid')
     const atsLen = buf[uidLen + 4]
     if (buf.length < uidLen + atsLen + 5) throw new Error('invalid invalid length of ats')
-    return new Hf14aAntiColl(
-      buf.subarray(1, uidLen + 1),
-      buf.subarray(uidLen + 1, uidLen + 3),
-      buf.subarray(uidLen + 3, uidLen + 4),
-      buf.subarray(uidLen + 5, uidLen + atsLen + 5),
-    )
+    return bufUnpackToClass(buf, `!${uidLen + 1}p2ss${atsLen + 1}p`, Hf14aAntiColl)
   }
 
   static fromCmd2000 (buf: Buffer): Hf14aAntiColl[] {
@@ -176,16 +165,7 @@ export class Mf1DarksideRes {
 
   static fromCmd2004 (buf: Buffer): Mf1DarksideRes {
     if (!Buffer.isBuffer(buf) || !_.includes([1, 33], buf.length)) throw new TypeError('buf should be a Buffer with length 1 or 33')
-    if (buf.length === 1) return new Mf1DarksideRes(buf[0])
-    return new Mf1DarksideRes(
-      buf[0], // status
-      buf.subarray(1, 5), // uid
-      buf.subarray(5, 9), // nt
-      buf.subarray(9, 17), // par
-      buf.subarray(17, 25), // ks
-      buf.subarray(25, 29), // nr
-      buf.subarray(29, 33), // ar
-    )
+    return bufUnpackToClass(buf, buf.length === 1 ? '!B' : '!B4s4s8s8s4s4s', Mf1DarksideRes)
   }
 }
 
@@ -199,10 +179,7 @@ export class Mf1NtDistanceRes {
 
   static fromCmd2005 (buf: Buffer): Mf1NtDistanceRes {
     if (!Buffer.isBuffer(buf) || buf.length !== 8) throw new TypeError('buf should be a Buffer with length 8')
-    return new Mf1NtDistanceRes(
-      buf.subarray(0, 4), // uid
-      buf.subarray(4, 8), // distance
-    )
+    return bufUnpackToClass(buf, '!4s4s', Mf1NtDistanceRes)
   }
 }
 
@@ -218,11 +195,7 @@ export class Mf1NestedRes {
 
   static fromCmd2006 (buf: Buffer): Mf1NestedRes[] {
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
-    return _.map(buf.chunk(9), chunk => new Mf1NestedRes(
-      chunk.subarray(0, 4), // nt1
-      chunk.subarray(4, 8), // nt2
-      chunk[8], // par
-    ))
+    return _.map(buf.chunk(9), chunk => bufUnpackToClass(chunk, '!4s4sB', Mf1NestedRes))
   }
 }
 
@@ -243,16 +216,15 @@ export class Mf1DetectionLog {
 
   constructor (
     block: number,
-    isKeyB: boolean,
-    isNested: boolean,
+    flags: Buffer,
     uid: Buffer,
     nt: Buffer,
     nr: Buffer,
     ar: Buffer
   ) {
     this.block = block
-    this.isKeyB = isKeyB
-    this.isNested = isNested
+    this.isKeyB = flags.readBitLSB(0) === 1
+    this.isNested = flags.readBitLSB(1) === 1
     this.uid = uid
     this.nt = nt
     this.nr = nr
@@ -261,16 +233,7 @@ export class Mf1DetectionLog {
 
   static fromBuffer (buf: Buffer): Mf1DetectionLog {
     if (!Buffer.isBuffer(buf) || buf.length < 18) throw new TypeError('buf should be a Buffer with length 18')
-    const flag = buf.subarray(1, 2)
-    return new Mf1DetectionLog(
-      buf[0], // block
-      flag.readBitLSB(0) === 1, // isKeyB
-      flag.readBitLSB(1) === 1, // isNested
-      buf.subarray(2, 6), // uid
-      buf.subarray(6, 10), // nt
-      buf.subarray(10, 14), // nr
-      buf.subarray(14, 18), // ar
-    )
+    return bufUnpackToClass(buf, '!Bs4s4s4s4s', Mf1DetectionLog)
   }
 
   static fromCmd4006 (buf: Buffer): Mf1DetectionLog[] {
@@ -296,13 +259,7 @@ export class Mf1EmuSettings {
 
   static fromCmd4009 (buf: Buffer): Mf1EmuSettings {
     if (!Buffer.isBuffer(buf) || buf.length !== 5) throw new TypeError('buf should be a Buffer with length 5')
-    return new Mf1EmuSettings(
-      buf[0] === 1, // detection
-      buf[1] === 1, // gen1a
-      buf[2] === 1, // gen2
-      buf[3] === 1, // antiColl
-      buf[4], // write
-    )
+    return bufUnpackToClass(buf, '!4?B', Mf1EmuSettings)
   }
 }
 

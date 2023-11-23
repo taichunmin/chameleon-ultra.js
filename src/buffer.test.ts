@@ -56,7 +56,7 @@ describe('Buffer.alloc()', () => {
     try {
       Buffer.alloc(1.2)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid size/)
     }
   })
 })
@@ -147,7 +147,7 @@ describe('Buffer.from()', () => {
     try {
       Buffer.from(1 as any)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of value/)
     }
   })
 })
@@ -214,7 +214,7 @@ describe('Buffer.fromView()', () => {
     try {
       Buffer.fromView(1 as any)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/invalid view/)
     }
   })
 })
@@ -339,7 +339,7 @@ describe('Buffer#fill()', () => {
     try {
       Buffer.allocUnsafe(5).fill('a', 1.5)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of offset or end/)
     }
   })
 
@@ -348,7 +348,7 @@ describe('Buffer#fill()', () => {
     try {
       Buffer.allocUnsafe(5).fill('a', 1, 2.5)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of offset or end/)
     }
   })
 })
@@ -545,7 +545,7 @@ describe('Buffer.from()', () => {
     try {
       Buffer.from('abc', 'utf16be' as any)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Unknown encoding/)
     }
   })
 })
@@ -555,7 +555,7 @@ test('Buffer.fromArray() should throw error with invalid argument', () => {
   try {
     Buffer.fromArray(1 as any)
   } catch (err) {
-    expect(err).toBeInstanceOf(Error)
+    expect(err.message).toMatch(/arr must be an array/)
   }
 })
 
@@ -620,7 +620,7 @@ describe('Buffer#chunk()', () => {
     try {
       Buffer.from('00010203', 'hex').chunk(0)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/invalid bytesPerChunk/)
     }
   })
 })
@@ -646,7 +646,7 @@ describe('Buffer#toString()', () => {
     try {
       expect(Buffer.from('abc').toString('utf16be' as any))
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Unknown encoding/)
     }
   })
 })
@@ -678,7 +678,7 @@ describe('Buffer#readUIntBE', () => {
     try {
       new Buffer().readUIntBE(0, byteLength)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid byteLength/)
     }
   })
 
@@ -687,7 +687,7 @@ describe('Buffer#readUIntBE', () => {
     try {
       new Buffer().readUIntBE(0, 4)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid offset/)
     }
   })
 })
@@ -714,7 +714,7 @@ describe('Buffer#readUIntLE', () => {
     try {
       new Buffer().readUIntLE(0, byteLength)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid byteLength/)
     }
   })
 
@@ -723,7 +723,7 @@ describe('Buffer#readUIntLE', () => {
     try {
       new Buffer().readUIntLE(0, 4)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid offset/)
     }
   })
 })
@@ -839,7 +839,7 @@ describe('Buffer.compare()', () => {
     try {
       Buffer.compare(1 as any, Buffer.from(''))
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of buf1/)
     }
   })
 
@@ -848,7 +848,7 @@ describe('Buffer.compare()', () => {
     try {
       Buffer.compare(Buffer.from(''), 1 as any)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of buf2/)
     }
   })
 
@@ -857,7 +857,7 @@ describe('Buffer.compare()', () => {
     try {
       Buffer.from('').compare(1 as any)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of target/)
     }
   })
 })
@@ -911,7 +911,7 @@ describe('Buffer#swap16()', () => {
     try {
       Buffer.from([0x1, 0x2, 0x3]).swap16()
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Buffer size/)
     }
   })
 
@@ -933,7 +933,7 @@ describe('Buffer#swap32()', () => {
     try {
       Buffer.from([0x1, 0x2, 0x3]).swap32()
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Buffer size/)
     }
   })
 })
@@ -949,7 +949,7 @@ describe('Buffer#swap64()', () => {
     try {
       Buffer.from([0x1, 0x2, 0x3]).swap64()
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Buffer size/)
     }
   })
 })
@@ -990,7 +990,7 @@ describe('Buffer#write()', () => {
     try {
       Buffer.alloc(10).write(1 as any)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of val/)
     }
   })
 
@@ -999,7 +999,7 @@ describe('Buffer#write()', () => {
     try {
       Buffer.alloc(10).write('abc', 1.5)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of offset/)
     }
   })
 
@@ -1008,7 +1008,7 @@ describe('Buffer#write()', () => {
     try {
       Buffer.alloc(10).write('abc', 1, 2.5)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of length/)
     }
   })
 
@@ -1017,7 +1017,7 @@ describe('Buffer#write()', () => {
     try {
       Buffer.alloc(10).write('abc', 'utf16be' as any)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Unknown encoding/)
     }
   })
 })
@@ -1053,7 +1053,7 @@ describe('Buffer.byteLength()', () => {
     try {
       Buffer.byteLength(1 as any)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/type of string/)
     }
   })
 })
@@ -1080,6 +1080,33 @@ test('read/write Double', () => {
   expect(buf.writeDoubleLE(0.5).readDoubleLE()).toBe(0.5)
   expect(buf.writeDoubleBE(0.5, 1).readDoubleBE(1)).toBe(0.5)
   expect(buf.writeDoubleLE(0.5, 1).readDoubleLE(1)).toBe(0.5)
+})
+
+describe('read/write Float16', () => {
+  test.each([
+    { hex: '8000', float: -0 },
+    { hex: '0000', float: 0 },
+    { hex: '3bff', float: 0.99951171875 },
+    { hex: '3c00', float: 1 },
+    { hex: '4000', float: 2 },
+    { hex: '7c00', float: Infinity },
+    { hex: 'bc00', float: -1 },
+    { hex: 'c000', float: -2 },
+    { hex: 'fc00', float: -Infinity },
+    { hex: '7e00', float: NaN },
+    { hex: 'fe00', float: -NaN },
+  ])('Buffer.from("$hex", "hex").readFloat16BE() = $expected', ({ hex, float }) => {
+    expect(Buffer.from(hex, 'hex').readFloat16BE()).toBe(float)
+    expect(new Buffer(2).writeFloat16BE(float).toString('hex')).toBe(hex)
+  })
+
+  test('read/write Float16', () => {
+    const buf = Buffer.alloc(3)
+    expect(buf.writeFloat16BE(-2).readFloat16BE()).toBe(-2)
+    expect(buf.writeFloat16LE(-2).readFloat16LE()).toBe(-2)
+    expect(buf.writeFloat16BE(-2, 1).readFloat16BE(1)).toBe(-2)
+    expect(buf.writeFloat16LE(-2, 1).readFloat16LE(1)).toBe(-2)
+  })
 })
 
 test('read/write Float', () => {
@@ -1155,7 +1182,7 @@ describe('read/write Int', () => {
     try {
       Buffer.alloc(10).writeIntBE(0, 0, byteLength)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid byteLength/)
     }
   })
 
@@ -1164,7 +1191,7 @@ describe('read/write Int', () => {
     try {
       Buffer.alloc(10).writeIntLE(0, 0, byteLength)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid byteLength/)
     }
   })
 
@@ -1209,7 +1236,7 @@ describe('read/write Int', () => {
     try {
       new Buffer().writeIntBE(0, 0, 0)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid byteLength/)
     }
   })
 
@@ -1218,7 +1245,7 @@ describe('read/write Int', () => {
     try {
       new Buffer().writeIntLE(0, 0, 0)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid byteLength/)
     }
   })
 })
@@ -1244,7 +1271,7 @@ describe('read/write UInt', () => {
     try {
       Buffer.alloc(10).writeUIntBE(0, 0, byteLength)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid byteLength/)
     }
   })
 
@@ -1253,7 +1280,7 @@ describe('read/write UInt', () => {
     try {
       Buffer.alloc(10).writeUIntLE(0, 0, byteLength)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid byteLength/)
     }
   })
 
@@ -1276,7 +1303,7 @@ describe('read/write UInt', () => {
     try {
       new Buffer().writeUIntBE(0)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid offset/)
     }
   })
 
@@ -1285,7 +1312,7 @@ describe('read/write UInt', () => {
     try {
       new Buffer().writeUIntLE(0)
     } catch (err) {
-      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/Invalid offset/)
     }
   })
 })
@@ -1357,4 +1384,230 @@ test('Buffer#reverse()', () => {
   const buf2 = buf1.reverse()
   expect(buf1.toString()).toEqual('123')
   expect(buf2.toString()).toEqual('321')
+})
+
+describe('Buffer.pack()', () => {
+  test('should work with new Buffer', () => {
+    // https://github.com/ryanrolds/bufferpack/blob/master/test/cstring.test.js
+    const actual = Buffer.pack('<bbbx5sbbb', 1, 2, 3, 'test', 5, 6, 7)
+    expect(actual.length).toBe(12)
+    expect(actual.toString('hex')).toBe('010203007465737400050607')
+  })
+
+  test.each([
+    { format: '!x', vals: [], hex: '00' },
+    { format: '!c', vals: [' '], hex: '20' },
+    { format: '!c', vals: [''], hex: '00' },
+    { format: '!bb', vals: [1, -1], hex: '01ff' },
+    { format: '!BB', vals: [1, 254], hex: '01fe' },
+    { format: '!??', vals: [true, false], hex: '0100' },
+    { format: '!hh', vals: [1, -1], hex: '0001ffff' },
+    { format: '!HH', vals: [1, 0xFFFE], hex: '0001fffe' },
+    { format: '<hh', vals: [1, -1], hex: '0100ffff' },
+    { format: '<HH', vals: [1, 0xFFFE], hex: '0100feff' },
+    { format: '!iill', vals: [1, -1, 2, -2], hex: '00000001ffffffff00000002fffffffe' },
+    { format: '!IILL', vals: [1, 0xF0F0F0F0, 2, 0xCACACACA], hex: '00000001f0f0f0f000000002cacacaca' },
+    { format: '!qq', vals: [1n, -1n], hex: '0000000000000001ffffffffffffffff' },
+    { format: '!QQ', vals: [1n, 0xFFFFFFFFFFFFFFFFn], hex: '0000000000000001ffffffffffffffff' },
+    { format: '!eeee', vals: [-0, 0.99951171875, Infinity, NaN], hex: '80003bff7c007e00' },
+    { format: '<eeee', vals: [-0, 0.99951171875, Infinity, NaN], hex: '0080ff3b007c007e' },
+    { format: '!ffff', vals: [-0, 0.999999940395355225, Infinity, NaN], hex: '800000003f7fffff7f8000007fc00000' },
+    { format: '<ffff', vals: [-0, 0.999999940395355225, Infinity, NaN], hex: '00000080ffff7f3f0000807f0000c07f' },
+    { format: '!dddd', vals: [-0, 1, Infinity, NaN], hex: '80000000000000003ff00000000000007ff00000000000007ff8000000000000' },
+    { format: '<d', vals: [NaN], hex: '000000000000f87f' },
+    { format: '!6s', vals: ['buffer'], hex: '627566666572' },
+    { format: '!6s', vals: [Buffer.from('010203040506', 'hex')], hex: '010203040506' },
+    { format: '!7p', vals: ['buffer'], hex: '06627566666572' },
+    { format: '!7p', vals: [Buffer.from('010203040506', 'hex')], hex: '06010203040506' },
+    { format: 'i', vals: [0x01020304], hex: '01020304' },
+    { format: '@i', vals: [0x01020304], hex: '01020304' },
+    { format: '=i', vals: [0x01020304], hex: '01020304' },
+    { format: '<i', vals: [0x01020304], hex: '04030201' },
+    { format: '>i', vals: [0x01020304], hex: '01020304' },
+    { format: '!i', vals: [0x01020304], hex: '01020304' },
+    { format: '<q', vals: [0x0102030405060708n], hex: '0807060504030201' },
+    { format: '>q', vals: [0x0102030405060708n], hex: '0102030405060708' },
+  ])('Buffer.pack("$format") = "$hex"', ({ format, vals, hex }) => {
+    // https://github.com/ryanrolds/bufferpack/blob/master/test/cstring.test.js
+    const actual = Buffer.pack(format, ...vals)
+    expect(actual.toString('hex')).toBe(hex)
+  })
+
+  test('should work with given Buffer', () => {
+    // https://github.com/ryanrolds/bufferpack/blob/master/test/cstring.test.js
+    const actual = new Buffer(13)
+    Buffer.pack(actual, '<bbbx5sbbb', 1, 2, 3, 'test', 5, 6, 7)
+    expect(actual.length).toBe(13)
+    expect(actual.toString('hex', 0, 12)).toBe('010203007465737400050607')
+  })
+
+  test('Buffer#pack()', () => {
+    const actual = new Buffer(13)
+    actual.pack('<bbbx5sbbb', 1, 2, 3, 'test', 5, 6, 7)
+    expect(actual.toString('hex', 0, 12)).toBe('010203007465737400050607')
+  })
+
+  test('should throw error with invalid type of buf', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.pack(1 as any, 'c')
+    } catch (err) {
+      expect(err.message).toMatch(/type of buf/)
+    }
+  })
+
+  test('should throw error while buf too small', () => {
+    // https://github.com/ryanrolds/bufferpack/blob/master/test/cstring.test.js
+    expect.hasAssertions()
+    try {
+      const buf = new Buffer(1)
+      Buffer.pack(buf, '<bbbx5sbbb', 1, 2, 3, 'test', 5, 6, 7)
+    } catch (err) {
+      expect(err.message).toMatch(/lenRequired =/)
+    }
+  })
+
+  test('should throw error with format which packFromFn is missing', () => {
+    jest.spyOn(Buffer, 'packParseFormat').mockReturnValueOnce({ littleEndian: false, items: [[1, 'n']] })
+    expect.hasAssertions()
+    try {
+      const actual = new Buffer(1)
+      Buffer.pack(actual, 'n', 1)
+    } catch (err) {
+      expect(err.message).toMatch(/Unknown format/)
+    }
+  })
+
+  test.each([
+    { format: '!c' },
+    { format: '!b' },
+    { format: '!?' },
+    { format: '!h' },
+    { format: '!i' },
+    { format: '!q' },
+    { format: '!e' },
+    { format: '!f' },
+    { format: '!d' },
+    { format: '!5s' },
+    { format: '!5p' },
+  ])('format "$format" should throw error while vals is not enough', ({ format }) => {
+    expect.hasAssertions()
+    try {
+      Buffer.pack(new Buffer(8), format)
+    } catch (err) {
+      expect(err.message).toMatch(/Not enough vals/)
+    }
+  })
+})
+
+describe('Buffer.unpack()', () => {
+  test('should work with given Buffer', () => {
+    // https://github.com/ryanrolds/bufferpack/blob/master/test/cstring.test.js
+    const buf = Buffer.from('010203007465737400050607', 'hex')
+    const actual = Buffer.unpack(buf, '<bbbx5sbbb')
+    expect(actual).toEqual([1, 2, 3, Buffer.from('test\0'), 5, 6, 7])
+  })
+
+  test('Buffer#unpack()', () => {
+    const buf = Buffer.from('010203007465737400050607', 'hex')
+    const actual = buf.unpack('<bbbx5sbbb')
+    expect(actual).toEqual([1, 2, 3, Buffer.from('test\0'), 5, 6, 7])
+  })
+
+  test('should throw error with invalid type of buf', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.unpack(1 as any, 'c')
+    } catch (err) {
+      expect(err.message).toMatch(/type of buf/)
+    }
+  })
+
+  test('should throw error while buf too small', () => {
+    // https://github.com/ryanrolds/bufferpack/blob/master/test/cstring.test.js
+    expect.hasAssertions()
+    try {
+      const buf = new Buffer(1)
+      Buffer.unpack(buf, '<bbbx5sbbb')
+    } catch (err) {
+      expect(err.message).toMatch(/lenRequired =/)
+    }
+  })
+
+  test('should throw error with format which packFromFn is missing', () => {
+    jest.spyOn(Buffer, 'packParseFormat').mockReturnValueOnce({ littleEndian: false, items: [[1, 'n']] })
+    expect.hasAssertions()
+    try {
+      const actual = new Buffer(1)
+      Buffer.unpack(actual, 'n')
+    } catch (err) {
+      expect(err.message).toMatch(/Unknown format/)
+    }
+  })
+
+  test.each([
+    { format: '!x', vals: [], hex: '00' },
+    { format: '!c', vals: [Buffer.from(' ')], hex: '20' },
+    { format: '!bb', vals: [1, -1], hex: '01ff' },
+    { format: '!BB', vals: [1, 254], hex: '01fe' },
+    { format: '!??', vals: [true, false], hex: '0100' },
+    { format: '!hh', vals: [1, -1], hex: '0001ffff' },
+    { format: '!HH', vals: [1, 0xFFFE], hex: '0001fffe' },
+    { format: '<hh', vals: [1, -1], hex: '0100ffff' },
+    { format: '<HH', vals: [1, 0xFFFE], hex: '0100feff' },
+    { format: '!iill', vals: [1, -1, 2, -2], hex: '00000001ffffffff00000002fffffffe' },
+    { format: '!IILL', vals: [1, 0xF0F0F0F0, 2, 0xCACACACA], hex: '00000001f0f0f0f000000002cacacaca' },
+    { format: '!qq', vals: [1n, -1n], hex: '0000000000000001ffffffffffffffff' },
+    { format: '!QQ', vals: [1n, 0xFFFFFFFFFFFFFFFFn], hex: '0000000000000001ffffffffffffffff' },
+    { format: '!eeee', vals: [-0, 0.99951171875, Infinity, NaN], hex: '80003bff7c007e00' },
+    { format: '<eeee', vals: [-0, 0.99951171875, Infinity, NaN], hex: '0080ff3b007c007e' },
+    { format: '!ffff', vals: [-0, 0.999999940395355225, Infinity, NaN], hex: '800000003f7fffff7f8000007fc00000' },
+    { format: '<ffff', vals: [-0, 0.999999940395355225, Infinity, NaN], hex: '00000080ffff7f3f0000807f0000c07f' },
+    { format: '!dddd', vals: [-0, 1, Infinity, NaN], hex: '80000000000000003ff00000000000007ff00000000000007ff8000000000000' },
+    { format: '<d', vals: [NaN], hex: '000000000000f87f' },
+    { format: '!6s', vals: [Buffer.from('010203040506', 'hex')], hex: '010203040506' },
+    { format: '!7p', vals: [Buffer.from('010203040506', 'hex')], hex: '06010203040506' },
+    { format: 'i', vals: [0x01020304], hex: '01020304' },
+    { format: '@i', vals: [0x01020304], hex: '01020304' },
+    { format: '=i', vals: [0x01020304], hex: '01020304' },
+    { format: '<i', vals: [0x01020304], hex: '04030201' },
+    { format: '>i', vals: [0x01020304], hex: '01020304' },
+    { format: '!i', vals: [0x01020304], hex: '01020304' },
+    { format: '<q', vals: [0x0102030405060708n], hex: '0807060504030201' },
+    { format: '>q', vals: [0x0102030405060708n], hex: '0102030405060708' },
+  ])('Buffer.unpack("$format") = "$hex"', ({ format, vals, hex }) => {
+    // https://github.com/ryanrolds/bufferpack/blob/master/test/cstring.test.js
+    const actual = Buffer.unpack(Buffer.from(hex, 'hex'), format)
+    expect(actual).toEqual(vals)
+  })
+})
+
+describe('Buffer.packParseFormat()', () => {
+  test('should throw error with invalid type of format', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.packParseFormat(1 as any)
+    } catch (err) {
+      expect(err.message).toMatch(/type of format/)
+    }
+  })
+
+  test('should throw error with invalid type of format', () => {
+    expect.hasAssertions()
+    try {
+      Buffer.packParseFormat('!')
+    } catch (err) {
+      expect(err.message).toMatch(/Invalid format/)
+    }
+  })
+
+  test('pascal string max repeat is 255', () => {
+    const actual = Buffer.packParseFormat('256p')?.items
+    expect(actual).toEqual([[255, 'p']])
+  })
+})
+
+test('Buffer.packCalcSize()', () => {
+  const actual = Buffer.packCalcSize('!bbbx5sbbb')
+  expect(actual).toBe(12)
 })

@@ -9,7 +9,7 @@
   "name": "chameleon-ultra.js",
   "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
   "unpkg": "dist/iife/index.min.js",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -147,7 +147,7 @@
     "dev:public": "nodemon --watch public --ext svg,png,jpg,jpeg --exec \"cp -r public/* dist\"",
     "dev:pug": "nodemon --watch pug --ext pug ./pug/build.ts",
     "dev:ts": "nodemon --watch src --ext ts,json --exec \"rollup --config rollup.config.mjs\"",
-    "docs": "typedoc --readme pages/typedoc.md",
+    "docs": "typedoc --readme pages/typedoc.md && ts-node ./typedoc.ts",
     "lint": "yarn lint:ci --fix",
     "lint:ci": "eslint --ext .mjs,.cjs,.js,.ts,.pug .",
     "mkcert": "mkdir ./mkcert && mkcert -key-file ./mkcert/key.pem -cert-file ./mkcert/cert.pem -ecdsa localhost",
