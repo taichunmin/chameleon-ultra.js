@@ -623,7 +623,6 @@ export class ChameleonUltra {
     this._clearRxBufs()
     const cmd = Cmd.ENTER_BOOTLOADER // cmd = 1010
     await this._writeCmd({ cmd })
-    await this._readRespTimeout({ cmd })
   }
 
   /**
@@ -1642,7 +1641,7 @@ export class ChameleonUltra {
     if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
     this._clearRxBufs()
     const cmd = Cmd.MF1_WRITE_ONE_BLOCK // cmd = 2009
-    await this._writeCmd({ cmd, data: Buffer.pack('!BB6s', keyType, block, key) })
+    await this._writeCmd({ cmd, data: Buffer.pack('!BB6s16s', keyType, block, key, data) })
     await this._readRespTimeout({ cmd })
   }
 
@@ -2125,7 +2124,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   await ultra.cmdMf1SetGen1aMode(false))
+   *   await ultra.cmdMf1SetGen1aMode(false)
    * }
    * ```
    */
@@ -2162,7 +2161,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   await ultra.cmdMf1SetGen2Mode(false))
+   *   await ultra.cmdMf1SetGen2Mode(false)
    * }
    * ```
    */
@@ -2199,7 +2198,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   await ultra.cmdMf1SetAntiCollMode(false))
+   *   await ultra.cmdMf1SetAntiCollMode(false)
    * }
    * ```
    */
@@ -2235,8 +2234,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
+   * const { Mf1EmuWriteMode } = window.ChameleonUltraJS
+   *
    * async function run (ultra) {
-   *   await ultra.cmdMf1SetWriteMode(0))
+   *   await ultra.cmdMf1SetWriteMode(Mf1EmuWriteMode.NORMAL)
    * }
    * ```
    */
