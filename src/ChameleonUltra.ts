@@ -1919,7 +1919,7 @@ export class ChameleonUltra {
    * }
    * ```
    */
-  async cmdMf1EmuWriteBlock (offset: number = 0, data: Buffer): Promise<void> {
+  async cmdMf1EmuWriteBlock (offset: number, data: Buffer): Promise<void> {
     if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
     if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
     this._clearRxBufs()
