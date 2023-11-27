@@ -4,6 +4,8 @@
   "include": ["./src/**/*.js", "./src/**/*.cjs", "./src/**/*.mjs", "./src/**/*.ts"],
   "compilerOptions": {
     "declaration": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "outDir": "./dist/types",
     "rootDir": "./src",
     "useUnknownInCatchVariables": false

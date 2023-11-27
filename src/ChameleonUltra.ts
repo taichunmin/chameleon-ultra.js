@@ -184,7 +184,7 @@ export class ChameleonUltra {
    * @returns The return value depent on the middlewares
    * @group Plugin Related
    */
-  async invokeHook (hook: string, ctx: any = {}, next: MiddlewareComposeFn): Promise<unknown> {
+  async invokeHook (hook: string, ctx: any = {}, next?: MiddlewareComposeFn): Promise<unknown> {
     ctx.me = this
     return await middlewareCompose(this.hooks[hook] ?? [])(ctx, next)
   }

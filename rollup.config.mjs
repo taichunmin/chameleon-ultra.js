@@ -1,4 +1,5 @@
 import _ from 'lodash'
+import { dts } from 'rollup-plugin-dts'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import nodePolyfills from 'rollup-plugin-polyfill-node'
@@ -28,14 +29,14 @@ const versionInjectorPlugin = versionInjector({
 })
 
 const tsconfig = {
-  "lib": ["es2023"],
-  "module": "ESNext",
-  "target": "ESNext",
-  "strict": true,
-  "esModuleInterop": true,
-  "skipLibCheck": true,
-  "forceConsistentCasingInFileNames": true,
-  "moduleResolution": "bundler"
+  esModuleInterop: true,
+  forceConsistentCasingInFileNames: true,
+  lib: ['es2023'],
+  module: 'ESNext',
+  moduleResolution: 'bundler',
+  skipLibCheck: true,
+  strict: true,
+  target: 'ESNext',
 }
 
 const terserConfig = {
@@ -120,4 +121,22 @@ export default [
       { file: 'dist/iife/plugin/WebserialAdapter.min.js', format: 'iife', globals, name: 'ChameleonUltraJS.WebserialAdapter', plugins: [terser(terserConfig)] },
     ]
   },
+
+  // dts
+  ..._.map([
+    'buffer',
+    'Crypto1',
+    'index',
+    'plugin/SerialPortAdapter',
+    'plugin/WebbleAdapter',
+    'plugin/WebserialAdapter',
+  ], dtsFile => ({
+    external: ['node:stream/web'],
+    input: `dist/types/${dtsFile}.d.ts`,
+    plugins: [dts()],
+    output: [
+      { file: `dist/es/${dtsFile}.d.mts`, format: 'es' },
+      { file: `dist/cjs/${dtsFile}.d.cts`, format: 'cjs' },
+    ],
+  }))
 ]

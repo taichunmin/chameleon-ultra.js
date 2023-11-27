@@ -136,6 +136,7 @@ out
 .nojekyll
 *.config.js
 *.config.mjs
+*.d.ts
 *.html
 *.svg
 *.test.ts

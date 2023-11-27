@@ -2,14 +2,17 @@ import { getenv, getSiteurl } from './dotenv'
 
 import _ from 'lodash'
 import { errToJson } from './utils'
+import { fileURLToPath } from 'url'
 import { inspect } from 'util'
 import { minify as htmlMinifier } from 'html-minifier'
 import { promises as fsPromises } from 'fs'
 import fg from 'fast-glob'
 import path from 'path'
+import process from 'process'
 import pug from 'pug'
 import UglifyJS from 'uglify-js'
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const srcDir = path.resolve(__dirname, './src/')
 const distDir = path.resolve(__dirname, '../dist/')
 
@@ -64,7 +67,7 @@ export async function build (): Promise<void> {
   if (pugErrors > 0) throw new Error(`Failed to render ${pugErrors} pug files.`)
 }
 
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   build().catch(err => {
     console.error(err)
     process.exit(1)
