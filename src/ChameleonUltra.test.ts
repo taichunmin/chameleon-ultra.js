@@ -232,6 +232,18 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 040a 0000 0000 f2 00')])
   })
 
+  test('#cmdGetGitVersion()', async () => {
+    // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03f9 0068 0013 89 76322e302e302d3132322d6737666462333538 43'))
+
+    // act
+    const actual = await ultra.cmdGetGitVersion()
+
+    // assert
+    expect(actual).toEqual('v2.0.0-122-g7fdb358')
+    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 03f9 0000 0000 04 00')])
+  })
+
   test('#cmdGetSupportedCmds()', async () => {
     // arrange
     adapter.send.push(Buffer.fromHexString('11ef 040b 0068 008c fd 03e803e903ea03eb03ec03ed03ee03ef03f003f103f203f303f403f503f603f703f803f903fa03fb03fc03fd03ff0400040104020403040404050407040604080409040a040b040c040d07d007d107d207d307d407d507d607d707d807d907da07db0bb80bb90fa00fa10fa40fa50fa60fa70fa80fa90faa0fab0fac0fad0fae0faf0fb00fb10fb213881389 f9'))

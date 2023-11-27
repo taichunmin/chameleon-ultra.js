@@ -91,7 +91,7 @@ export class Hf14aAntiColl {
   sak: Buffer
   ats: Buffer
 
-  constructor (uid: Buffer, atqa: Buffer, sak: Buffer, ats: Buffer = new Buffer()) {
+  constructor (uid: Buffer, atqa: Buffer, sak: Buffer, ats: Buffer) {
     ;[this.uid, this.atqa, this.sak, this.ats] = [uid, atqa, sak, ats]
   }
 
