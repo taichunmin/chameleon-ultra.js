@@ -266,7 +266,7 @@ export default class Crypto1 {
    * console.log(Crypto1.beBit(0x01000000, 0)) // 1
    * ```
    */
-  static beBit (x: number, n: number): number { return Crypto1.bit(x, n ^ 24) }
+  static beBit (this: void, x: number, n: number): number { return Crypto1.bit(x, n ^ 24) }
 
   /**
    * Get bit of the unsigned 32-bit integer `x` at position `n`.
@@ -282,7 +282,7 @@ export default class Crypto1 {
    * console.log(Crypto1.bit(0x1, 0)) // 1
    * ```
    */
-  static bit (x: number, n: number): number { return Crypto1.toBit(x >>> n) }
+  static bit (this: void, x: number, n: number): number { return Crypto1.toBit(x >>> n) }
 
   /**
    * Cast the number `x` to bit.
@@ -298,7 +298,7 @@ export default class Crypto1 {
    * console.log(Crypto1.toBit(2)) // 0
    * ```
    */
-  static toBit (x: number): number { return x & 1 }
+  static toBit (this: void, x: number): number { return x & 1 }
 
   /**
    * Indicates whether the number is truly or not.
@@ -314,7 +314,7 @@ export default class Crypto1 {
    * console.log(Crypto1.toBool(2)) // 1
    * ```
    */
-  static toBool (x: number): number { return x !== 0 ? 1 : 0 }
+  static toBool (this: void, x: number): number { return x !== 0 ? 1 : 0 }
 
   /**
    * Cast the number `x` to unsigned 24-bit integer.
@@ -329,7 +329,7 @@ export default class Crypto1 {
    * console.log(Crypto1.toUint24(-1).toString(16)) // 'ffffff'
    * ```
    */
-  static toUint24 (x: number): number { return x & 0xFFFFFF }
+  static toUint24 (this: void, x: number): number { return x & 0xFFFFFF }
 
   /**
    * Cast the number `x` to unsigned 32-bit integer.
@@ -344,7 +344,7 @@ export default class Crypto1 {
    * console.log(Crypto1.toUint32(-1).toString(16)) // 'ffffffff'
    * ```
    */
-  static toUint32 (x: number): number { return x >>> 0 }
+  static toUint32 (this: void, x: number): number { return x >>> 0 }
 
   /**
    * Cast Buffer, hex string or number to UInt32
@@ -353,7 +353,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static castToUint32 (x: UInt32Like): number {
+  static castToUint32 (this: void, x: UInt32Like): number {
     const { toUint32 } = Crypto1
     if (_.isSafeInteger(x)) return toUint32(x as number)
     if (_.isString(x)) return Buffer.from(x, 'hex').readUInt32BE(0)
@@ -382,7 +382,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static filter (x: number): number {
+  static filter (this: void, x: number): number {
     let f = 0
     f |= 0xF22C0 >>> (x & 0xF) & 16
     f |= 0x6C9C0 >>> (x >>> 4 & 0xF) & 8
@@ -399,7 +399,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static evenParity8 (x: number): number {
+  static evenParity8 (this: void, x: number): number {
     const { evenParityCache, toBit } = Crypto1
     if (evenParityCache.length !== 256) {
       for (let i = 0; i < 256; i++) {
@@ -430,7 +430,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static evenParity32 (x: number): number {
+  static evenParity32 (this: void, x: number): number {
     x ^= x >>> 16
     return Crypto1.evenParity8(x ^ (x >>> 8))
   }
@@ -448,7 +448,7 @@ export default class Crypto1 {
    * console.log(Crypto1.swapEndian(0x12345678).toString(16)) // '78563412'
    * ```
    */
-  static swapEndian (x: number): number {
+  static swapEndian (this: void, x: number): number {
     return Crypto1.lfsrBuf.writeUInt32BE(x, 0).readUInt32LE(0)
   }
 
@@ -458,7 +458,7 @@ export default class Crypto1 {
    * @param n The number of times to generate the new prng state.
    * @returns The new prng state.
    */
-  static prngSuccessor (x: number, n: number): number {
+  static prngSuccessor (this: void, x: number, n: number): number {
     const { swapEndian } = Crypto1
     x = swapEndian(x)
     while ((n--) !== 0) x = x >>> 1 | (x >>> 16 ^ x >>> 18 ^ x >>> 19 ^ x >>> 21) << 31
@@ -473,7 +473,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static updateContribution (item: number, mask1: number, mask2: number): number {
+  static updateContribution (this: void, item: number, mask1: number, mask2: number): number {
     const { evenParity32, toUint32 } = Crypto1
     let p = item >>> 25
     p = p << 2 | (evenParity32(item & mask1) > 0 ? 2 : 0) | evenParity32(item & mask2)
@@ -492,7 +492,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static extendTable (tbl: Uint32Array, size: number, bit: number, m1: number, m2: number, input: number): number {
+  static extendTable (this: void, tbl: Uint32Array, size: number, bit: number, m1: number, m2: number, input: number): number {
     const { filter, toUint32, updateContribution } = Crypto1
     input = toUint32(input << 24)
     for (let i = 0; i < size; i++) {
@@ -517,7 +517,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static extendTableSimple (tbl: Uint32Array, size: number, bit: number): number {
+  static extendTableSimple (this: void, tbl: Uint32Array, size: number, bit: number): number {
     const { filter } = Crypto1
     for (let i = 0; i < size; i++) {
       const iFilter = filter(tbl[i] *= 2)
@@ -540,7 +540,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static mfkeyRecoverState (ctx: MfkeyRecoverContext): void {
+  static mfkeyRecoverState (this: void, ctx: MfkeyRecoverContext): void {
     const { evenParity32, extendTable, mfkeyRecoverState, toBit, toBool, toUint32 } = Crypto1
     const { evens, odds, states } = ctx
     if (ctx.rem < 0) {
@@ -596,7 +596,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrRecovery32 (ks2: number, input: number): Crypto1[] {
+  static lfsrRecovery32 (this: void, ks2: number, input: number): Crypto1[] {
     const { beBit, extendTableSimple, filter, mfkeyRecoverState, toBit, toUint32 } = Crypto1
     const evens = { s: 0, d: new Uint32Array(1 << 21) } // possible evens for ks2
     const odds = { s: 0, d: new Uint32Array(1 << 21) } // possible odds for ks2
@@ -633,7 +633,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrRecovery64 (ks2: number, ks3: number): Crypto1 {
+  static lfsrRecovery64 (this: void, ks2: number, ks3: number): Crypto1 {
     const { beBit, evenParity32, extendTableSimple, filter } = Crypto1
     const oks = new Uint8Array(32)
     const eks = new Uint8Array(32)
@@ -810,7 +810,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static nestedRecoverState (args: NestedRecoverStateArgs): Buffer[] {
+  static nestedRecoverState (this: void, args: NestedRecoverStateArgs): Buffer[] {
     const { lfsrRecovery32, toUint32 } = Crypto1
     const keyCnt = new Map<number, number>()
     for (const { ntp, ks1 } of args.atks) {
@@ -913,7 +913,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static nestedIsValidNonce (nt1: number, nt2: number, ks1: number, par: number): boolean {
+  static nestedIsValidNonce (this: void, nt1: number, nt2: number, ks1: number, par: number): boolean {
     const { evenParity8, bit } = Crypto1
     if (evenParity8((nt1 >>> 24) & 0xFF) !== (bit(par, 0) ^ evenParity8((nt2 >>> 24) & 0xFF) ^ bit(ks1, 16))) return false
     if (evenParity8((nt1 >>> 16) & 0xFF) !== (bit(par, 1) ^ evenParity8((nt2 >>> 16) & 0xFF) ^ bit(ks1, 8))) return false
@@ -925,7 +925,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrPrefixKs (ks: Buffer, isOdd: boolean): number[] {
+  static lfsrPrefixKs (this: void, ks: Buffer, isOdd: boolean): number[] {
     const { bit, filter, toUint32 } = Crypto1
     const candidates: number[] = []
     for (let i = 0; i < 2097152; i++) { // 2**21 = 2097152
@@ -944,7 +944,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static checkPfxParity (pfx: number, ar: number, par: number[][], odd: number, even: number, isZeroPar: boolean): Crypto1 | undefined {
+  static checkPfxParity (this: void, pfx: number, ar: number, par: number[][], odd: number, even: number, isZeroPar: boolean): Crypto1 | undefined {
     const { evenParity32, bit, toUint32 } = Crypto1
     const state = new Crypto1()
     for (let i = 0; i < 8; i++) {
@@ -972,7 +972,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrCommonPrefix (pfx: number, ar: number, ks: Buffer, par: number[][], isZeroPar: boolean): Crypto1[] {
+  static lfsrCommonPrefix (this: void, pfx: number, ar: number, ks: Buffer, par: number[][], isZeroPar: boolean): Crypto1[] {
     const { lfsrPrefixKs, checkPfxParity } = Crypto1
     const odds = lfsrPrefixKs(ks, true)
     const evens = lfsrPrefixKs(ks, false)

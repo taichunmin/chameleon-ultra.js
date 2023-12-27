@@ -259,23 +259,23 @@ export class Buffer extends Uint8Array {
     return fromStringFns[encoding](str)
   }
 
-  static fromUcs2String (ucs2: string): Buffer {
+  static fromUcs2String (this: void, ucs2: string): Buffer {
     const buf = new Buffer(ucs2.length * 2)
     for (let i = 0; i < ucs2.length; i++) buf.writeUInt16LE(ucs2.charCodeAt(i), i * 2)
     return buf
   }
 
-  static fromUtf8String (utf8: string): Buffer {
+  static fromUtf8String (this: void, utf8: string): Buffer {
     return Buffer.fromView(new TextEncoder().encode(utf8))
   }
 
-  static fromAsciiString (ascii: string): Buffer {
+  static fromAsciiString (this: void, ascii: string): Buffer {
     const buf = new Buffer(ascii.length)
     for (let i = 0; i < ascii.length; i++) buf[i] = ascii.charCodeAt(i) & 0xFF
     return buf
   }
 
-  static fromBase64String (base64: string): Buffer {
+  static fromBase64String (this: void, base64: string): Buffer {
     base64 = base64.replace(/[^A-Za-z0-9/_+-]/g, '')
     const tmp1 = base64.length
     const tmp2 = base64.length + 3
@@ -294,7 +294,7 @@ export class Buffer extends Uint8Array {
     return tmp1 < base64.length ? buf.subarray(0, tmp1 - base64.length) : buf
   }
 
-  static fromBase64urlString (base64: string): Buffer {
+  static fromBase64urlString (this: void, base64: string): Buffer {
     base64 = base64.replace(/[^A-Za-z0-9/_+-]/g, '')
     const tmp1 = base64.length
     const tmp2 = base64.length + 3
@@ -313,7 +313,7 @@ export class Buffer extends Uint8Array {
     return tmp1 < base64.length ? buf.subarray(0, tmp1 - base64.length) : buf
   }
 
-  static fromHexString (hex: string): Buffer {
+  static fromHexString (this: void, hex: string): Buffer {
     hex = hex.replace(/[^0-9A-Fa-f]/g, '')
     const buf = new Buffer(hex.length >>> 1)
     for (let i = 0; i < buf.length; i++) buf[i] = HEX_CHAR.get(hex[i * 2]) << 4 | HEX_CHAR.get(hex[i * 2 + 1])
@@ -673,11 +673,12 @@ export class Buffer extends Uint8Array {
   }
 
   subarray (start: number = 0, end: number = this.length): Buffer {
-    return Buffer.fromView(super.subarray(start, end))
+    const buf = super.subarray(start, end)
+    return new Buffer(buf.buffer, buf.byteOffset, buf.byteLength)
   }
 
   slice (start: number = 0, end: number = this.length): Buffer {
-    return new Buffer(super.subarray(start, end))
+    return new Buffer(super.slice(start, end).buffer)
   }
 
   reverse (): Buffer {
@@ -728,23 +729,23 @@ export class Buffer extends Uint8Array {
     return toStringFns[encoding](this.subarray(start, end))
   }
 
-  static toUcs2String (buf: Buffer): string {
+  static toUcs2String (this: void, buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i += 2) arr.push(String.fromCharCode(buf.readUInt16LE(i)))
     return arr.join('')
   }
 
-  static toUtf8String (buf: Buffer): string {
+  static toUtf8String (this: void, buf: Buffer): string {
     return new TextDecoder().decode(buf)
   }
 
-  static toAsciiString (buf: Buffer): string {
+  static toAsciiString (this: void, buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i++) arr.push(String.fromCharCode(buf[i]))
     return arr.join('')
   }
 
-  static toBase64String (buf: Buffer): string {
+  static toBase64String (this: void, buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i += 3) {
       const u24 = (buf[i] << 16) +
@@ -762,7 +763,7 @@ export class Buffer extends Uint8Array {
     return arr.join('')
   }
 
-  static toBase64urlString (buf: Buffer): string {
+  static toBase64urlString (this: void, buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i += 3) {
       const u24 = (buf[i] << 16) +
@@ -779,7 +780,7 @@ export class Buffer extends Uint8Array {
     return (tmp !== 0 ? arr.slice(0, tmp) : arr).join('')
   }
 
-  static toHexString (buf: Buffer): string {
+  static toHexString (this: void, buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i++) arr.push(HEX_CHAR.get(buf[i] >>> 4), HEX_CHAR.get(buf[i] & 0xF))
     return arr.join('')

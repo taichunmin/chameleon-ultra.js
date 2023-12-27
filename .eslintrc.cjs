@@ -13,10 +13,14 @@ module.exports = {
     project: './tsconfig.json'
   },
   rules: {
+    '@typescript-eslint/no-unsafe-argument': 0, // 0 = off, 1 = warn, 2 = error
     '@typescript-eslint/return-await': 0, // 0 = off, 1 = warn, 2 = error
     'multiline-ternary': 0, // 0 = off, 1 = warn, 2 = error
     'no-extra-boolean-cast': 0, // 0 = off, 1 = warn, 2 = error
     'no-return-await': 0, // 0 = off, 1 = warn, 2 = error
+    '@typescript-eslint/no-invalid-void-type': ['error', {
+      allowAsThisParameter: true,
+    }],
     'comma-dangle': ['error', {
       arrays: 'always-multiline',
       objects: 'always-multiline',

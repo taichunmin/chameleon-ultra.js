@@ -145,8 +145,8 @@ class ChameleonWebbleAdapterRxSource implements UnderlyingSource<Buffer> {
   start (controller: ReadableStreamDefaultController<Buffer>): void { this.controller = controller }
 
   onNotify (event: any): void {
-    const buf = this.adapter.Buffer?.from(event?.target?.value) as Buffer
-    this.adapter.logger.webble(`onNotify = ${buf.toString('hex')}`)
+    const buf = this.adapter.Buffer?.from((event?.target?.value as Uint8Array))
+    this.adapter.logger.webble(`onNotify = ${buf?.toString('hex')}`)
     this.controller?.enqueue(buf)
   }
 }

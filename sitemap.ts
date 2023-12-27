@@ -1,10 +1,13 @@
 import { getSiteurl } from './pug/dotenv'
 
 import _ from 'lodash'
+import { fileURLToPath } from 'url'
 import { promises as fsPromises } from 'fs'
 import dayjs from 'dayjs'
 import fg from 'fast-glob'
 import path from 'path'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
 
 function toUrl (url: string): string {
   return `<url><loc>${url}</loc><changefreq>daily</changefreq></url>`

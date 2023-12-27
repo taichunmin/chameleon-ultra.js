@@ -1,6 +1,7 @@
 import { getPort, getSiteurl } from './pug/dotenv'
 
 import _ from 'lodash'
+import { fileURLToPath } from 'url'
 import { promises as fsPromises } from 'fs'
 import finalhandler from 'finalhandler'
 import https from 'https'
@@ -9,7 +10,9 @@ import path from 'path'
 import serveStatic from 'serve-static'
 import watch from 'node-watch'
 
-async function readMkcert (): Promise<any> {
+const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
+
+async function readMkcert (): Promise<{ cert: Buffer, key: Buffer }> {
   try {
     const [cert, key] = await Promise.all([
       fsPromises.readFile(path.resolve(__dirname, './mkcert/cert.pem')),
@@ -35,8 +38,8 @@ async function main (): Promise<void> {
     server: httpsServer,
   }) as LiveReloadServer1
 
-  livereloadServer._filterRefresh = livereloadServer.filterRefresh
-  livereloadServer.filterRefresh = _.debounce((filepath) => { livereloadServer._filterRefresh?.(filepath) }, 1000)
+  livereloadServer._filterRefresh = (livereloadServer as any).filterRefresh
+  livereloadServer.filterRefresh = _.debounce((filepath: string) => { livereloadServer._filterRefresh?.(filepath) }, 1000)
   livereloadServer.watch(publicDir)
   console.log(`build finish. Visit: ${getSiteurl('/test.html')}`)
 

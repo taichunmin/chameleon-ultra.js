@@ -17,7 +17,7 @@ export class SlotInfo {
   }
 
   static fromCmd1019 (buf: Buffer): SlotInfo[] {
-    if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('buf should be a Buffer with length 16')
+    if (!Buffer.isBuffer(buf) || buf.length !== 32) throw new TypeError('buf should be a Buffer with length 32')
     return _.times(8, i => bufUnpackToClass(buf.subarray(i * 4), '!HH', SlotInfo))
   }
 }
@@ -31,7 +31,7 @@ export class SlotFreqIsEnable {
   }
 
   static fromCmd1023 (buf: Buffer): SlotFreqIsEnable[] {
-    if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('buf should be a Buffer with length 16')
+    if (!Buffer.isBuffer(buf) || buf.length !== 16) throw new TypeError('buf should be a Buffer with length 16')
     return _.times(8, i => bufUnpackToClass(buf.subarray(i * 2), '!??', SlotFreqIsEnable))
   }
 }
@@ -231,8 +231,8 @@ export class Mf1DetectionLog {
     this.ar = ar
   }
 
-  static fromBuffer (buf: Buffer): Mf1DetectionLog {
-    if (!Buffer.isBuffer(buf) || buf.length < 18) throw new TypeError('buf should be a Buffer with length 18')
+  static fromBuffer (this: void, buf: Buffer): Mf1DetectionLog {
+    if (!Buffer.isBuffer(buf) || buf.length !== 18) throw new TypeError('buf should be a Buffer with length 18')
     return bufUnpackToClass(buf, '!Bs4s4s4s4s', Mf1DetectionLog)
   }
 
