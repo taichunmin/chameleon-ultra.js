@@ -10,6 +10,7 @@ import path from 'path'
 const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
 
 function toUrl (url: string): string {
+  url = url.replace(/[/]index[.]html$/, '/')
   return `<url><loc>${url}</loc><changefreq>daily</changefreq></url>`
 }
 
