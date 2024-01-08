@@ -86,7 +86,7 @@ block content
         .row.mx-n1.mb-2
           .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnGen2Read") #[i.fa.fa-fw.fa-upload] Read
           .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnGen2Write") #[i.fa.fa-fw.fa-download] Write
-        button.btn.btn-sm.btn-block.btn-outline-info.mb-2(@click="btnKeysGrab") #[i.fa.mr-1.fa-key] Grab keys from Mifare Data
+        button.btn.btn-sm.btn-block.btn-outline-info.mb-2(@click="btnKeysGrab") #[i.fa.mr-1.fa-key] Grab keys from Mifare Dump
         button.btn.btn-sm.btn-block.btn-outline-secondary.mb-2(@click="btnKeysReset") #[i.fa.mr-1.fa-fire] Reset to well-known keys
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
         h6.card-title UID (Chinese Magic Card gen1a)
@@ -94,13 +94,13 @@ block content
           .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnGen1aRead") #[i.fa.fa-fw.fa-upload] Read
           .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnGen1aWrite") #[i.fa.fa-fw.fa-download] Write
     .card.shadow-sm.mb-2
-      h6.card-header.bg-light #[i.fa.fa-id-card.mr-1] Mifare Data
+      h6.card-header.bg-light #[i.fa.fa-id-card.mr-1] Mifare Dump
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
         input.d-none(type="file", ref="cardImport", @change="cardImport?.cb?.($event.target.files[0])")
         .row.mx-n1.mb-2
           .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnCardImport") #[i.fa.fa-fw.fa-file-code-o] Import
           .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnCardExport") #[i.fa.fa-fw.fa-floppy-o] Export
-        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnCardReset") #[i.fa.mr-1.fa-repeat] Reset to empty mifare
+        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnCardReset") #[i.fa.mr-1.fa-repeat] Reset to empty dump
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
         h6.card-title Anit Collision
         .input-group.input-group-sm.mb-2.was-validated
@@ -120,7 +120,7 @@ block content
           input.form-control(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
           .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.ats = ''") #[i.fa.fa-fw.fa-times]
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
-        h6.card-title Mifare 1k Card Data
+        h6.card-title Mifare 1k Card Dump
         .input-group.input-group-sm.mb-2(v-for="i in _.times(16)")
           .input-group-prepend: label.input-group-text.justify-content-center.flex-column(style="width: 2rem", :for="`i-toggle-${i}`")
             input.my-2(type="checkbox", v-model="ss.toggle[i]", :id="`i-toggle-${i}`")

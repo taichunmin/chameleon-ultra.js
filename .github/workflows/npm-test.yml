@@ -6,11 +6,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: node:18
+    container: node:20
     steps:
       - uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
       - name: install and npm test
         run: |
           set -ex

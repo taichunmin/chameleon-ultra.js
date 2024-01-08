@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { type AnimationMode, type ButtonAction, type DarksideStatus, type Mf1EmuWriteMode, type Mf1PrngType, type TagType } from './ChameleonUltra'
+import { type AnimationMode, type ButtonAction, type DarksideStatus, type Mf1EmuWriteMode, type Mf1PrngType, type TagType } from './enums'
 import { type Class } from 'utility-types'
 
 function bufUnpackToClass <T> (buf: Buffer, format: string, Type: Class<T>): T {
@@ -231,7 +231,7 @@ export class Mf1DetectionLog {
     this.ar = ar
   }
 
-  static fromBuffer (this: void, buf: Buffer): Mf1DetectionLog {
+  static fromBuffer (buf: Buffer): Mf1DetectionLog {
     if (!Buffer.isBuffer(buf) || buf.length !== 18) throw new TypeError('buf should be a Buffer with length 18')
     return bufUnpackToClass(buf, '!Bs4s4s4s4s', Mf1DetectionLog)
   }

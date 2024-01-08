@@ -1,5 +1,4 @@
 import _ from 'lodash'
-import { type ValuesType } from 'utility-types'
 
 export type MiddlewareComposeFn = (ctx: Record<string, any>, next: () => Promise<unknown>) => Promise<unknown>
 
@@ -43,16 +42,6 @@ export function middlewareCompose (middlewares: MiddlewareComposeFn[]): (ctx: Re
 
 export async function sleep (ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-export function createIsEnum<T extends readonly any[] | ArrayLike<any> | Record<any, any>> (e: T): (val: any) => val is ValuesType<T> {
-  const s = new Set(_.values(e))
-  return (val: any): val is ValuesType<T> => s.has(val)
-}
-
-export function createIsEnumInteger<T extends readonly any[] | ArrayLike<any> | Record<any, any>> (e: T): (val: any) => val is ValuesType<T> {
-  const isEnum = createIsEnum(e)
-  return (val: any): val is ValuesType<T> => _.isInteger(val) && isEnum(val)
 }
 
 const ERROR_KEYS = [
