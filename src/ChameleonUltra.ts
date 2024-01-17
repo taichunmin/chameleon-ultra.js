@@ -2675,23 +2675,23 @@ export class ChameleonUltra {
     for (const key of keys) {
       if (!await this.cmdMf1CheckBlockKey({ block, key, keyType: Mf1KeyType.KEY_A })) continue
       sectorKey[Mf1KeyType.KEY_A] = key
+      // shortcut: try to read key B from trailer of sector
+      try {
+        const keyB = (await this.cmdMf1ReadBlock({ block, key, keyType: Mf1KeyType.KEY_A })).subarray(10)
+        if (_.sum(keyB) > 0) { // key B in trailer
+          sectorKey[Mf1KeyType.KEY_B] = keyB
+          return sectorKey
+        }
+      } catch (err) {
+        if (!this.isConnected()) throw err
+      }
       break
     }
-    // try to read trailer of sector with key A
-    try {
-      if (_.isNil(sectorKey[Mf1KeyType.KEY_A])) throw new Error('keyA not found')
-      const keyB = (await this.cmdMf1ReadBlock({ block, keyType: Mf1KeyType.KEY_A, key: sectorKey[Mf1KeyType.KEY_A] })).subarray(10)
-      if (_.sum(keyB) > 0) sectorKey[Mf1KeyType.KEY_B] = keyB
-    } catch (err) {
-      if (!this.isConnected()) throw err
-    }
     // check key B
-    if (_.isNil(sectorKey[Mf1KeyType.KEY_B])) {
-      for (const key of keys) {
-        if (!await this.cmdMf1CheckBlockKey({ block, key, keyType: Mf1KeyType.KEY_B })) continue
-        sectorKey[Mf1KeyType.KEY_B] = key
-        break
-      }
+    for (const key of keys) {
+      if (!await this.cmdMf1CheckBlockKey({ block, key, keyType: Mf1KeyType.KEY_B })) continue
+      sectorKey[Mf1KeyType.KEY_B] = key
+      break
     }
     return sectorKey
   }
