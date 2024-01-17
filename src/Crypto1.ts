@@ -4,7 +4,7 @@
  */
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { Mf1KeyType } from './ChameleonUltra'
+import { Mf1KeyType } from './enums'
 
 const LF_POLY_ODD = 0x29CE5C
 const LF_POLY_EVEN = 0x870804
@@ -80,9 +80,9 @@ export default class Crypto1 {
   odd: number = 0
 
   /**
-   * @param args
-   * @param args.even The even bits of lfsr.
-   * @param args.odd The odd bits of lfsr.
+   * @param opts
+   * @param opts.even The even bits of lfsr.
+   * @param opts.odd The odd bits of lfsr.
    * @see [mfkey source code from RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/tree/master/tools/mfkey)
    * @example
    * ```js
@@ -266,7 +266,7 @@ export default class Crypto1 {
    * console.log(Crypto1.beBit(0x01000000, 0)) // 1
    * ```
    */
-  static beBit (this: void, x: number, n: number): number { return Crypto1.bit(x, n ^ 24) }
+  static beBit (x: number, n: number): number { return Crypto1.bit(x, n ^ 24) }
 
   /**
    * Get bit of the unsigned 32-bit integer `x` at position `n`.
@@ -282,7 +282,7 @@ export default class Crypto1 {
    * console.log(Crypto1.bit(0x1, 0)) // 1
    * ```
    */
-  static bit (this: void, x: number, n: number): number { return Crypto1.toBit(x >>> n) }
+  static bit (x: number, n: number): number { return Crypto1.toBit(x >>> n) }
 
   /**
    * Cast the number `x` to bit.
@@ -298,7 +298,7 @@ export default class Crypto1 {
    * console.log(Crypto1.toBit(2)) // 0
    * ```
    */
-  static toBit (this: void, x: number): number { return x & 1 }
+  static toBit (x: number): number { return x & 1 }
 
   /**
    * Indicates whether the number is truly or not.
@@ -314,7 +314,7 @@ export default class Crypto1 {
    * console.log(Crypto1.toBool(2)) // 1
    * ```
    */
-  static toBool (this: void, x: number): number { return x !== 0 ? 1 : 0 }
+  static toBool (x: number): number { return x !== 0 ? 1 : 0 }
 
   /**
    * Cast the number `x` to unsigned 24-bit integer.
@@ -323,13 +323,13 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    * @example
-   * ```
+   * ```js
    * const { Crypto1 } = window
    *
    * console.log(Crypto1.toUint24(-1).toString(16)) // 'ffffff'
    * ```
    */
-  static toUint24 (this: void, x: number): number { return x & 0xFFFFFF }
+  static toUint24 (x: number): number { return x & 0xFFFFFF }
 
   /**
    * Cast the number `x` to unsigned 32-bit integer.
@@ -344,7 +344,7 @@ export default class Crypto1 {
    * console.log(Crypto1.toUint32(-1).toString(16)) // 'ffffffff'
    * ```
    */
-  static toUint32 (this: void, x: number): number { return x >>> 0 }
+  static toUint32 (x: number): number { return x >>> 0 }
 
   /**
    * Cast Buffer, hex string or number to UInt32
@@ -353,7 +353,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static castToUint32 (this: void, x: UInt32Like): number {
+  static castToUint32 (x: UInt32Like): number {
     const { toUint32 } = Crypto1
     if (_.isSafeInteger(x)) return toUint32(x as number)
     if (_.isString(x)) return Buffer.from(x, 'hex').readUInt32BE(0)
@@ -382,7 +382,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static filter (this: void, x: number): number {
+  static filter (x: number): number {
     let f = 0
     f |= 0xF22C0 >>> (x & 0xF) & 16
     f |= 0x6C9C0 >>> (x >>> 4 & 0xF) & 8
@@ -399,7 +399,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static evenParity8 (this: void, x: number): number {
+  static evenParity8 (x: number): number {
     const { evenParityCache, toBit } = Crypto1
     if (evenParityCache.length !== 256) {
       for (let i = 0; i < 256; i++) {
@@ -430,7 +430,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static evenParity32 (this: void, x: number): number {
+  static evenParity32 (x: number): number {
     x ^= x >>> 16
     return Crypto1.evenParity8(x ^ (x >>> 8))
   }
@@ -448,7 +448,7 @@ export default class Crypto1 {
    * console.log(Crypto1.swapEndian(0x12345678).toString(16)) // '78563412'
    * ```
    */
-  static swapEndian (this: void, x: number): number {
+  static swapEndian (x: number): number {
     return Crypto1.lfsrBuf.writeUInt32BE(x, 0).readUInt32LE(0)
   }
 
@@ -458,7 +458,7 @@ export default class Crypto1 {
    * @param n The number of times to generate the new prng state.
    * @returns The new prng state.
    */
-  static prngSuccessor (this: void, x: number, n: number): number {
+  static prngSuccessor (x: number, n: number): number {
     const { swapEndian } = Crypto1
     x = swapEndian(x)
     while ((n--) !== 0) x = x >>> 1 | (x >>> 16 ^ x >>> 18 ^ x >>> 19 ^ x >>> 21) << 31
@@ -473,7 +473,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static updateContribution (this: void, item: number, mask1: number, mask2: number): number {
+  static updateContribution (item: number, mask1: number, mask2: number): number {
     const { evenParity32, toUint32 } = Crypto1
     let p = item >>> 25
     p = p << 2 | (evenParity32(item & mask1) > 0 ? 2 : 0) | evenParity32(item & mask2)
@@ -492,7 +492,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static extendTable (this: void, tbl: Uint32Array, size: number, bit: number, m1: number, m2: number, input: number): number {
+  static extendTable (tbl: Uint32Array, size: number, bit: number, m1: number, m2: number, input: number): number {
     const { filter, toUint32, updateContribution } = Crypto1
     input = toUint32(input << 24)
     for (let i = 0; i < size; i++) {
@@ -517,7 +517,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static extendTableSimple (this: void, tbl: Uint32Array, size: number, bit: number): number {
+  static extendTableSimple (tbl: Uint32Array, size: number, bit: number): number {
     const { filter } = Crypto1
     for (let i = 0; i < size; i++) {
       const iFilter = filter(tbl[i] *= 2)
@@ -540,7 +540,15 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static mfkeyRecoverState (this: void, ctx: MfkeyRecoverContext): void {
+  static mfkeyRecoverState (ctx: {
+    eks: number
+    evens: RecoverContextUint32Array
+    input: number
+    odds: RecoverContextUint32Array
+    oks: number
+    rem: number
+    states: Crypto1[]
+  }): void {
     const { evenParity32, extendTable, mfkeyRecoverState, toBit, toBool, toUint32 } = Crypto1
     const { evens, odds, states } = ctx
     if (ctx.rem < 0) {
@@ -596,7 +604,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrRecovery32 (this: void, ks2: number, input: number): Crypto1[] {
+  static lfsrRecovery32 (ks2: number, input: number): Crypto1[] {
     const { beBit, extendTableSimple, filter, mfkeyRecoverState, toBit, toUint32 } = Crypto1
     const evens = { s: 0, d: new Uint32Array(1 << 21) } // possible evens for ks2
     const odds = { s: 0, d: new Uint32Array(1 << 21) } // possible odds for ks2
@@ -633,7 +641,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrRecovery64 (this: void, ks2: number, ks3: number): Crypto1 {
+  static lfsrRecovery64 (ks2: number, ks3: number): Crypto1 {
     const { beBit, evenParity32, extendTableSimple, filter } = Crypto1
     const oks = new Uint8Array(32)
     const eks = new Uint8Array(32)
@@ -686,7 +694,14 @@ export default class Crypto1 {
 
   /**
    * Recover the key with the two authentication attempts from reader.
-   * @param args
+   * @param opts
+   * @param opts.uid The 4-bytes uid in the authentication attempt.
+   * @param opts.nt0 The nonce from tag in the first authentication attempt.
+   * @param opts.nr0 The calculated nonce response from reader in the first authentication attempt.
+   * @param opts.ar0 The random challenge from reader in the first authentication attempt.
+   * @param opts.nt1 The nonce from tag in the second authentication attempt.
+   * @param opts.nr1 The calculated nonce response from reader in the second authentication attempt.
+   * @param opts.ar1 The random challenge from reader in the second authentication attempt.
    * @returns The recovered key.
    * @example
    * ```js
@@ -721,9 +736,17 @@ export default class Crypto1 {
    * }).toString('hex')) // A9AC67832330
    * ```
    */
-  static mfkey32v2 (args: Mfkey32v2Args): Buffer {
+  static mfkey32v2 (opts: {
+    uid: UInt32Like
+    nt0: UInt32Like
+    nr0: UInt32Like
+    ar0: UInt32Like
+    nt1: UInt32Like
+    nr1: UInt32Like
+    ar1: UInt32Like
+  }): Buffer {
     const { castToUint32, lfsrRecovery32, prngSuccessor, toUint32 } = Crypto1
-    const [uid, nt0, nr0, ar0, nt1, nr1, ar1] = _.map(['uid', 'nt0', 'nr0', 'ar0', 'nt1', 'nr1', 'ar1'] as const, k => castToUint32(args[k]))
+    const [uid, nt0, nr0, ar0, nt1, nr1, ar1] = _.map(['uid', 'nt0', 'nr0', 'ar0', 'nt1', 'nr1', 'ar1'] as const, k => castToUint32(opts[k]))
     const p640 = prngSuccessor(nt0, 64)
     const p641 = prngSuccessor(nt1, 64)
 
@@ -742,7 +765,12 @@ export default class Crypto1 {
 
   /**
    * Recover the key with the successfully authentication between the reader and the tag.
-   * @param args
+   * @param opts
+   * @param opts.uid The 4-bytes uid in the authentication.
+   * @param opts.nt The nonce from tag in the authentication.
+   * @param opts.nr The calculated response of `args.nt` from reader in the authentication.
+   * @param opts.ar The random challenge from reader in the authentication.
+   * @param opts.at The calculated response of `args.ar` from tag in the authentication.
    * @returns The recovered key.
    * @example
    * ```js
@@ -771,9 +799,15 @@ export default class Crypto1 {
    * }).toString('hex')) // A9AC67832330
    * ```
    */
-  static mfkey64 (args: Mfkey64Args): Buffer {
+  static mfkey64 (opts: {
+    uid: UInt32Like
+    nt: UInt32Like
+    nr: UInt32Like
+    ar: UInt32Like
+    at: UInt32Like
+  }): Buffer {
     const { castToUint32, lfsrRecovery64, prngSuccessor } = Crypto1
-    const [uid, nt, nr, ar, at] = _.map(['uid', 'nt', 'nr', 'ar', 'at'] as const, k => castToUint32(args[k]))
+    const [uid, nt, nr, ar, at] = _.map(['uid', 'nt', 'nr', 'ar', 'at'] as const, k => castToUint32(opts[k]))
     const p64 = prngSuccessor(nt, 64)
     const [ks2, ks3] = [ar ^ p64, at ^ prngSuccessor(p64, 32)]
     const state = lfsrRecovery64(ks2, ks3)
@@ -786,18 +820,29 @@ export default class Crypto1 {
 
   /**
    * Decrypt the data.
-   * @param args
+   * @param opts
+   * @param opts.uid The 4-bytes uid in the authentication.
+   * @param opts.nt The nonce from tag in the authentication.
+   * @param opts.nr The calculated response of `args.nt` from reader in the authentication.
+   * @param opts.data The encrypted data.
+   * @param opts.key The 6-bytes key to decrypt the data.
    * @returns The decrypted data.
    */
-  static decrypt (args: DecryptArgs): Buffer {
+  static decrypt (opts: {
+    uid: UInt32Like
+    nt: UInt32Like
+    nr: UInt32Like
+    data: Buffer
+    key: Buffer
+  }): Buffer {
     const { castToUint32 } = Crypto1
-    if (!Buffer.isBuffer(args.key) || args.key.length !== 6) throw new TypeError('invalid args.key')
-    if (!Buffer.isBuffer(args.data)) throw new TypeError('invalid args.data')
-    const [uid, nt, nr] = _.map(['uid', 'nt', 'nr'] as const, k => castToUint32(args[k]))
-    const data = args.data.slice() // clone data
+    if (!Buffer.isBuffer(opts.key) || opts.key.length !== 6) throw new TypeError('invalid opts.key')
+    if (!Buffer.isBuffer(opts.data)) throw new TypeError('invalid opts.data')
+    const [uid, nt, nr] = _.map(['uid', 'nt', 'nr'] as const, k => castToUint32(opts[k]))
+    const data = opts.data.slice() // clone data
 
     const state = new Crypto1()
-    state.setLfsr(args.key.readUIntBE(0, 6))
+    state.setLfsr(opts.key.readUIntBE(0, 6))
     state.lfsrWord(uid ^ nt, 0)
     state.lfsrWord(nr, 1)
     for (let i = 0; i < 2; i++) state.lfsrWord(0, 0)
@@ -810,11 +855,17 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static nestedRecoverState (this: void, args: NestedRecoverStateArgs): Buffer[] {
+  static nestedRecoverState (opts: {
+    uid: number
+    atks: Array<{
+      ntp: number
+      ks1: number
+    }>
+  }): Buffer[] {
     const { lfsrRecovery32, toUint32 } = Crypto1
     const keyCnt = new Map<number, number>()
-    for (const { ntp, ks1 } of args.atks) {
-      const tmp = toUint32(ntp ^ args.uid)
+    for (const { ntp, ks1 } of opts.atks) {
+      const tmp = toUint32(ntp ^ opts.uid)
       const states = lfsrRecovery32(ks1, tmp)
       for (const state of states) {
         state.lfsrRollbackWord(tmp, 0)
@@ -831,7 +882,10 @@ export default class Crypto1 {
 
   /**
    * Recover key from mifare tags with static nonce
-   * @param args
+   * @param opts
+   * @param opts.uid The 4-bytes uid in the authentication.
+   * @param opts.keyType The key type of target block.
+   * @param opts.atks The nonce logs of the authentication.
    * @returns candidates keys
    * @example
    * ```js
@@ -848,21 +902,28 @@ export default class Crypto1 {
    * console.log(`keys = ${JSON.stringify(_.map(keys, key => key.toString('hex')))}`)
    * ```
    */
-  static staticnested (args: StaticNestedArgs): Buffer[] {
+  static staticnested (opts: {
+    uid: UInt32Like
+    keyType: Mf1KeyType
+    atks: Array<{
+      nt1: UInt32Like
+      nt2: UInt32Like
+    }>
+  }): Buffer[] {
     const { castToUint32, nestedRecoverState, prngSuccessor, toUint32 } = Crypto1
 
     // dist
-    const firstNt = castToUint32(args.atks[0].nt1)
+    const firstNt = castToUint32(opts.atks[0].nt1)
     let dist = 0
     // st gen1: There is no loophole in this generation. This tag can be decrypted with the default parameter value 160!
     if (firstNt === 0x01200145) dist = 160
     // st gen2: tag is vulnerable too but parameter must be adapted depending on the attacked key type
-    else if (firstNt === 0x009080A2) dist = args.keyType === Mf1KeyType.KEY_A ? 160 : 161
+    else if (firstNt === 0x009080A2) dist = opts.keyType === Mf1KeyType.KEY_A ? 160 : 161
     if (dist === 0) throw new Error('unknown static nonce')
 
     return nestedRecoverState({
-      uid: castToUint32(args.uid),
-      atks: _.map(args.atks, tmp => {
+      uid: castToUint32(opts.uid),
+      atks: _.map(opts.atks, tmp => {
         const [nt1, nt2] = _.map([tmp.nt1, tmp.nt2], castToUint32)
         const ntp = prngSuccessor(nt1, dist)
         const ks1 = toUint32(nt2 ^ ntp)
@@ -874,7 +935,10 @@ export default class Crypto1 {
 
   /**
    * Recover key from mifare tags with weak prng
-   * @param args
+   * @param opts
+   * @param opts.uid The 4-bytes uid in the authentication.
+   * @param opts.dist The nonce distance between two authentication.
+   * @param opts.atks The logs of the nested attack.
    * @returns candidates keys
    * @example
    * ```js
@@ -890,14 +954,18 @@ export default class Crypto1 {
    * console.log(`keys = ${JSON.stringify(_.map(keys, key => key.toString('hex')))}`)
    * ```
    */
-  static nested (args: NestedArgs): Buffer[] {
+  static nested (opts: {
+    uid: UInt32Like
+    dist: UInt32Like
+    atks: Array<{ nt1: UInt32Like, nt2: UInt32Like, par: UInt32Like }>
+  }): Buffer[] {
     const { castToUint32, nestedIsValidNonce, nestedRecoverState, prngSuccessor, toUint32 } = Crypto1
 
-    const dist = castToUint32(args.dist)
-    const atks: NestedRecoverStateArgs['atks'] = []
+    const dist = castToUint32(opts.dist)
+    const atks: Array<{ ntp: number, ks1: number }> = []
 
-    for (let i = 0; i < args.atks.length; i++) {
-      const tmp = args.atks[i]
+    for (let i = 0; i < opts.atks.length; i++) {
+      const tmp = opts.atks[i]
       const [nt1, nt2, par] = _.map([tmp.nt1, tmp.nt2, tmp.par], castToUint32)
       let ntp = prngSuccessor(nt1, dist - 14)
       for (let j = 0; j < 29; j++, ntp = prngSuccessor(ntp, 1)) {
@@ -906,14 +974,14 @@ export default class Crypto1 {
       }
     }
 
-    return nestedRecoverState({ uid: castToUint32(args.uid), atks })
+    return nestedRecoverState({ uid: castToUint32(opts.uid), atks })
   }
 
   /**
    * @internal
    * @group Internal
    */
-  static nestedIsValidNonce (this: void, nt1: number, nt2: number, ks1: number, par: number): boolean {
+  static nestedIsValidNonce (nt1: number, nt2: number, ks1: number, par: number): boolean {
     const { evenParity8, bit } = Crypto1
     if (evenParity8((nt1 >>> 24) & 0xFF) !== (bit(par, 0) ^ evenParity8((nt2 >>> 24) & 0xFF) ^ bit(ks1, 16))) return false
     if (evenParity8((nt1 >>> 16) & 0xFF) !== (bit(par, 1) ^ evenParity8((nt2 >>> 16) & 0xFF) ^ bit(ks1, 8))) return false
@@ -925,7 +993,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrPrefixKs (this: void, ks: Buffer, isOdd: boolean): number[] {
+  static lfsrPrefixKs (ks: Buffer, isOdd: boolean): number[] {
     const { bit, filter, toUint32 } = Crypto1
     const candidates: number[] = []
     for (let i = 0; i < 2097152; i++) { // 2**21 = 2097152
@@ -944,7 +1012,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static checkPfxParity (this: void, pfx: number, ar: number, par: number[][], odd: number, even: number, isZeroPar: boolean): Crypto1 | undefined {
+  static checkPfxParity (pfx: number, ar: number, par: number[][], odd: number, even: number, isZeroPar: boolean): Crypto1 | undefined {
     const { evenParity32, bit, toUint32 } = Crypto1
     const state = new Crypto1()
     for (let i = 0; i < 8; i++) {
@@ -972,7 +1040,7 @@ export default class Crypto1 {
    * @internal
    * @group Internal
    */
-  static lfsrCommonPrefix (this: void, pfx: number, ar: number, ks: Buffer, par: number[][], isZeroPar: boolean): Crypto1[] {
+  static lfsrCommonPrefix (pfx: number, ar: number, ks: Buffer, par: number[][], isZeroPar: boolean): Crypto1[] {
     const { lfsrPrefixKs, checkPfxParity } = Crypto1
     const odds = lfsrPrefixKs(ks, true)
     const evens = lfsrPrefixKs(ks, false)
@@ -999,9 +1067,8 @@ export default class Crypto1 {
    * @returns The recovered key.
    * @example
    * ```js
-   * const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const block = 0
    *   const keyType = Mf1KeyType.KEY_A
@@ -1019,6 +1086,8 @@ export default class Crypto1 {
    *   )
    *   console.log(`key founded: ${key.toString('hex')}`)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   static async darkside (
@@ -1069,89 +1138,7 @@ export default class Crypto1 {
 
 type UInt32Like = Buffer | number | string
 
-interface MfkeyRecoverContext {
-  eks: number
-  evens: RecoverContextUint32Array
-  input: number
-  odds: RecoverContextUint32Array
-  oks: number
-  rem: number
-  states: Crypto1[]
-}
-
 interface RecoverContextUint32Array {
   s: number
   d: Uint32Array
-}
-
-export interface Mfkey32v2Args {
-  /** The 4-bytes uid in the authentication attempt. */
-  uid: UInt32Like
-  /** The nonce from tag in the first authentication attempt. */
-  nt0: UInt32Like
-  /** The calculated nonce response from reader in the first authentication attempt. */
-  nr0: UInt32Like
-  /** The random challenge from reader in the first authentication attempt. */
-  ar0: UInt32Like
-  /** The nonce from tag in the second authentication attempt. */
-  nt1: UInt32Like
-  /** The calculated nonce response from reader in the second authentication attempt. */
-  nr1: UInt32Like
-  /** The random challenge from reader in the second authentication attempt. */
-  ar1: UInt32Like
-}
-
-export interface Mfkey64Args {
-  /** The 4-bytes uid in the authentication. */
-  uid: UInt32Like
-  /** The nonce from tag in the authentication. */
-  nt: UInt32Like
-  /** The calculated response of `args.nt` from reader in the authentication. */
-  nr: UInt32Like
-  /** The random challenge from reader in the authentication. */
-  ar: UInt32Like
-  /** The calculated response of `args.ar` from tag in the authentication. */
-  at: UInt32Like
-}
-
-export interface DecryptArgs {
-  /** The 4-bytes uid in the authentication. */
-  uid: UInt32Like
-  /** The nonce from tag in the authentication. */
-  nt: UInt32Like
-  /** The calculated response of `args.nt` from reader in the authentication. */
-  nr: UInt32Like
-  /** The encrypted data. */
-  data: Buffer
-  /** The 6-bytes key to decrypt the data. */
-  key: Buffer
-}
-
-export interface NestedRecoverStateArgs {
-  uid: number
-  atks: Array<{
-    ntp: number
-    ks1: number
-  }>
-}
-
-export interface StaticNestedArgs {
-  /** The 4-bytes uid in the authentication. */
-  uid: UInt32Like
-  keyType: Mf1KeyType
-  atks: Array<{
-    nt1: UInt32Like
-    nt2: UInt32Like
-  }>
-}
-
-export interface NestedArgs {
-  /** The 4-bytes uid in the authentication. */
-  uid: UInt32Like
-  dist: UInt32Like
-  atks: Array<{
-    nt1: UInt32Like
-    nt2: UInt32Like
-    par: UInt32Like
-  }>
 }

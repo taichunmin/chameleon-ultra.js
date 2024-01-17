@@ -1,16 +1,48 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { createIsEnum, createIsEnumInteger, errToJson, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { debug as createDebugger, type Debugger } from 'debug'
+import { errToJson, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
 import * as Decoder from './ResponseDecoder'
+
+import {
+  Cmd,
+  Mf1KeyType,
+  RespStatus,
+  type AnimationMode,
+  type ButtonAction,
+  type ButtonType,
+  type DeviceMode,
+  type DeviceModel,
+  type FreqType,
+  type Mf1EmuWriteMode,
+  type Mf1PrngType,
+  type Mf1VblockOperator,
+  type Slot,
+  type TagType,
+
+  isAnimationMode,
+  isButtonAction,
+  isButtonType,
+  isDeviceMode,
+  isMf1EmuWriteMode,
+  isMf1KeyType,
+  isMf1VblockOperator,
+  isSlot,
+  isTagType,
+  isValidFreqType,
+} from './enums'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
 const VERSION_SUPPORTED = { gte: '2.0', lt: '3.0' } as const
 
+function isMf1BlockNo (block: any): boolean {
+  return _.isInteger(block) && block >= 0 && block <= 0xFF
+}
+
 function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string = ''): void {
-  if (!_.isSafeInteger(block)) throw new TypeError(`${prefix}block should be a integer`)
+  if (!isMf1BlockNo(block)) throw new TypeError(`${prefix}block should be a integer`)
   if (!isMf1KeyType(keyType)) throw new TypeError(`${prefix}keyType should be a Mf1KeyType`)
   if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError(`${prefix}key should be a Buffer(6)`)
 }
@@ -84,7 +116,7 @@ export class ChameleonUltra {
    * <script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebbleAdapter.min.js"></script>
    * <script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebserialAdapter.min.js"></script>
    * <script>
-   *   const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS
+   *   const { ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS
    *
    *   const ultraUsb = new ChameleonUltra()
    *   ultraUsb.use(new WebserialAdapter())
@@ -97,7 +129,7 @@ export class ChameleonUltra {
    * Example usage in CommonJS:
    *
    * ```js
-   * const { Buffer, ChameleonUltra } = require('chameleon-ultra.js')
+   * const { ChameleonUltra } = require('chameleon-ultra.js')
    * const WebbleAdapter = require('chameleon-ultra.js/plugin/WebbleAdapter')
    * const WebserialAdapter = require('chameleon-ultra.js/plugin/WebserialAdapter')
    * const SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
@@ -115,7 +147,7 @@ export class ChameleonUltra {
    * Example usage in ESM:
    *
    * ```js
-   * import { Buffer, ChameleonUltra } from 'chameleon-ultra.js'
+   * import { ChameleonUltra } from 'chameleon-ultra.js'
    * import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
    * import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
    * import SerialPortAdapter from 'chameleon-ultra.js/plugin/SerialPortAdapter'
@@ -389,6 +421,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdGetAppVersion()) // '1.0'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetAppVersion (): Promise<`${number}.${number}`> {
@@ -406,11 +440,12 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdChangeDeviceMode (mode: DeviceMode): Promise<void> {
@@ -427,12 +462,13 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode } = window.ChameleonUltraJS
    *   const deviceMode = await ultra.cmdGetDeviceMode()
    *   console.log(DeviceMode[deviceMode]) // 'TAG'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetDeviceMode (): Promise<DeviceMode> {
@@ -449,11 +485,12 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Slot } = window.ChameleonUltraJS
    *   await ultra.cmdSlotSetActive(Slot.SLOT_1)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotSetActive (slot: Slot): Promise<void> {
@@ -471,16 +508,17 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot, TagType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Slot, TagType } = window.ChameleonUltraJS
    *   await ultra.cmdSlotChangeTagType(Slot.SLOT_1, TagType.MIFARE_1024)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotChangeTagType (slot: Slot, tagType: TagType): Promise<void> {
     if (!isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!isTagType(tagType)) throw new TypeError('Invalid tag type')
+    if (!isTagType(tagType)) throw new TypeError('Invalid tagType')
     this._clearRxBufs()
     const cmd = Cmd.SET_SLOT_TAG_TYPE // cmd = 1004
     await this._writeCmd({ cmd, data: Buffer.pack('!BH', slot, tagType) })
@@ -494,11 +532,12 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot, TagType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Slot, TagType } = window.ChameleonUltraJS
    *   await ultra.cmdSlotResetTagType(Slot.SLOT_1, TagType.MIFARE_1024)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotResetTagType (slot: Slot, tagType: TagType): Promise<void> {
@@ -517,16 +556,17 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { FreqType, Slot } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { FreqType, Slot } = window.ChameleonUltraJS
    *   await ultra.cmdSlotSetEnable(Slot.SLOT_1, FreqType.HF, true)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotSetEnable (slot: Slot, freq: FreqType, enable: boolean | number): Promise<void> {
     if (!isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+    if (!isValidFreqType(freq)) throw new TypeError('Invalid freq')
     if (_.isNil(enable)) throw new TypeError('enable is required')
     this._clearRxBufs()
     const cmd = Cmd.SET_SLOT_ENABLE // cmd = 1006
@@ -542,16 +582,17 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot, FreqType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Slot, FreqType } = window.ChameleonUltraJS
    *   await ultra.cmdSlotSetFreqName(Slot.SLOT_1, FreqType.HF, 'My Tag')
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotSetFreqName (slot: Slot, freq: FreqType, name: string): Promise<void> {
     if (!isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+    if (!isValidFreqType(freq)) throw new TypeError('Invalid freq')
     if (!_.isString(name)) throw new TypeError('name should be a string')
     const buf1 = Buffer.from(name)
     if (!_.inRange(buf1.length, 1, 33)) throw new TypeError('byteLength of name should between 1 and 32')
@@ -569,18 +610,19 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot, FreqType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Slot, FreqType } = window.ChameleonUltraJS
    *   const name = await ultra.cmdSlotGetFreqName(Slot.SLOT_1, FreqType.HF)
    *   console.log(name) // 'My Tag'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotGetFreqName (slot: Slot, freq: FreqType): Promise<string | undefined> {
     try {
       if (!isSlot(slot)) throw new TypeError('Invalid slot')
-      if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+      if (!isValidFreqType(freq)) throw new TypeError('Invalid freq')
       this._clearRxBufs()
       const cmd = Cmd.GET_SLOT_TAG_NICK // cmd = 1008
       await this._writeCmd({ cmd, data: Buffer.pack('!BB', slot, freq) })
@@ -597,9 +639,12 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
+   *   const { Buffer } = window.ChameleonUltraJS
    *   await ultra.cmdMf1EmuWriteBlock(1, Buffer.alloc(16))
    *   await ultra.cmdSlotSaveSettings()
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotSaveSettings (): Promise<void> {
@@ -617,6 +662,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdEnterBootloader()
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdEnterBootloader (): Promise<void> {
@@ -634,6 +681,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdGetDeviceChipId()) // 'db1c624228d9634c'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetDeviceChipId (): Promise<string> {
@@ -653,6 +702,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdBleGetAddress()) // 'E8:B6:3D:04:B6:FE'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdBleGetAddress (): Promise<string> {
@@ -673,6 +724,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdSaveSettings()
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSaveSettings (): Promise<void> {
@@ -690,6 +743,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdResetSettings()
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdResetSettings (): Promise<void> {
@@ -705,15 +760,16 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { AnimationMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { AnimationMode } = window.ChameleonUltraJS
    *   await ultra.cmdSetAnimationMode(AnimationMode.SHORT)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSetAnimationMode (mode: AnimationMode): Promise<void> {
-    if (!isAnimationMode(mode)) throw new TypeError('Invalid animation mode')
+    if (!isAnimationMode(mode)) throw new TypeError('Invalid mode')
     this._clearRxBufs()
     const cmd = Cmd.SET_ANIMATION_MODE // cmd = 1015
     await this._writeCmd({ cmd, data: Buffer.pack('!B', mode) })
@@ -726,12 +782,13 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { AnimationMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { AnimationMode } = window.ChameleonUltraJS
    *   const mode = await ultra.cmdGetAnimationMode()
    *   console.log(AnimationMode[mode]) // 'FULL'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetAnimationMode (): Promise<AnimationMode> {
@@ -750,6 +807,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdGetGitVersion()) // '98605be'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetGitVersion (): Promise<string> {
@@ -766,12 +825,13 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Slot } = window.ChameleonUltraJS
    *   const slot = await ultra.cmdSlotGetActive()
    *   console.log(Slot[slot]) // 'SLOT_1'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotGetActive (): Promise<Slot> {
@@ -803,6 +863,8 @@ export class ChameleonUltra {
    *    * ]
    *    *\/
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotGetInfo (): Promise<Decoder.SlotInfo[]> {
@@ -820,6 +882,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdWipeFds()
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdWipeFds (): Promise<void> {
@@ -837,16 +901,18 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot, FreqType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Slot, FreqType } = window.ChameleonUltraJS
    *   console.log(await ultra.cmdSlotDeleteFreqName(Slot.SLOT_1, FreqType.HF)) // true
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
    */
   async cmdSlotDeleteFreqName (slot: Slot, freq: FreqType): Promise<boolean> {
     try {
       if (!isSlot(slot)) throw new TypeError('Invalid slot')
-      if (!isFreqType(freq) || freq < 1) throw new TypeError('freq should be 1 or 2')
+      if (!isValidFreqType(freq)) throw new TypeError('Invalid freq')
       this._clearRxBufs()
       const cmd = Cmd.DELETE_SLOT_TAG_NICK // cmd = 1021
       await this._writeCmd({ cmd, data: Buffer.pack('!BB', slot, freq) })
@@ -878,6 +944,8 @@ export class ChameleonUltra {
    *   //   { "hf": true, "lf": false }
    *   // ]
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotGetIsEnable (): Promise<Decoder.SlotFreqIsEnable[]> {
@@ -894,16 +962,17 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * const { Slot, FreqType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Slot, FreqType } = window.ChameleonUltraJS
    *   await ultra.cmdSlotDeleteFreqType(Slot.SLOT_1, FreqType.HF)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSlotDeleteFreqType (slot: Slot, freq: FreqType): Promise<void> {
     if (!isSlot(slot)) throw new TypeError('Invalid slot')
-    if (!isFreqType(freq)) throw new TypeError('Invalid freq')
+    if (!isValidFreqType(freq)) throw new TypeError('Invalid freq')
     this._clearRxBufs()
     const cmd = Cmd.DELETE_SLOT_SENSE_TYPE // cmd = 1024
     await this._writeCmd({ cmd, data: Buffer.pack('!BB', slot, freq) })
@@ -920,6 +989,8 @@ export class ChameleonUltra {
    *   const battery = await ultra.cmdGetBatteryInfo()
    *   console.log(JSON.stringify(battery)) // { "voltage": 4192, "level": 99 }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetBatteryInfo (): Promise<Decoder.BatteryInfo> {
@@ -936,16 +1007,17 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { ButtonType, ButtonAction } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { ButtonAction, ButtonType } = window.ChameleonUltraJS
    *   const btnAction = await ultra.cmdGetButtonPressAction(ButtonType.BUTTON_A)
    *   console.log(ButtonAction[btnAction]) // 'CYCLE_SLOT_INC'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetButtonPressAction (btn: ButtonType): Promise<ButtonAction> {
-    if (!isButtonType(btn)) throw new TypeError('Invalid button type')
+    if (!isButtonType(btn)) throw new TypeError('Invalid btn')
     this._clearRxBufs()
     const cmd = Cmd.GET_BUTTON_PRESS_CONFIG // cmd = 1026
     await this._writeCmd({ cmd, data: Buffer.pack('!B', btn) })
@@ -959,16 +1031,17 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { ButtonType, ButtonAction } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { ButtonAction, ButtonType } = window.ChameleonUltraJS
    *   await ultra.cmdSetButtonPressAction(ButtonType.BUTTON_A, ButtonAction.CYCLE_SLOT_INC)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSetButtonPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
-    if (!isButtonType(btn)) throw new TypeError('Invalid button type')
-    if (!isButtonAction(action)) throw new TypeError('Invalid button action')
+    if (!isButtonType(btn)) throw new TypeError('Invalid btn')
+    if (!isButtonAction(action)) throw new TypeError('Invalid action')
     this._clearRxBufs()
     const cmd = Cmd.SET_BUTTON_PRESS_CONFIG // cmd = 1027
     await this._writeCmd({ cmd, data: Buffer.pack('!BB', btn, action) })
@@ -982,16 +1055,17 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { ButtonType, ButtonAction } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { ButtonAction, ButtonType } = window.ChameleonUltraJS
    *   const btnAction = await ultra.cmdGetButtonLongPressAction(ButtonType.BUTTON_A)
    *   console.log(ButtonAction[btnAction]) // 'CLONE_IC_UID'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetButtonLongPressAction (btn: ButtonType): Promise<ButtonAction> {
-    if (!isButtonType(btn)) throw new TypeError('Invalid button type')
+    if (!isButtonType(btn)) throw new TypeError('Invalid btn')
     this._clearRxBufs()
     const cmd = Cmd.GET_LONG_BUTTON_PRESS_CONFIG // cmd = 1028
     await this._writeCmd({ cmd, data: Buffer.pack('!B', btn) })
@@ -1005,16 +1079,17 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { ButtonType, ButtonAction } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { ButtonAction, ButtonType } = window.ChameleonUltraJS
    *   await ultra.cmdSetButtonLongPressAction(ButtonType.BUTTON_A, ButtonAction.CYCLE_SLOT_INC)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdSetButtonLongPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
-    if (!isButtonType(btn)) throw new TypeError('Invalid button type')
-    if (!isButtonAction(action)) throw new TypeError('Invalid button action')
+    if (!isButtonType(btn)) throw new TypeError('Invalid btn')
+    if (!isButtonAction(action)) throw new TypeError('Invalid action')
     this._clearRxBufs()
     const cmd = Cmd.SET_LONG_BUTTON_PRESS_CONFIG // cmd = 1029
     await this._writeCmd({ cmd, data: Buffer.pack('!BB', btn, action) })
@@ -1030,6 +1105,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdBleSetPairingKey('123456')
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdBleSetPairingKey (key: string): Promise<void> {
@@ -1049,6 +1126,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdBleGetPairingKey()) // '123456'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdBleGetPairingKey (): Promise<string> {
@@ -1066,6 +1145,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdBleDeleteAllBonds()
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdBleDeleteAllBonds (): Promise<void> {
@@ -1081,12 +1162,13 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * const { DeviceModel } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceModel } = window.ChameleonUltraJS
    *   const model = await ultra.cmdGetDeviceModel()
    *   console.log(DeviceModel[model]) // 'ULTRA'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetDeviceModel (): Promise<DeviceModel> {
@@ -1117,6 +1199,8 @@ export class ChameleonUltra {
    *    * }
    *    *\/
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetDeviceSettings (): Promise<Decoder.DeviceSettings> {
@@ -1136,6 +1220,8 @@ export class ChameleonUltra {
    *   const cmds = await ultra.cmdGetSupportedCmds()
    *   console.log(cmds.size) // 67
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdGetSupportedCmds (): Promise<Set<Cmd>> {
@@ -1157,6 +1243,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.isCmdSupported(Cmd.GET_APP_VERSION)) // true
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async isCmdSupported (cmd: Cmd): Promise<boolean> {
@@ -1173,6 +1261,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdBleGetPairingMode()) // false
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdBleGetPairingMode (): Promise<boolean> {
@@ -1191,6 +1281,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdBleSetPairingMode(false)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdBleSetPairingMode (enable: boolean | number): Promise<void> {
@@ -1208,14 +1300,15 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const antiColl = _.first(await ultra.cmdHf14aScan())
    *   console.log(_.mapValues(antiColl, val => val.toString('hex')))
    *   // { uid: '040dc4420d2981', atqa: '4400', sak: '00', ats: ''}
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdHf14aScan (): Promise<Decoder.Hf14aAntiColl[]> {
@@ -1231,12 +1324,13 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   console.log(await ultra.cmdMf1IsSupport()) // true
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1IsSupport (): Promise<boolean> {
@@ -1258,12 +1352,13 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1PrngType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode, Mf1PrngType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   console.log(Mf1PrngType[await ultra.cmdMf1TestPrngType()]) // 'WEAK'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1TestPrngType (): Promise<Mf1PrngType> {
@@ -1286,9 +1381,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1AcquireStaticNested({
@@ -1312,18 +1406,16 @@ export class ChameleonUltra {
    *   //   ],
    *   // }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdMf1AcquireStaticNested (known: {
-    block: number
-    key: Buffer
-    keyType: Mf1KeyType
-  }, target: {
-    block: number
-    keyType: Mf1KeyType
-  }): Promise<Decoder.Mf1AcquireStaticNestedRes> {
+  async cmdMf1AcquireStaticNested (
+    known: { block: number, key: Buffer, keyType: Mf1KeyType },
+    target: { block: number, keyType: Mf1KeyType }
+  ): Promise<Decoder.Mf1AcquireStaticNestedRes> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
-    if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
+    if (!isMf1BlockNo(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
     this._clearRxBufs()
     const cmd = Cmd.MF1_STATIC_NESTED_ACQUIRE // cmd = 2003
@@ -1341,9 +1433,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1KeyType, DarksideStatus } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode, Mf1KeyType, DarksideStatus } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const res1 = await ultra.cmdMf1AcquireDarkside(0, Mf1KeyType.KEY_A, true)
    *   console.log(res1)
@@ -1369,14 +1460,15 @@ export class ChameleonUltra {
    *   //   "uid": "d3efed0c"
    *   // }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    *
    * If you want to use darkside attack to recover the key, you can use the following example code:
    *
    * ```js
-   * const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const block = 0
    *   const keyType = Mf1KeyType.KEY_A
@@ -1394,6 +1486,8 @@ export class ChameleonUltra {
    *   )
    *   console.log(`key founded: ${key.toString('hex')}`)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1AcquireDarkside (
@@ -1422,9 +1516,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
@@ -1451,13 +1544,11 @@ export class ChameleonUltra {
    *   //   ]
    *   // }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdMf1TestNtDistance (known: {
-    block: number
-    key: Buffer
-    keyType: Mf1KeyType
-  }): Promise<Decoder.Mf1NtDistanceRes> {
+  async cmdMf1TestNtDistance (known: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<Decoder.Mf1NtDistanceRes> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     this._clearRxBufs()
     const cmd = Cmd.MF1_DETECT_NT_DIST // cmd = 2005
@@ -1478,9 +1569,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
@@ -1507,16 +1597,14 @@ export class ChameleonUltra {
    *   //   ]
    *   // }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdMf1AcquireNested (known: {
-    block: number
-    key: Buffer
-    keyType: Mf1KeyType
-  }, target: {
-    block: number
-    keyType: Mf1KeyType
-  }): Promise<Decoder.Mf1NestedRes[]> {
+  async cmdMf1AcquireNested (
+    known: { block: number, key: Buffer, keyType: Mf1KeyType },
+    target: { block: number, keyType: Mf1KeyType }
+  ): Promise<Decoder.Mf1NestedRes[]> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
@@ -1536,9 +1624,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   console.log(await ultra.cmdMf1CheckBlockKey({
@@ -1547,13 +1634,11 @@ export class ChameleonUltra {
    *     key,
    *   })) // true
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdMf1CheckBlockKey (opts: {
-    block: number
-    keyType: Mf1KeyType
-    key: Buffer
-  }): Promise<boolean> {
+  async cmdMf1CheckBlockKey (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<boolean> {
     const { block, keyType, key } = opts
     try {
       validateMf1BlockKey(block, keyType, key)
@@ -1578,9 +1663,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const block1 = await ultra.cmdMf1ReadBlock({
@@ -1590,13 +1674,11 @@ export class ChameleonUltra {
    *   })
    *   console.log(block1.toString('hex')) // '00000000000000000000000000000000'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdMf1ReadBlock (opts: {
-    block: number
-    keyType: Mf1KeyType
-    key: Buffer
-  }): Promise<Buffer> {
+  async cmdMf1ReadBlock (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<Buffer> {
     const { block, keyType, key } = opts
     validateMf1BlockKey(block, keyType, key)
     this._clearRxBufs()
@@ -1615,9 +1697,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const block1 = Buffer.from('00000000000000000000000000000000', 'hex')
@@ -1628,6 +1709,8 @@ export class ChameleonUltra {
    *     data: block1,
    *   })
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1WriteBlock (opts: {
@@ -1651,9 +1734,8 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1PrngType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode, Mf1PrngType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const tag = _.first(await ultra.hf14aInfo())
    *   console.log(tag.nxpTypeBySak) // 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'
@@ -1661,6 +1743,8 @@ export class ChameleonUltra {
    *   console.log(_.mapValues(tag.antiColl, val => val.toString('hex')))
    *   // { uid: 'dbe3d63d', atqa: '0400', sak: '08', ats: '' }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async hf14aInfo (): Promise<Decoder.Hf14aTagInfo[]> {
@@ -1757,9 +1841,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
@@ -1772,13 +1855,15 @@ export class ChameleonUltra {
    *   )
    *   console.log(await ultra.mf1VblockGetValue(src))
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1VblockManipulate (
-    src: { block: number, keyType: Mf1KeyType, key: Buffer },
+    src: { block: number, key: Buffer, keyType: Mf1KeyType },
     operator: Mf1VblockOperator,
     operand: number,
-    dst: { block: number, keyType: Mf1KeyType, key: Buffer },
+    dst: { block: number, key: Buffer, keyType: Mf1KeyType },
   ): Promise<void> {
     validateMf1BlockKey(src.block, src.keyType, src.key, 'src.')
     validateMf1BlockKey(dst.block, dst.keyType, dst.key, 'dst.')
@@ -1801,20 +1886,19 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
    *   console.log(await ultra.mf1VblockGetValue(src))
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async mf1VblockGetValue (
-    opts: { block: number, keyType: Mf1KeyType, key: Buffer },
-  ): Promise<{ value: number, adr: number }> {
+  async mf1VblockGetValue (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<{ value: number, adr: number }> {
     const blkDt = await this.cmdMf1ReadBlock(opts)
     const [val1, val2, val3] = _.times(3, i => blkDt.readInt32LE(i * 4))
     if (val1 !== val3 || val1 + val2 !== -1) throw new Error(`Invalid value of value block: ${blkDt.toString('hex')}`)
@@ -1835,20 +1919,21 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
    *   console.log(await ultra.mf1VblockGetValue(src))
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async mf1VblockSetValue (
-    dst: { block: number, keyType: Mf1KeyType, key: Buffer },
-    val: { adr?: number, value?: number },
+    dst: { block: number, key: Buffer, keyType: Mf1KeyType },
+    val: { adr?: number, value?: number }
   ): Promise<void> {
     const blkDt = new Buffer(16)
     const { value: val1 = 0, adr: adr1 = dst.block } = val
@@ -1866,14 +1951,15 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * const { Buffer } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *
    *   const id = await ultra.cmdEm410xScan()
    *   console.log(id.toString('hex')) // 'deadbeef88'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdEm410xScan (): Promise<Buffer> {
@@ -1889,12 +1975,13 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * const { Buffer } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   await ultra.cmdEm410xWriteToT55xx(Buffer.from('deadbeef88', 'hex'))
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdEm410xWriteToT55xx (id: Buffer): Promise<void> {
@@ -1915,8 +2002,11 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
+   *   const { Buffer } = window.ChameleonUltraJS
    *   await ultra.cmdMf1EmuWriteBlock(1, Buffer.alloc(16))
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1EmuWriteBlock (offset: number, data: Buffer): Promise<void> {
@@ -1938,12 +2028,15 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
+   *   const { Buffer } = window.ChameleonUltraJS
    *   await ultra.cmdHf14aSetAntiCollData({
    *     atqa: Buffer.from('0400', 'hex'),
    *     sak: Buffer.from('08', 'hex'),
    *     uid: Buffer.from('01020304', 'hex')
    *   })
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdHf14aSetAntiCollData (opts: {
@@ -1972,6 +2065,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdMf1SetDetectionEnable(true)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1SetDetectionEnable (enable: boolean | number): Promise<void> {
@@ -1991,6 +2086,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdMf1GetDetectionCount()) // 0
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1GetDetectionCount (): Promise<number> {
@@ -2022,6 +2119,8 @@ export class ChameleonUltra {
    *    * }
    *    *\/
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1GetDetectionLogs (offset: number = 0): Promise<Decoder.Mf1DetectionLog[]> {
@@ -2041,6 +2140,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdMf1GetDetectionEnable()) // false
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1GetDetectionEnable (): Promise<boolean> {
@@ -2062,6 +2163,8 @@ export class ChameleonUltra {
    *   const data = await ultra.cmdMf1EmuReadBlock(1)
    *   console.log(data.toString('hex')) // '00000000000000000000000000000000'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1EmuReadBlock (offset: number = 0, length: number = 1): Promise<Buffer> {
@@ -2090,6 +2193,8 @@ export class ChameleonUltra {
    *    *  }
    *    *\/
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1GetEmuSettings (): Promise<Decoder.Mf1EmuSettings> {
@@ -2108,6 +2213,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdMf1GetGen1aMode()) // false
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1GetGen1aMode (): Promise<boolean> {
@@ -2126,6 +2233,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdMf1SetGen1aMode(false)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1SetGen1aMode (enable: boolean | number): Promise<void> {
@@ -2145,6 +2254,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdMf1GetGen2Mode()) // false
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1GetGen2Mode (): Promise<boolean> {
@@ -2163,6 +2274,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdMf1SetGen2Mode(false)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1SetGen2Mode (enable: boolean | number): Promise<void> {
@@ -2182,6 +2295,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdMf1GetAntiCollMode()) // false
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1GetAntiCollMode (): Promise<boolean> {
@@ -2200,6 +2315,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   await ultra.cmdMf1SetAntiCollMode(false)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1SetAntiCollMode (enable: boolean | number): Promise<void> {
@@ -2219,6 +2336,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   console.log(await ultra.cmdMf1GetWriteMode()) // 0
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1GetWriteMode (): Promise<Mf1EmuWriteMode> {
@@ -2234,15 +2353,16 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { Mf1EmuWriteMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Mf1EmuWriteMode } = window.ChameleonUltraJS
    *   await ultra.cmdMf1SetWriteMode(Mf1EmuWriteMode.NORMAL)
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1SetWriteMode (mode: Mf1EmuWriteMode): Promise<void> {
-    if (!isMf1EmuWriteMode(mode)) throw new TypeError('Invalid emu write mode')
+    if (!isMf1EmuWriteMode(mode)) throw new TypeError('Invalid mode')
     this._clearRxBufs()
     const cmd = Cmd.MF1_SET_WRITE_MODE // cmd = 4017
     await this._writeCmd({ cmd, data: Buffer.pack('!B', mode) })
@@ -2265,6 +2385,8 @@ export class ChameleonUltra {
    *   //   "ats": { "type": "Buffer", "data": [] }
    *   // }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdHf14aGetAntiCollData (): Promise<Decoder.Hf14aAntiColl | null> {
@@ -2282,8 +2404,11 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
+   *   const { Buffer } = window.ChameleonUltraJS
    *   await ultra.cmdEm410xSetEmuId(Buffer.from('deadbeef88', 'hex'))
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
@@ -2304,6 +2429,8 @@ export class ChameleonUltra {
    *   const id = await ultra.cmdEm410xGetEmuId()
    *   console.log(id.toString('hex')) // 'deadbeef88'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdEm410xGetEmuId (): Promise<Buffer> {
@@ -2322,6 +2449,8 @@ export class ChameleonUltra {
    * async function run (ultra) {
    *   if (await ultra.isSupportedAppVersion()) throw new Error('Firmware version is not supported. Please update the firmware.')
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async isSupportedAppVersion (): Promise<boolean> {
@@ -2337,12 +2466,14 @@ export class ChameleonUltra {
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=16)
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
    * async function run (ultra) {
+   *   const { DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const data = await ultra.mfuReadPages({ pageOffset: 0 })
    *   console.log(data.toString('hex')) // '040dc445420d2981e7480000e1100600'
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async mfuReadPages (opts: { pageOffset: number }): Promise<Buffer> {
@@ -2364,11 +2495,13 @@ export class ChameleonUltra {
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=17)
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const data = await ultra.mfuWritePage({ pageOffset: 9, data: Buffer.from('00000000', 'hex') })
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async mfuWritePage (opts: { pageOffset: number, data: Buffer }): Promise<void> {
@@ -2388,11 +2521,13 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
    * async function run (ultra) {
+   *   const { DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   await ultra.mf1Halt()
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    */
   async mf1Halt (): Promise<void> {
     await this.cmdHf14aRaw({ appendCrc: true, data: Buffer.pack('!H', 0x5000), waitResponse: false }) // HALT + close RF field
@@ -2428,13 +2563,14 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const card = await ultra.mf1Gen1aReadBlocks(0, 64)
    *   console.log(_.map(card.chunk(16), chunk => chunk.toString('hex')).join('\n'))
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async mf1Gen1aReadBlocks (offset: number, length: number = 1): Promise<Buffer> {
@@ -2461,12 +2597,13 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   await ultra.mf1Gen1aWriteBlocks(1, new Buffer(16))
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async mf1Gen1aWriteBlocks (offset: number, data: Buffer): Promise<void> {
@@ -2484,6 +2621,26 @@ export class ChameleonUltra {
   }
 
   /**
+   * Get the blockNo of sector trailer.
+   * @param sector The sector number.
+   * @returns The blockNo of sector trailer.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * async function run () {
+   *   const { ChameleonUltra } = window.ChameleonUltraJS
+   *   console.log(ChameleonUltra.mf1TrailerBlockNoOfSector(0))
+   *   // 3
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  static mf1TrailerBlockNoOfSector (sector: number): number {
+    return sector < 32 ? sector * 4 + 3 : sector * 16 - 369
+  }
+
+  /**
    * Given a list of keys, check which is the correct key A and key B of the sector.
    * @param sector The sector number to be checked.
    * @param keys The keys dictionary.
@@ -2491,28 +2648,48 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const sectorKey = await ultra.mf1CheckSectorKeys(0, keys)
    *   console.log(_.mapValues(sectorKey, key => key.toString('hex')))
    *   // { "96": "ffffffffffff", "97": "ffffffffffff" }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
    */
-  async mf1CheckSectorKeys (sector: number, keys: Buffer[]): Promise<Partial<Record<Mf1KeyType, Buffer>>> {
+  async mf1CheckSectorKeys (sector: number, keys: Buffer[]): Promise<{
+    [Mf1KeyType.KEY_A]?: Buffer
+    [Mf1KeyType.KEY_B]?: Buffer
+  }> {
     if (!_.isSafeInteger(sector)) throw new TypeError('Invalid sector')
     keys = _.chain(keys)
       .filter(key => Buffer.isBuffer(key) && key.length === 6)
-      .uniqBy(key => key.toString('hex'))
+      .uniqWith(Buffer.equals)
       .value()
-    if (keys.length === 0) throw new TypeError('keys should be an array of Buffer with length 6')
-    const sectorKey: Partial<Record<Mf1KeyType, Buffer>> = {}
-    for (const keyType of [Mf1KeyType.KEY_B, Mf1KeyType.KEY_A]) {
+    const sectorKey: { [Mf1KeyType.KEY_A]?: Buffer, [Mf1KeyType.KEY_B]?: Buffer } = {}
+    const block = ChameleonUltra.mf1TrailerBlockNoOfSector(sector)
+    // check key A
+    for (const key of keys) {
+      if (!await this.cmdMf1CheckBlockKey({ block, key, keyType: Mf1KeyType.KEY_A })) continue
+      sectorKey[Mf1KeyType.KEY_A] = key
+      break
+    }
+    // try to read trailer of sector with key A
+    try {
+      if (_.isNil(sectorKey[Mf1KeyType.KEY_A])) throw new Error('keyA not found')
+      const keyB = (await this.cmdMf1ReadBlock({ block, keyType: Mf1KeyType.KEY_A, key: sectorKey[Mf1KeyType.KEY_A] })).subarray(10)
+      if (_.sum(keyB) > 0) sectorKey[Mf1KeyType.KEY_B] = keyB
+    } catch (err) {
+      if (!this.isConnected()) throw err
+    }
+    // check key B
+    if (_.isNil(sectorKey[Mf1KeyType.KEY_B])) {
       for (const key of keys) {
-        if (!await this.cmdMf1CheckBlockKey({ block: sector * 4 + 3, keyType, key })) continue
-        sectorKey[keyType] = key
+        if (!await this.cmdMf1CheckBlockKey({ block, key, keyType: Mf1KeyType.KEY_B })) continue
+        sectorKey[Mf1KeyType.KEY_B] = key
         break
       }
     }
@@ -2527,15 +2704,17 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const { data, success } = await ultra.mf1ReadSectorByKeys(0, keys)
    *   console.log({ data: data.toString('hex'), success })
    *   // { "data": "...", "success": [true, true, true, true] }
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
    */
   async mf1ReadSectorByKeys (sector: number, keys: Buffer[]): Promise<{ data: Buffer, success: boolean[] }> {
     const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
@@ -2570,9 +2749,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * const { DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *
    * async function run (ultra) {
+   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const data = Buffer.concat([
@@ -2585,6 +2763,9 @@ export class ChameleonUltra {
    *   console.log(success)
    *   // [true, true, true, true]
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
    */
   async mf1WriteSectorByKeys (sector: number, keys: Buffer[], data: Buffer): Promise<{ success: boolean[] }> {
     if (!Buffer.isBuffer(data) || data.length !== 64) throw new TypeError('data should be a Buffer with length 64')
@@ -2617,8 +2798,11 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
+   *   const { Buffer } = window.ChameleonUltraJS
    *   console.log(ultra.mf1IsValidAcl(Buffer.from('ff078069', 'hex'))) // true
    * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   mf1IsValidAcl (data: Buffer): boolean {
@@ -2637,179 +2821,6 @@ export class ChameleonUltra {
  * @group Internal
  */
 export type Logger = Debugger | ((...args: any[]) => void)
-
-export enum Cmd {
-  GET_APP_VERSION = 1000,
-  CHANGE_DEVICE_MODE = 1001,
-  GET_DEVICE_MODE = 1002,
-  SET_ACTIVE_SLOT = 1003,
-  SET_SLOT_TAG_TYPE = 1004,
-  SET_SLOT_DATA_DEFAULT = 1005,
-  SET_SLOT_ENABLE = 1006,
-  SET_SLOT_TAG_NICK = 1007,
-  GET_SLOT_TAG_NICK = 1008,
-  SLOT_DATA_CONFIG_SAVE = 1009,
-  ENTER_BOOTLOADER = 1010,
-  GET_DEVICE_CHIP_ID = 1011,
-  GET_DEVICE_ADDRESS = 1012,
-  SAVE_SETTINGS = 1013,
-  RESET_SETTINGS = 1014,
-  SET_ANIMATION_MODE = 1015,
-  GET_ANIMATION_MODE = 1016,
-  GET_GIT_VERSION = 1017,
-  GET_ACTIVE_SLOT = 1018,
-  GET_SLOT_INFO = 1019,
-  WIPE_FDS = 1020,
-  DELETE_SLOT_TAG_NICK = 1021,
-  GET_ENABLED_SLOTS = 1023,
-  DELETE_SLOT_SENSE_TYPE = 1024,
-  GET_BATTERY_INFO = 1025,
-  GET_BUTTON_PRESS_CONFIG = 1026,
-  SET_BUTTON_PRESS_CONFIG = 1027,
-  GET_LONG_BUTTON_PRESS_CONFIG = 1028,
-  SET_LONG_BUTTON_PRESS_CONFIG = 1029,
-  SET_BLE_PAIRING_KEY = 1030,
-  GET_BLE_PAIRING_KEY = 1031,
-  DELETE_ALL_BLE_BONDS = 1032,
-  GET_DEVICE_MODEL = 1033,
-  GET_DEVICE_SETTINGS = 1034,
-  GET_DEVICE_CAPABILITIES = 1035,
-  GET_BLE_PAIRING_ENABLE = 1036,
-  SET_BLE_PAIRING_ENABLE = 1037,
-
-  HF14A_SCAN = 2000,
-  MF1_DETECT_SUPPORT = 2001,
-  MF1_DETECT_NT_LEVEL = 2002,
-  MF1_STATIC_NESTED_ACQUIRE = 2003,
-  MF1_DARKSIDE_ACQUIRE = 2004,
-  MF1_DETECT_NT_DIST = 2005,
-  MF1_NESTED_ACQUIRE = 2006,
-  MF1_AUTH_ONE_KEY_BLOCK = 2007,
-  MF1_READ_ONE_BLOCK = 2008,
-  MF1_WRITE_ONE_BLOCK = 2009,
-  HF14A_RAW = 2010,
-  MF1_MANIPULATE_VALUE_BLOCK = 2011,
-
-  EM410X_SCAN = 3000,
-  EM410X_WRITE_TO_T55XX = 3001,
-
-  MF1_WRITE_EMU_BLOCK_DATA = 4000,
-  HF14A_SET_ANTI_COLL_DATA = 4001,
-  MF1_SET_ANTI_COLLISION_INFO = 4002,
-  MF1_SET_ATS_RESOURCE = 4003,
-  MF1_SET_DETECTION_ENABLE = 4004,
-  MF1_GET_DETECTION_COUNT = 4005,
-  MF1_GET_DETECTION_LOG = 4006,
-  MF1_GET_DETECTION_ENABLE = 4007,
-  MF1_READ_EMU_BLOCK_DATA = 4008,
-  MF1_GET_EMULATOR_CONFIG = 4009,
-  MF1_GET_GEN1A_MODE = 4010,
-  MF1_SET_GEN1A_MODE = 4011,
-  MF1_GET_GEN2_MODE = 4012,
-  MF1_SET_GEN2_MODE = 4013,
-  HF14A_GET_BLOCK_ANTI_COLL_MODE = 4014,
-  HF14A_SET_BLOCK_ANTI_COLL_MODE = 4015,
-  MF1_GET_WRITE_MODE = 4016,
-  MF1_SET_WRITE_MODE = 4017,
-  HF14A_GET_ANTI_COLL_DATA = 4018,
-
-  EM410X_SET_EMU_ID = 5000,
-  EM410X_GET_EMU_ID = 5001,
-}
-
-export enum Slot {
-  SLOT_1 = 0,
-  SLOT_2 = 1,
-  SLOT_3 = 2,
-  SLOT_4 = 3,
-  SLOT_5 = 4,
-  SLOT_6 = 5,
-  SLOT_7 = 6,
-  SLOT_8 = 7,
-}
-export const isSlot = createIsEnumInteger(Slot)
-
-export enum FreqType {
-  /** No Freq */
-  NONE = 0,
-  /** Low Freq: 125 kHz */
-  LF = 1,
-  /** High Freq: 13.56 MHz */
-  HF = 2,
-}
-export const isFreqType = createIsEnumInteger(FreqType)
-
-export enum TagType {
-  // 特定的且必須存在的標誌不存在的類型
-  UNDEFINED = 0,
-  // 1xx: ASK Tag-Talk-First
-  EM410X = 100,
-  // 2xx: FSK Tag-Talk-First
-  // 3xx: PSK Tag-Talk-First
-  // 4xx: Reader-Talk-First
-  LF_END = 999,
-  // 10xx: MIFARE Classic series
-  MIFARE_Mini = 1000,
-  MIFARE_1024 = 1001,
-  MIFARE_2048 = 1002,
-  MIFARE_4096 = 1003,
-  // 11xx: MFUL / NTAG series
-  NTAG_213 = 1100,
-  NTAG_215 = 1101,
-  NTAG_216 = 1102,
-  // 12xx: MIFARE Plus series
-  // 13xx: DESFire series
-  // 14xx: ST25TA series
-  // 15xx: HF14A-4 series
-}
-export const isTagType = createIsEnumInteger(TagType)
-
-export enum DeviceMode {
-  TAG = 0,
-  READER = 1,
-}
-export const isDeviceMode = createIsEnumInteger(DeviceMode)
-
-export enum RespStatus {
-  /** IC card operation is successful */
-  HF_TAG_OK = 0x00,
-  /** IC card not found */
-  HF_TAG_NOT_FOUND = 0x01,
-  /** Abnormal IC card status */
-  HF_ERR_STAT = 0x02,
-  /** IC card communication verification abnormal */
-  HF_ERR_CRC = 0x03,
-  /** IC card conflict */
-  HF_COLLISION = 0x04,
-  /** IC card BCC error */
-  HF_ERR_BCC = 0x05,
-  /** MF card verification failed */
-  MF_ERR_AUTH = 0x06,
-  /** IC card parity error */
-  HF_ERR_PARITY = 0x07,
-  /** ATS should be present but card NAKed, or ATS too large */
-  HF_ERR_ATS = 0x08,
-
-  /** LF tag operation is successful */
-  LF_TAG_OK = 0x40,
-  /** EM410X tag not found error */
-  EM410X_TAG_NOT_FOUND = 0x41,
-
-  /** Invalid param error */
-  PAR_ERR = 0x60,
-  /** Wrong device mode error */
-  DEVICE_MODE_ERROR = 0x66,
-  /** invalid cmd error */
-  INVALID_CMD = 0x67,
-  /** Device operation succeeded */
-  DEVICE_SUCCESS = 0x68,
-  /** Not implemented error */
-  NOT_IMPLEMENTED = 0x69,
-  /** Flash write failed */
-  FLASH_WRITE_FAIL = 0x70,
-  /** Flash read failed */
-  FLASH_READ_FAIL = 0x71,
-}
 
 const RespStatusMsg = new Map([
   [RespStatus.HF_TAG_OK, 'HF tag operation succeeded'],
@@ -2853,26 +2864,6 @@ const RespStatusFail = new Set([
   RespStatus.FLASH_WRITE_FAIL,
   RespStatus.FLASH_READ_FAIL,
 ])
-
-export enum ButtonType {
-  BUTTON_A = 0x41,
-  BUTTON_B = 0x42,
-}
-export const isButtonType = createIsEnum(ButtonType)
-
-export enum ButtonAction {
-  /** No Function */
-  DISABLE = 0,
-  /** Select next slot */
-  CYCLE_SLOT_INC = 1,
-  /** Select previous slot */
-  CYCLE_SLOT_DEC = 2,
-  /** Read then simulate the ID/UID card number */
-  CLONE_IC_UID = 3,
-  /** Show Battery Level */
-  BATTERY = 4,
-}
-export const isButtonAction = createIsEnumInteger(ButtonAction)
 
 export interface ChameleonSerialPort<I, O> {
   isOpen?: () => boolean
@@ -2939,73 +2930,6 @@ class ChameleonUltraFrame {
   get inspect (): string { return ChameleonUltraFrame.inspect(this.buf) }
   get status (): number { return this.buf.readUInt16BE(4) }
 }
-
-export enum Mf1PrngType {
-  /** StaticNested: the random number of the card response is fixed */
-  STATIC = 0,
-  /** Nested: the random number of the card response is weak */
-  WEAK = 1,
-  /** HardNested: the random number of the card response is unpredictable */
-  HARD = 2,
-}
-
-export enum DarksideStatus {
-  /** normal process */
-  OK = 0,
-  /** the random number cannot be fixed, this situation may appear on some UID card */
-  CANT_FIX_NT = 1,
-  /** the direct authentification is successful, maybe the key is just the default one */
-  LUCKY_AUTH_OK = 2,
-  /** the card does not respond to NACK, it may be a card that fixes Nack logic vulnerabilities */
-  NO_NAK_SENT = 3,
-  /** card change while running DARKSIDE */
-  TAG_CHANGED = 4,
-}
-
-export enum Mf1KeyType {
-  KEY_A = 0x60,
-  KEY_B = 0x61,
-}
-export const isMf1KeyType = createIsEnumInteger(Mf1KeyType)
-
-export enum DeviceModel {
-  ULTRA = 0,
-  LITE = 1,
-}
-
-export enum Mf1EmuWriteMode {
-  /** Normal write as standard mifare */
-  NORMAL = 0,
-  /** Send NACK to write attempts */
-  DENIED = 1,
-  /** Acknowledge writes, but don't remember contents */
-  DECEIVE = 2,
-  /** Store data to RAM, but not save to persistent storage */
-  SHADOW = 3,
-  /** Shadow requested, will be changed to SHADOW and stored to ROM */
-  SHADOW_REQ = 4,
-}
-export const isMf1EmuWriteMode = createIsEnumInteger(Mf1EmuWriteMode)
-
-export enum AnimationMode {
-  FULL = 0,
-  SHORT = 1,
-  NONE = 2,
-}
-export const isAnimationMode = createIsEnumInteger(AnimationMode)
-
-/**
- * Operators of mifare classic value block manipulation.
- */
-export enum Mf1VblockOperator {
-  /** decrement value by X (0 ~ 2147483647) from src to dst */
-  DECREMENT = 0xC0,
-  /** increment value by X (0 ~ 2147483647) from src to dst */
-  INCREMENT = 0xC1,
-  /** copy value from src to dst (Restore and Transfer) */
-  RESTORE = 0xC2,
-}
-export const isMf1VblockOperator = createIsEnumInteger(Mf1VblockOperator)
 
 /**
  * @see [MIFARE type identification procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)

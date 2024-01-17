@@ -36,5 +36,8 @@ module.exports = {
       imports: 'always-multiline',
       objects: 'always-multiline',
     }],
+    '@typescript-eslint/unbound-method': ['error', {
+      ignoreStatic: true,
+    }]
   },
 }

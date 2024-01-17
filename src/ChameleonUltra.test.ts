@@ -1,9 +1,8 @@
+import _ from 'lodash'
 import { Buffer } from './buffer'
+import { ChameleonUltra } from './ChameleonUltra'
 import BufferMockAdapter from './plugin/BufferMockAdapter'
 import {
-  ChameleonUltra,
-
-  // enum
   AnimationMode,
   ButtonAction,
   ButtonType,
@@ -17,7 +16,7 @@ import {
   Mf1VblockOperator,
   Slot,
   TagType,
-} from './ChameleonUltra'
+} from './enums'
 
 describe('ChameleonUltra with BufferMockAdapter', () => {
   let ultra: ChameleonUltra
@@ -1134,7 +1133,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
   test('#mf1CheckSectorKeys()', async () => {
     // arrange
     adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
-    adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
+    adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 000000000000ff078069ffffffffffff 17'))
 
     // act
     const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
@@ -1146,15 +1145,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       [Mf1KeyType.KEY_B]: Buffer.fromHexString('FFFFFFFFFFFF'),
     })
     expect(adapter.recv).toEqual([
-      Buffer.fromHexString('11ef 07d7 0000 0008 1a 6103ffffffffffff a2'),
       Buffer.fromHexString('11ef 07d7 0000 0008 1a 6003ffffffffffff a3'),
+      Buffer.fromHexString('11ef 07d8 0000 0008 19 6003ffffffffffff a3'),
     ])
   })
 
   test('#mf1ReadSectorByKeys()', async () => {
     // arrange
     adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
-    adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
+    adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 000000000000ff078069ffffffffffff 17'))
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 877209e11d0804000392abdef258ec90 10'))
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 00000000000000000000000000000000 00'))
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 00000000000000000000000000000000 00'))
@@ -1175,8 +1174,8 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       success: [true, true, true, true],
     })
     expect(adapter.recv).toEqual([
-      Buffer.fromHexString('11ef 07d7 0000 0008 1a 6103ffffffffffff a2'),
       Buffer.fromHexString('11ef 07d7 0000 0008 1a 6003ffffffffffff a3'),
+      Buffer.fromHexString('11ef 07d8 0000 0008 19 6003ffffffffffff a3'),
       Buffer.fromHexString('11ef 07d8 0000 0008 19 6100ffffffffffff a5'),
       Buffer.fromHexString('11ef 07d8 0000 0008 19 6101ffffffffffff a4'),
       Buffer.fromHexString('11ef 07d8 0000 0008 19 6102ffffffffffff a3'),
@@ -1187,7 +1186,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
   test('#mf1WriteSectorByKeys()', async () => {
     // arrange
     adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
-    adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
+    adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 000000000000ff078069ffffffffffff 17'))
     adapter.send.push(Buffer.fromHexString('11ef 07d9 0000 0000 20 00'))
     adapter.send.push(Buffer.fromHexString('11ef 07d9 0000 0000 20 00'))
     adapter.send.push(Buffer.fromHexString('11ef 07d9 0000 0000 20 00'))
@@ -1206,8 +1205,8 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // assert
     expect(actual).toEqual({ success: [true, true, true, true] })
     expect(adapter.recv).toEqual([
-      Buffer.fromHexString('11ef 07d7 0000 0008 1a 6107ffffffffffff 9e'),
       Buffer.fromHexString('11ef 07d7 0000 0008 1a 6007ffffffffffff 9f'),
+      Buffer.fromHexString('11ef 07d8 0000 0008 19 6007ffffffffffff 9f'),
       Buffer.fromHexString('11ef 07d9 0000 0018 08 6104ffffffffffff00000000000000000000000000000000 a1'),
       Buffer.fromHexString('11ef 07d9 0000 0018 08 6105ffffffffffff00000000000000000000000000000000 a0'),
       Buffer.fromHexString('11ef 07d9 0000 0018 08 6106ffffffffffff00000000000000000000000000000000 9f'),
@@ -1228,4 +1227,18 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // assert
     expect(actual).toBe(expected)
   })
+})
+
+test('.mf1TrailerBlockNoOfSector()', async () => {
+  const actual = _.times(40, ChameleonUltra.mf1TrailerBlockNoOfSector)
+  expect(actual).toEqual([
+    // mifare classic 1k
+    3, 7, 11, 15, 19, 23, 27, 31,
+    35, 39, 43, 47, 51, 55, 59, 63,
+    // mifare classic 2k
+    67, 71, 75, 79, 83, 87, 91, 95,
+    99, 103, 107, 111, 115, 119, 123, 127,
+    // mifare classic 4k
+    143, 159, 175, 191, 207, 223, 239, 255,
+  ])
 })

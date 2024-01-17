@@ -1,8 +1,6 @@
-export { Buffer, type Encoding } from './buffer'
+export { Buffer } from './buffer'
+export { ChameleonUltra } from './ChameleonUltra'
 export {
-  ChameleonUltra,
-
-  // enum
   AnimationMode,
   ButtonAction,
   ButtonType,
@@ -17,19 +15,7 @@ export {
   Mf1VblockOperator,
   Slot,
   TagType,
-
-  // is enum
-  isAnimationMode,
-  isButtonAction,
-  isButtonType,
-  isDeviceMode,
-  isFreqType,
-  isMf1EmuWriteMode,
-  isMf1KeyType,
-  isMf1VblockOperator,
-  isSlot,
-  isTagType,
-} from './ChameleonUltra'
+} from './enums'
 
 /** The version of `chameleon-ultra.js`. */
 export const version: string = '[VI]{version}[/VI]'

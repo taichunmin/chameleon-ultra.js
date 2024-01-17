@@ -1,5 +1,4 @@
 import _ from 'lodash'
-import { createIsEnum } from './helper'
 import { type Class } from 'utility-types'
 
 const BASE64_CHAR = _.transform('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'.split(''), (m, v, k) => {
@@ -56,27 +55,31 @@ function floatU16ToU32 (u16: number): number {
 
 const float16Buf = new DataView(new ArrayBuffer(4))
 
-/**
- * @enum
- */
-const EncodingConst = {
-  'ucs-2': 'ucs-2',
-  'utf-16le': 'utf-16le',
-  'utf-8': 'utf-8',
-  ascii: 'ascii',
-  base64: 'base64',
-  base64url: 'base64url',
-  binary: 'binary',
-  hex: 'hex',
-  latin1: 'latin1',
-  ucs2: 'ucs2',
-  utf16le: 'utf16le',
-  utf8: 'utf8',
-} as const
+enum Encoding {
+  'ucs-2' = 'ucs-2',
+  'utf-16le' = 'utf-16le',
+  'utf-8' = 'utf-8',
+  ascii = 'ascii',
+  base64 = 'base64',
+  base64url = 'base64url',
+  binary = 'binary',
+  hex = 'hex',
+  latin1 = 'latin1',
+  ucs2 = 'ucs2',
+  utf16le = 'utf16le',
+  utf8 = 'utf8',
+}
+type EncodingKeys = keyof typeof Encoding
 
-export type Encoding = keyof typeof EncodingConst
+export interface EnumLike {
+  [k: string]: string | number
+  [nu: number]: string
+}
 
-const isEncoding = createIsEnum(EncodingConst)
+export function createIsEnum <T extends EnumLike> (e: T): (val: any) => val is T[keyof T] {
+  const ev = new Set(_.chain(e).toPairs().filter(([k, v]) => !_.isNumber(e[v])).map(1).value())
+  return (val: any): val is T[keyof T] => ev.has(val)
+}
 
 const isNativeLittleEndian = new Uint8Array(new Uint16Array([0x1234]).buffer)[0] === 0x12
 
@@ -144,10 +147,12 @@ export class Buffer extends Uint8Array {
     this.dv = new DataView(this.buffer, this.byteOffset, this.byteLength)
   }
 
-  static alloc (size: number, fill: string, encoding?: Encoding): Buffer
+  static isEncoding = createIsEnum(Encoding)
+
+  static alloc (size: number, fill: string, encoding?: EncodingKeys): Buffer
   static alloc (size: number, fill?: Buffer | Uint8Array | number): Buffer
 
-  static alloc (size: number, fill?: any, encoding: Encoding = 'utf8'): Buffer {
+  static alloc (size: number, fill?: any, encoding: EncodingKeys = 'utf8'): Buffer {
     if (!_.isSafeInteger(size) || size >= K_MAX_LENGTH) throw new RangeError(`Invalid size: ${size}`)
     const buf = new Buffer(size)
     if (_.isNil(fill)) return buf
@@ -163,9 +168,9 @@ export class Buffer extends Uint8Array {
   }
 
   static byteLength (string: ArrayBufferView | ArrayBufferLike): number
-  static byteLength (string: string, encoding?: Encoding): number
+  static byteLength (string: string, encoding?: EncodingKeys): number
 
-  static byteLength (string: any, encoding: Encoding = 'utf8'): number {
+  static byteLength (string: any, encoding: EncodingKeys = 'utf8'): number {
     if (Buffer.isBuffer(string) || isInstance(string, ArrayBuffer) || isSharedArrayBuffer(string) || ArrayBuffer.isView(string)) return string.byteLength
     if (!_.isString(string)) throw new TypeError(`Invalid type of string: ${typeof string}`)
 
@@ -177,22 +182,15 @@ export class Buffer extends Uint8Array {
   }
 
   static compare (buf1: any, buf2: any): number {
-    if (!Buffer.isBuffer(buf1) && !isInstance(buf1, Uint8Array)) throw new TypeError('Invalid type of buf1')
-    if (!Buffer.isBuffer(buf2) && !isInstance(buf2, Uint8Array)) throw new TypeError('Invalid type of buf2')
-    const len = Math.max(buf1.length, buf2.length)
-    for (let i = 0; i < len; i++) {
-      if (i >= buf1.length) return -1
-      if (i >= buf2.length) return 1
-      if (buf1[i] !== buf2[i]) return buf1[i] < buf2[i] ? -1 : 1
+    if (!Buffer.isBuffer(buf1)) {
+      if (!ArrayBuffer.isView(buf1)) throw new TypeError('Invalid type')
+      buf1 = Buffer.fromView(buf1)
     }
-    return 0
+    return buf1.compare(buf2)
   }
 
   static equals (buf1: any, buf2: any): boolean {
-    if (!Buffer.isBuffer(buf1) || !Buffer.isBuffer(buf2)) return false
-    if (buf1.length !== buf2.length) return false
-    for (let i = 0; i < buf1.length; i++) if (buf1[i] !== buf2[i]) return false
-    return true
+    return Buffer.isBuffer(buf1) && buf1.equals(buf2)
   }
 
   static concat (list: Buffer[], totalLength?: number): Buffer {
@@ -223,14 +221,14 @@ export class Buffer extends Uint8Array {
 
   static from (data: WithImplicitCoercion<Uint8Array | Buffer | ArrayLike<number> | Iterable<number>>): Buffer
   static from (arrayBuffer: WithImplicitCoercion<ArrayBufferLike>, byteOffset?: number, length?: number): Buffer
-  static from (object: WithImplicitCoercion<string> | { [Symbol.toPrimitive]: (hint: 'string') => string }, encoding?: Encoding): Buffer
+  static from (object: WithImplicitCoercion<string> | { [Symbol.toPrimitive]: (hint: 'string') => string }, encoding?: EncodingKeys): Buffer
 
   static from (val: any, encodingOrOffset?: any, length?: number): Buffer {
     const valueOfObj = val?.[Symbol.toPrimitive]?.('string') ?? val?.valueOf?.()
     if (!_.isNil(valueOfObj) && valueOfObj !== val) val = valueOfObj
 
     if (Buffer.isBuffer(val)) return new Buffer(val)
-    if (ArrayBuffer.isView(val)) return Buffer.fromView(val as ArrayBufferView)
+    if (ArrayBuffer.isView(val)) return Buffer.fromView(val)
     if (isInstance(val, ArrayBuffer) || isSharedArrayBuffer(val)) return new Buffer(val, encodingOrOffset, length)
     if (_.isString(val)) return Buffer.fromString(val, encodingOrOffset)
     if (_.isArray(val)) return Buffer.fromArray(val)
@@ -239,8 +237,8 @@ export class Buffer extends Uint8Array {
     throw new TypeError(`Invalid type of value: ${typeof val}`)
   }
 
-  static fromString (str: string, encoding: Encoding = 'utf8'): Buffer {
-    encoding = _.toLower(encoding) as Encoding
+  static fromString (str: string, encoding: EncodingKeys = 'utf8'): Buffer {
+    encoding = _.toLower(encoding) as EncodingKeys
     if (!Buffer.isEncoding(encoding)) throw new TypeError(`Unknown encoding: ${encoding as string}`)
     const fromStringFns = {
       'ucs-2': Buffer.fromUcs2String,
@@ -259,23 +257,23 @@ export class Buffer extends Uint8Array {
     return fromStringFns[encoding](str)
   }
 
-  static fromUcs2String (this: void, ucs2: string): Buffer {
+  static fromUcs2String (ucs2: string): Buffer {
     const buf = new Buffer(ucs2.length * 2)
     for (let i = 0; i < ucs2.length; i++) buf.writeUInt16LE(ucs2.charCodeAt(i), i * 2)
     return buf
   }
 
-  static fromUtf8String (this: void, utf8: string): Buffer {
+  static fromUtf8String (utf8: string): Buffer {
     return Buffer.fromView(new TextEncoder().encode(utf8))
   }
 
-  static fromAsciiString (this: void, ascii: string): Buffer {
+  static fromAsciiString (ascii: string): Buffer {
     const buf = new Buffer(ascii.length)
     for (let i = 0; i < ascii.length; i++) buf[i] = ascii.charCodeAt(i) & 0xFF
     return buf
   }
 
-  static fromBase64String (this: void, base64: string): Buffer {
+  static fromBase64String (base64: string): Buffer {
     base64 = base64.replace(/[^A-Za-z0-9/_+-]/g, '')
     const tmp1 = base64.length
     const tmp2 = base64.length + 3
@@ -294,7 +292,7 @@ export class Buffer extends Uint8Array {
     return tmp1 < base64.length ? buf.subarray(0, tmp1 - base64.length) : buf
   }
 
-  static fromBase64urlString (this: void, base64: string): Buffer {
+  static fromBase64urlString (base64: string): Buffer {
     base64 = base64.replace(/[^A-Za-z0-9/_+-]/g, '')
     const tmp1 = base64.length
     const tmp2 = base64.length + 3
@@ -313,7 +311,7 @@ export class Buffer extends Uint8Array {
     return tmp1 < base64.length ? buf.subarray(0, tmp1 - base64.length) : buf
   }
 
-  static fromHexString (this: void, hex: string): Buffer {
+  static fromHexString (hex: string): Buffer {
     hex = hex.replace(/[^0-9A-Fa-f]/g, '')
     const buf = new Buffer(hex.length >>> 1)
     for (let i = 0; i < buf.length; i++) buf[i] = HEX_CHAR.get(hex[i * 2]) << 4 | HEX_CHAR.get(hex[i * 2 + 1])
@@ -329,10 +327,6 @@ export class Buffer extends Uint8Array {
 
   static isBuffer (obj: any): obj is Buffer {
     return isInstance(obj, Buffer)
-  }
-
-  static isEncoding (encoding: any): encoding is Encoding {
-    return isEncoding(encoding)
   }
 
   static packParseFormat (format: string): PackFormat {
@@ -408,9 +402,26 @@ export class Buffer extends Uint8Array {
     return ctx.vals as unknown as T
   }
 
-  compare (target: any, targetStart: number = 0, targetEnd: number = target.length, sourceStart: number = 0, sourceEnd: number = this.length): number {
-    if (!Buffer.isBuffer(target) && !isInstance(target, Uint8Array)) throw new TypeError('Invalid type of target')
-    return Buffer.compare(this.subarray(sourceStart, sourceEnd), target.subarray(targetStart, targetEnd))
+  compare (
+    target: any,
+    targetStart: number = 0,
+    targetEnd: number = target.length,
+    sourceStart: number = 0,
+    sourceEnd: number = this.length
+  ): number {
+    if (!Buffer.isBuffer(target)) {
+      if (!ArrayBuffer.isView(target)) throw new TypeError('Invalid type')
+      target = Buffer.fromView(target)
+    }
+    const me = this.subarray(sourceStart, sourceEnd)
+    target = target.subarray(targetStart, targetEnd)
+    const len = Math.max(me.length, target.length)
+    for (let i = 0; i < len; i++) {
+      if (i >= me.length) return -1
+      if (i >= target.length) return 1
+      if (me[i] !== target[i]) return me[i] < target[i] ? -1 : 1
+    }
+    return 0
   }
 
   copy (target: Buffer, targetStart: number = 0, sourceStart: number = 0, sourceEnd: number = this.length): number {
@@ -421,18 +432,20 @@ export class Buffer extends Uint8Array {
   }
 
   equals (other: any): boolean {
-    return Buffer.equals(this, other)
+    if (!Buffer.isBuffer(other) || this.length !== other.length) return false
+    for (let i = 0; i < this.length; i++) if (this[i] !== other[i]) return false
+    return true
   }
 
-  fill (val: string, encoding?: Encoding): this
-  fill (val: string, offset?: number, encoding?: Encoding): this
-  fill (val: string, offset?: number, end?: number, encoding?: Encoding): this
+  fill (val: string, encoding?: EncodingKeys): this
+  fill (val: string, offset?: number, encoding?: EncodingKeys): this
+  fill (val: string, offset?: number, end?: number, encoding?: EncodingKeys): this
   fill (val: Buffer, offset?: number, end?: number): this
   fill (val: Uint8Array, offset?: number, end?: number): this
   fill (val: number, offset?: number, end?: number): this
-  fill (val: string | Buffer | Uint8Array | number, offset?: number | Encoding, end?: number | Encoding, encoding?: Encoding): this
+  fill (val: string | Buffer | Uint8Array | number, offset?: number | EncodingKeys, end?: number | EncodingKeys, encoding?: EncodingKeys): this
 
-  fill (val: any, offset: any = 0, end: any = this.length, encoding: Encoding = 'utf8'): this {
+  fill (val: any, offset: any = 0, end: any = this.length, encoding: EncodingKeys = 'utf8'): this {
     if (Buffer.isEncoding(offset)) [offset, encoding] = [0, offset]
     if (Buffer.isEncoding(end)) [end, encoding] = [this.length, end]
     if (!_.isSafeInteger(offset) || !_.isSafeInteger(end)) throw new RangeError('Invalid type of offset or end')
@@ -454,14 +467,14 @@ export class Buffer extends Uint8Array {
     return this
   }
 
-  includes (val: string, encoding?: Encoding): boolean
-  includes (val: string, offset?: number, encoding?: Encoding): boolean
+  includes (val: string, encoding?: EncodingKeys): boolean
+  includes (val: string, offset?: number, encoding?: EncodingKeys): boolean
   includes (val: Buffer, offset?: number): boolean
   includes (val: Uint8Array, offset?: number): boolean
   includes (val: number, offset?: number): boolean
-  includes (val: string | Buffer | Uint8Array | number, offset?: number | Encoding, encoding?: Encoding): boolean
+  includes (val: string | Buffer | Uint8Array | number, offset?: number | EncodingKeys, encoding?: EncodingKeys): boolean
 
-  includes (val: any, offset: any = 0, encoding: Encoding = 'utf8'): boolean {
+  includes (val: any, offset: any = 0, encoding: EncodingKeys = 'utf8'): boolean {
     if (Buffer.isEncoding(offset)) [offset, encoding] = [0, offset]
     offset = _.toSafeInteger(offset)
     if (offset < 0) offset = this.length + offset
@@ -487,14 +500,14 @@ export class Buffer extends Uint8Array {
     return false
   }
 
-  indexOf (val: string, encoding?: Encoding): number
-  indexOf (val: string, offset?: number, encoding?: Encoding): number
+  indexOf (val: string, encoding?: EncodingKeys): number
+  indexOf (val: string, offset?: number, encoding?: EncodingKeys): number
   indexOf (val: Buffer, offset?: number): number
   indexOf (val: Uint8Array, offset?: number): number
   indexOf (val: number, offset?: number): number
-  indexOf (val: string | Buffer | Uint8Array | number, offset?: number | Encoding, encoding?: Encoding): number
+  indexOf (val: string | Buffer | Uint8Array | number, offset?: number | EncodingKeys, encoding?: EncodingKeys): number
 
-  indexOf (val: any, offset: any = 0, encoding: Encoding = 'utf8'): number {
+  indexOf (val: any, offset: any = 0, encoding: EncodingKeys = 'utf8'): number {
     if (Buffer.isEncoding(offset)) [offset, encoding] = [0, offset]
     offset = _.toSafeInteger(offset)
     if (offset < 0) offset = this.length + offset
@@ -520,14 +533,14 @@ export class Buffer extends Uint8Array {
     return -1
   }
 
-  lastIndexOf (val: string, encoding?: Encoding): number
-  lastIndexOf (val: string, offset?: number, encoding?: Encoding): number
+  lastIndexOf (val: string, encoding?: EncodingKeys): number
+  lastIndexOf (val: string, offset?: number, encoding?: EncodingKeys): number
   lastIndexOf (val: Buffer, offset?: number): number
   lastIndexOf (val: Uint8Array, offset?: number): number
   lastIndexOf (val: number, offset?: number): number
-  lastIndexOf (val: string | Buffer | Uint8Array | number, offset?: number | Encoding, encoding?: Encoding): number
+  lastIndexOf (val: string | Buffer | Uint8Array | number, offset?: number | EncodingKeys, encoding?: EncodingKeys): number
 
-  lastIndexOf (val: any, offset: any = this.length - 1, encoding: Encoding = 'utf8'): number {
+  lastIndexOf (val: any, offset: any = this.length - 1, encoding: EncodingKeys = 'utf8'): number {
     if (Buffer.isEncoding(offset)) [offset, encoding] = [this.length - 1, offset]
     offset = _.toSafeInteger(offset)
     if (offset < 0) offset = this.length + offset
@@ -709,8 +722,8 @@ export class Buffer extends Uint8Array {
     return { type: 'Buffer', data: [...this] }
   }
 
-  toString (encoding: Encoding = 'utf8', start: number = 0, end: number = this.length): string {
-    encoding = _.toLower(encoding) as Encoding
+  toString (encoding: EncodingKeys = 'utf8', start: number = 0, end: number = this.length): string {
+    encoding = _.toLower(encoding) as EncodingKeys
     if (!Buffer.isEncoding(encoding)) throw new TypeError(`Unknown encoding: ${encoding as string}`)
     const toStringFns = {
       'ucs-2': Buffer.toUcs2String,
@@ -729,23 +742,23 @@ export class Buffer extends Uint8Array {
     return toStringFns[encoding](this.subarray(start, end))
   }
 
-  static toUcs2String (this: void, buf: Buffer): string {
+  static toUcs2String (buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i += 2) arr.push(String.fromCharCode(buf.readUInt16LE(i)))
     return arr.join('')
   }
 
-  static toUtf8String (this: void, buf: Buffer): string {
+  static toUtf8String (buf: Buffer): string {
     return new TextDecoder().decode(buf)
   }
 
-  static toAsciiString (this: void, buf: Buffer): string {
+  static toAsciiString (buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i++) arr.push(String.fromCharCode(buf[i]))
     return arr.join('')
   }
 
-  static toBase64String (this: void, buf: Buffer): string {
+  static toBase64String (buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i += 3) {
       const u24 = (buf[i] << 16) +
@@ -763,7 +776,7 @@ export class Buffer extends Uint8Array {
     return arr.join('')
   }
 
-  static toBase64urlString (this: void, buf: Buffer): string {
+  static toBase64urlString (buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i += 3) {
       const u24 = (buf[i] << 16) +
@@ -780,15 +793,15 @@ export class Buffer extends Uint8Array {
     return (tmp !== 0 ? arr.slice(0, tmp) : arr).join('')
   }
 
-  static toHexString (this: void, buf: Buffer): string {
+  static toHexString (buf: Buffer): string {
     const arr = []
     for (let i = 0; i < buf.length; i++) arr.push(HEX_CHAR.get(buf[i] >>> 4), HEX_CHAR.get(buf[i] & 0xF))
     return arr.join('')
   }
 
-  write (val: string, encoding?: Encoding): number
-  write (val: string, offset?: number, encoding?: Encoding): number
-  write (val: string, offset?: number, end?: number, encoding?: Encoding): number
+  write (val: string, encoding?: EncodingKeys): number
+  write (val: string, offset?: number, encoding?: EncodingKeys): number
+  write (val: string, offset?: number, end?: number, encoding?: EncodingKeys): number
 
   write (val: any, offset: any = 0, length: any = this.length - offset, encoding: any = 'utf8'): number {
     if (_.isString(offset)) [offset, length, encoding] = [0, this.length, offset]
@@ -1195,8 +1208,6 @@ function unpackToPascal (ctx: PackFromContext): void {
   vals.push(buf.subarray(ctx.offset + 1, ctx.offset + 1 + len))
   ctx.offset += repeat
 }
-
-type ArrayBufferView = NodeJS.ArrayBufferView | Buffer
 
 interface ArrayLike<T> {
   readonly length: number

@@ -834,30 +834,30 @@ describe('Buffer.compare()', () => {
     expect(buf1.compare(buf2)).toEqual(expected)
   })
 
-  test('should throw error with invalid type of arg1', () => {
+  test('should throw error with invalid type', () => {
     expect.hasAssertions()
     try {
       Buffer.compare(1 as any, Buffer.from(''))
     } catch (err) {
-      expect(err.message).toMatch(/type of buf1/)
+      expect(err.message).toMatch(/Invalid type/)
     }
   })
 
-  test('should throw error with invalid type of arg2', () => {
+  test('should throw error with invalid type', () => {
     expect.hasAssertions()
     try {
       Buffer.compare(Buffer.from(''), 1 as any)
     } catch (err) {
-      expect(err.message).toMatch(/type of buf2/)
+      expect(err.message).toMatch(/Invalid type/)
     }
   })
 
-  test('should throw error with invalid type of target', () => {
+  test('should throw error with invalid type', () => {
     expect.hasAssertions()
     try {
       Buffer.from('').compare(1 as any)
     } catch (err) {
-      expect(err.message).toMatch(/type of target/)
+      expect(err.message).toMatch(/Invalid type/)
     }
   })
 })

@@ -150,6 +150,7 @@ out
 /.rollup.cache
 /*.ts
 /dist/docs
+/jest.config.cjs
 /pages
 /pug
 /src/example
