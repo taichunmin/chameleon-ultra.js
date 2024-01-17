@@ -76,5 +76,21 @@ jobs:
         uses: actions/deploy-pages@v4
       - name: 發布至 npm
         uses: JS-DevTools/npm-publish@v3
+        id: npm-publish
         with:
+          access: public
           token: ${{ secrets.NPM_TOKEN }}
+      - name: jsDelivr Purge
+        if: ${{ steps.npm-publish.outputs.type }}
+        uses: egad13/purge-jsdelivr-cache@v1
+        with:
+          url: |
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js/dist/iife/index.min.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js/dist/iife/Crypto1.min.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js/dist/iife/plugin/WebbleAdapter.min.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js/dist/iife/plugin/WebserialAdapter.min.js
+
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/index.min.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/Crypto1.min.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebbleAdapter.min.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebserialAdapter.min.js
