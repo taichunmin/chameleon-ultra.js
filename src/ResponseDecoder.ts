@@ -1,7 +1,16 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { type AnimationMode, type ButtonAction, type DarksideStatus, type Mf1EmuWriteMode, type Mf1PrngType, type TagType } from './enums'
 import { type Class } from 'utility-types'
+
+import {
+  Mf1KeyType,
+  type AnimationMode,
+  type ButtonAction,
+  type DarksideStatus,
+  type Mf1EmuWriteMode,
+  type Mf1PrngType,
+  type TagType,
+} from './enums'
 
 function bufUnpackToClass <T> (buf: Buffer, format: string, Type: Class<T>): T {
   return new Type(...buf.unpack<ConstructorParameters<typeof Type>>(format))
@@ -196,6 +205,26 @@ export class Mf1NestedRes {
   static fromCmd2006 (buf: Buffer): Mf1NestedRes[] {
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
     return _.map(buf.chunk(9), chunk => bufUnpackToClass(chunk, '!4s4sB', Mf1NestedRes))
+  }
+}
+
+export class Mf1CheckKeysOfSectorsRes {
+  [Mf1KeyType.KEY_A]?: Buffer
+  [Mf1KeyType.KEY_B]?: Buffer
+
+  constructor (keyA?: Buffer, keyB?: Buffer) {
+    if (Buffer.isBuffer(keyA) && keyA.length === 6) this[Mf1KeyType.KEY_A] = keyA
+    if (Buffer.isBuffer(keyB) && keyB.length === 6) this[Mf1KeyType.KEY_B] = keyB
+  }
+
+  static fromCmd2012 (buf: Buffer): Mf1CheckKeysOfSectorsRes[] {
+    if (!Buffer.isBuffer(buf) || buf.length !== 490) throw new TypeError('buf should be a Buffer with length 490')
+    return _.times(40, i => {
+      const buf1 = buf.subarray(12 * i + 10)
+      const keyA = buf.readBitMSB(i * 2) !== 1 ? undefined : buf1.subarray(0, 6)
+      const keyB = buf.readBitMSB(i * 2 + 1) !== 1 ? undefined : buf1.subarray(6, 12)
+      return new Mf1CheckKeysOfSectorsRes(keyA, keyB)
+    })
   }
 }
 

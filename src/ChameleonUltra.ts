@@ -1958,6 +1958,29 @@ export class ChameleonUltra {
     await this.cmdMf1WriteBlock({ ...dst, data: blkDt })
   }
 
+  async cmdMf1CheckKeysOfSectors (opts: { keys: Buffer[], mask: Buffer }): Promise<Array<{
+    [Mf1KeyType.KEY_A]?: Buffer
+    [Mf1KeyType.KEY_B]?: Buffer
+  }>> {
+    let { mask, keys } = opts
+    if (!Buffer.isBuffer(mask) || mask.length !== 10) throw new TypeError('mask should be a Buffer with length 10')
+    keys = _.chain(keys)
+      .filter(key => Buffer.isBuffer(key) && key.length === 6)
+      .uniqWith(Buffer.equals)
+      .value()
+    if (keys.length < 1 || keys.length > 83) throw new TypeError('Invalid keys.length')
+    this._clearRxBufs()
+    const cmd = Cmd.MF1_CHECK_KEYS_OF_SECTORS // cmd = 2012
+    const data = Buffer.concat([mask, ...keys])
+
+    let timeout = 80
+    for (let b of mask) while (b > 0) [timeout, b] = [timeout - (b & 0b1), b >>> 1]
+    timeout = READ_DEFAULT_TIMEOUT + (timeout + 1) * keys.length * 100
+
+    await this._writeCmd({ cmd, data })
+    return Decoder.Mf1CheckKeysOfSectorsRes.fromCmd2012((await this._readRespTimeout({ cmd, timeout }))?.data)
+  }
+
   /**
    * Scan em410x tag and print id
    * @returns The id of em410x tag.
@@ -2671,6 +2694,7 @@ export class ChameleonUltra {
       .filter(key => Buffer.isBuffer(key) && key.length === 6)
       .uniqWith(Buffer.equals)
       .value()
+    if (keys.length === 0) throw new TypeError('Invalid keys')
     const sectorKey: { [Mf1KeyType.KEY_A]?: Buffer, [Mf1KeyType.KEY_B]?: Buffer } = {}
     const block = ChameleonUltra.mf1TrailerBlockNoOfSector(sector)
     // check key A
