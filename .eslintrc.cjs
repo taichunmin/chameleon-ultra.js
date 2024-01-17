@@ -7,17 +7,18 @@ module.exports = {
   },
   extends: ['standard-with-typescript'],
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint'],
+  plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc'],
   root: true,
   parserOptions: {
     project: './tsconfig.json'
   },
   rules: {
-    '@typescript-eslint/no-unsafe-argument': 0, // 0 = off, 1 = warn, 2 = error
-    '@typescript-eslint/return-await': 0, // 0 = off, 1 = warn, 2 = error
-    'multiline-ternary': 0, // 0 = off, 1 = warn, 2 = error
-    'no-extra-boolean-cast': 0, // 0 = off, 1 = warn, 2 = error
-    'no-return-await': 0, // 0 = off, 1 = warn, 2 = error
+    '@typescript-eslint/no-unsafe-argument': 'off',
+    '@typescript-eslint/return-await': 'off',
+    'multiline-ternary': 'off',
+    'no-extra-boolean-cast': 'off',
+    'no-return-await': 'off',
+    'tsdoc/syntax': 'warn',
     '@typescript-eslint/no-invalid-void-type': ['error', {
       allowAsThisParameter: true,
     }],
