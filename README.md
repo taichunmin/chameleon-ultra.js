@@ -85,13 +85,13 @@ Once the package is installed, you can import the library using `import` or `req
 
 ```js
 // import
-import { Buffer, ChameleonUltra } from 'chameleon-ultra.js'
+import { ChameleonUltra } from 'chameleon-ultra.js'
 import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
 import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
 import SerialPortAdapter from 'chameleon-ultra.js/plugin/SerialPortAdapter'
 
 // require
-const { Buffer, ChameleonUltra } = require('chameleon-ultra.js')
+const { ChameleonUltra } = require('chameleon-ultra.js')
 const WebbleAdapter = require('chameleon-ultra.js/plugin/WebbleAdapter')
 const WebserialAdapter = require('chameleon-ultra.js/plugin/WebserialAdapter')
 const SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
@@ -131,12 +131,8 @@ ultraBle.use(new WebbleAdapter())
 ### Slot Enable and Emulate Mifare 1K
 
 ```js
-const { Buffer, ChameleonUltra, DeviceMode, FreqType, Slot, TagType, WebserialAdapter } = window.ChameleonUltraJS
-
-const ultraUsb = new ChameleonUltra()
-ultraUsb.use(new WebserialAdapter())
-
 async function run (ultra) {
+  const { Buffer, DeviceMode, FreqType, Slot, TagType } = window.ChameleonUltraJS
   // set slot tag type and reset data
   await ultra.cmdSlotChangeTagType(Slot.SLOT_8, TagType.MIFARE_1024)
   await ultra.cmdSlotResetTagType(Slot.SLOT_8, TagType.MIFARE_1024)
@@ -157,24 +153,33 @@ async function run (ultra) {
   await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
 }
 
-run(ultraUsb)
+// you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+await run(vm.ultra)
+
+// or run with new ChaneleonUltra instance
+const { ChameleonUltra, WebserialAdapter } = window.ChameleonUltraJS
+const ultraUsb = new ChameleonUltra()
+ultraUsb.use(new WebserialAdapter())
+await run(ultraUsb)
 ```
 
 ### Set new BLE Pairing Key and Enable BLE Pairing
 
 ```js
-const { Buffer, ChameleonUltra, DeviceMode, Slot, TagType, WebserialAdapter } = window.ChameleonUltraJS
-
-const ultraUsb = new ChameleonUltra()
-ultraUsb.use(new WebserialAdapter())
-
 async function run (ultra) {
   await ultra.cmdBleSetPairingKey('654321')
   await ultra.cmdBleDeleteAllBonds() // need to delete all bonds before change pairing mode
   await ultra.cmdBleSetPairingMode(true)
 }
 
-run(ultraUsb)
+// you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+await run(vm.ultra)
+
+// or run with new ChaneleonUltra instance
+const { ChameleonUltra, WebserialAdapter } = window.ChameleonUltraJS
+const ultraUsb = new ChameleonUltra()
+ultraUsb.use(new WebserialAdapter())
+await run(ultraUsb)
 ```
 
 ## Related links

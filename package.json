@@ -10,7 +10,7 @@
   "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
   "type": "module",
   "unpkg": "dist/iife/index.min.js",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
