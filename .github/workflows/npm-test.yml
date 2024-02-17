@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     container: node:20
     steps:
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: install and npm test
@@ -21,14 +21,28 @@ jobs:
 
           cat << "EOF" > index.cjs
             const { version } = require('chameleon-ultra.js')
-            console.log(`SDK version = ${version}`)
+            console.log(`index.cjs: SDK version = ${version}`)
             process.exit(typeof version === 'string' ? 0 : 1)
           EOF
           node ./index.cjs
 
           cat << "EOF" > index.mjs
             import { version } from 'chameleon-ultra.js'
-            console.log(`SDK version = ${version}`)
+            console.log(`index.mjs: SDK version = ${version}`)
             process.exit(typeof version === 'string' ? 0 : 1)
           EOF
           node ./index.mjs
+
+          cat << "EOF" > index.cts
+            const { version } = require('chameleon-ultra.js')
+            console.log(`index.cts: SDK version = ${version}`)
+            process.exit(typeof version === 'string' ? 0 : 1)
+          EOF
+          yarn tsx ./index.cts
+
+          cat << "EOF" > index.mts
+            import { version } from 'chameleon-ultra.js'
+            console.log(`index.mts: SDK version = ${version}`)
+            process.exit(typeof version === 'string' ? 0 : 1)
+          EOF
+          yarn tsx ./index.mts
