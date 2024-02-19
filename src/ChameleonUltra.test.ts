@@ -502,6 +502,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#cmdEm410xScan()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 0bb8 0040 0005 f8 0000002076 6a'))
 
     // act
@@ -509,13 +510,17 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toEqual(Buffer.fromHexString('0000002076'))
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 0bb8 0000 0000 3d 00')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 0bb8 0000 0000 3d 00'),
+    ])
   })
 
   test('#cmdEm410xScan() should throw tag not found error', async () => {
     expect.hasAssertions()
     try {
       // arrange
+      adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
       adapter.send.push(Buffer.fromHexString('11ef 0bb8 0041 0000 fc 00'))
 
       // act
@@ -523,7 +528,10 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
       // assert
       expect(actual).toEqual(Buffer.fromHexString('0000002076'))
-      expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 0bb8 0000 0000 3d 00')])
+      expect(adapter.recv).toEqual([
+        Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+        Buffer.fromHexString('11ef 0bb8 0000 0000 3d 00'),
+      ])
     } catch (err) {
       expect(err.message).toMatch(/tag not found/)
     }
@@ -531,17 +539,22 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#cmdEm410xWriteToT55xx()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 0bb9 0040 0000 fc 00'))
 
     // act
     await ultra.cmdEm410xWriteToT55xx(Buffer.fromHexString('deadbeef88'))
 
     // assert
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 0bb9 0000 0011 2b deadbeef88202066665124364819920427 6b')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 0bb9 0000 0011 2b deadbeef88202066665124364819920427 6b'),
+    ])
   })
 
   test('#cmdHf14aRaw()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0000 1f 00'))
 
     // act
@@ -549,11 +562,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toEqual(Buffer.fromHexString(''))
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07da 0000 0007 18 2003e800105000 95')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07da 0000 0007 18 2003e800105000 95'),
+    ])
   })
 
   test('#cmdHf14aScan()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d0 0000 0009 20 0494194a3d04000800 bc'))
 
     // act
@@ -566,7 +583,10 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       sak: Buffer.fromHexString('08'),
       uid: Buffer.fromHexString('94194a3d'),
     }])
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d0 0000 0000 29 00')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d0 0000 0000 29 00'),
+    ])
   })
 
   test('#cmdEm410xGetEmuId()', async () => {
@@ -626,6 +646,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#cmdMf1AcquireDarkside()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d4 0000 0021 04 00d3efed0c5499e1c00000000000000000070b0d0a060e0f090000000000000000 62'))
 
     // act
@@ -641,11 +662,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       status: DarksideStatus.OK,
       uid: Buffer.fromHexString('d3efed0c'),
     })
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d4 0000 0004 21 6000011e 81')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d4 0000 0004 21 6000011e 81'),
+    ])
   })
 
   test('#cmdMf1AcquireNested()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d6 0000 0012 11 502e7c41d1b90dab0561d34ecbcd6cef0207 00'))
 
     // act
@@ -659,11 +684,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       { nt1: Buffer.fromHexString('502e7c41'), nt2: Buffer.fromHexString('d1b90dab'), par: 5 },
       { nt1: Buffer.fromHexString('61d34ecb'), nt2: Buffer.fromHexString('cd6cef02'), par: 7 },
     ])
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d6 0000 000a 19 6000ffffffffffff6004 42')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d6 0000 000a 19 6000ffffffffffff6004 42'),
+    ])
   })
 
   test('#cmdMf1AcquireStaticNested()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d3 0000 0014 12 b908a16d012001458190197501200145cdd400f3 30'))
 
     // act
@@ -680,11 +709,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
         { nt1: Buffer.fromHexString('01200145'), nt2: Buffer.fromHexString('cdd400f3') },
       ],
     })
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d3 0000 000a 1c 6000ffffffffffff6004 42')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d3 0000 000a 1c 6000ffffffffffff6004 42'),
+    ])
   })
 
   test('#cmdMf1CheckBlockKey()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
 
     // act
@@ -696,7 +729,10 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toEqual(true)
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d7 0000 0008 1a 6000ffffffffffff a6')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d7 0000 0008 1a 6000ffffffffffff a6'),
+    ])
   })
 
   test('#cmdMf1EmuReadBlock()', async () => {
@@ -854,6 +890,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#cmdMf1IsSupport()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d1 0000 0000 28 00'))
 
     // act
@@ -861,11 +898,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toEqual(true)
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d1 0000 0000 28 00')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d1 0000 0000 28 00'),
+    ])
   })
 
   test('#cmdMf1ReadBlock()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 877209e11d0804000392abdef258ec90 10'))
 
     // act
@@ -877,7 +918,10 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toEqual(Buffer.fromHexString('877209e11d0804000392abdef258ec90'))
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d8 0000 0008 19 6000ffffffffffff a6')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d8 0000 0008 19 6000ffffffffffff a6'),
+    ])
   })
 
   test('#cmdMf1SetAntiCollMode()', async () => {
@@ -937,6 +981,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#cmdMf1TestNtDistance()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d5 0000 0008 1c 877209e100000080 9d'))
 
     // act
@@ -951,11 +996,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       dist: Buffer.fromHexString('00000080'),
       uid: Buffer.fromHexString('877209e1'),
     })
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d5 0000 0008 1c 6000ffffffffffff a6')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d5 0000 0008 1c 6000ffffffffffff a6'),
+    ])
   })
 
   test('#cmdMf1TestPrngType()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d2 0000 0001 26 01 ff'))
 
     // act
@@ -963,11 +1012,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toEqual(Mf1PrngType.WEAK)
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d2 0000 0000 27 00')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d2 0000 0000 27 00'),
+    ])
   })
 
   test('#cmdMf1VblockManipulate()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07db 0000 0000 1e 00'))
     const key = Buffer.fromHexString('FFFFFFFFFFFF')
 
@@ -979,11 +1032,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     )
 
     // assert
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07db 0000 0015 09 6004ffffffffffffc0000000016004ffffffffffff 83')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07db 0000 0015 09 6004ffffffffffffc0000000016004ffffffffffff 83'),
+    ])
   })
 
   test('#cmdMf1WriteBlock()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d9 0000 0000 20 00'))
 
     // act
@@ -995,11 +1052,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     })
 
     // assert
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d9 0000 0018 08 6004ffffffffffff00000000000000000000000000000000 a2')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d9 0000 0018 08 6004ffffffffffff00000000000000000000000000000000 a2'),
+    ])
   })
 
   test('#hf14aInfo()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d0 0000 0009 20 0494194a3d04000800 bc')) // cmdHf14aScan
     adapter.send.push(Buffer.fromHexString('11ef 07d1 0000 0000 28 00')) // cmdMf1IsSupport
     adapter.send.push(Buffer.fromHexString('11ef 07d2 0000 0001 26 01 ff')) // cmdMf1TestPrngType
@@ -1022,6 +1083,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#mf1VblockGetValue()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 01000000feffffff0100000001fe01fe 05'))
 
     // act
@@ -1033,11 +1095,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toMatchObject({ adr: 1, value: 1 })
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d8 0000 0008 19 6001ffffffffffff a5')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d8 0000 0008 19 6001ffffffffffff a5'),
+    ])
   })
 
   test('#mf1VblockSetValue()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d9 0000 0000 20 00'))
 
     // act
@@ -1048,11 +1114,15 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     }, { adr: 1, value: 1 })
 
     // assert
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07d9 0000 0018 08 6004ffffffffffff01000000feffffff0100000001fe01fe a7')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07d9 0000 0018 08 6004ffffffffffff01000000feffffff0100000001fe01fe a7'),
+    ])
   })
 
   test('#mfuReadPages()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0010 0f 040dc445420d2981e7480000e1100600 c7'))
 
     // act
@@ -1060,33 +1130,45 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toEqual(Buffer.fromHexString('040dc445420d2981e7480000e1100600'))
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07da 0000 0007 18 7403e800103000 61')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07da 0000 0007 18 7403e800103000 61'),
+    ])
   })
 
-  test('#mfuReadPages()', async () => {
+  test('#mfuWritePage()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0000 1f 00'))
 
     // act
     await ultra.mfuWritePage({ pageOffset: 9, data: Buffer.fromHexString('00000000') })
 
     // assert
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07da 0000 000b 14 7403e80030a20900000000 c6')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07da 0000 000b 14 7403e80030a20900000000 c6'),
+    ])
   })
 
   test('#mf1Halt()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0000 1f 00'))
 
     // act
     await ultra.mf1Halt()
 
     // assert
-    expect(adapter.recv).toEqual([Buffer.fromHexString('11ef 07da 0000 0007 18 2003e800105000 95')])
+    expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
+      Buffer.fromHexString('11ef 07da 0000 0007 18 2003e800105000 95'),
+    ])
   })
 
   test('#mf1Gen1aReadBlocks()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0000 1f 00'))
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0001 1e 0a f6'))
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0001 1e 0a f6'))
@@ -1099,6 +1181,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // assert
     expect(actual).toEqual(Buffer.fromHexString('877209e11d0804000392abdef258ec90'))
     expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
       Buffer.fromHexString('11ef 07da 0000 0007 18 2003e800105000 95'),
       Buffer.fromHexString('11ef 07da 0000 0006 19 4803e8000740 86'),
       Buffer.fromHexString('11ef 07da 0000 0006 19 4803e8000843 82'),
@@ -1109,6 +1192,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#mf1Gen1aWriteBlocks()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0000 1f 00'))
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0001 1e 0a f6'))
     adapter.send.push(Buffer.fromHexString('11ef 07da 0000 0001 1e 0a f6'))
@@ -1121,6 +1205,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
       Buffer.fromHexString('11ef 07da 0000 0007 18 2003e800105000 95'),
       Buffer.fromHexString('11ef 07da 0000 0006 19 4803e8000740 86'),
       Buffer.fromHexString('11ef 07da 0000 0006 19 4803e8000843 82'),
@@ -1132,6 +1217,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#mf1CheckSectorKeys()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 000000000000ff078069ffffffffffff 17'))
 
@@ -1145,6 +1231,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       [Mf1KeyType.KEY_B]: Buffer.fromHexString('FFFFFFFFFFFF'),
     })
     expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
       Buffer.fromHexString('11ef 07d7 0000 0008 1a 6003ffffffffffff a3'),
       Buffer.fromHexString('11ef 07d8 0000 0008 19 6003ffffffffffff a3'),
     ])
@@ -1152,6 +1239,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#mf1ReadSectorByKeys()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 000000000000ff078069ffffffffffff 17'))
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 877209e11d0804000392abdef258ec90 10'))
@@ -1174,6 +1262,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       success: [true, true, true, true],
     })
     expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
       Buffer.fromHexString('11ef 07d7 0000 0008 1a 6003ffffffffffff a3'),
       Buffer.fromHexString('11ef 07d8 0000 0008 19 6003ffffffffffff a3'),
       Buffer.fromHexString('11ef 07d8 0000 0008 19 6100ffffffffffff a5'),
@@ -1185,6 +1274,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#mf1WriteSectorByKeys()', async () => {
     // arrange
+    adapter.send.push(Buffer.fromHexString('11ef 03e9 0068 0000 ac 00')) // DeviceMode.READER
     adapter.send.push(Buffer.fromHexString('11ef 07d7 0000 0000 22 00'))
     adapter.send.push(Buffer.fromHexString('11ef 07d8 0000 0010 11 000000000000ff078069ffffffffffff 17'))
     adapter.send.push(Buffer.fromHexString('11ef 07d9 0000 0000 20 00'))
@@ -1205,6 +1295,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // assert
     expect(actual).toEqual({ success: [true, true, true, true] })
     expect(adapter.recv).toEqual([
+      Buffer.fromHexString('11ef 03e9 0000 0001 13 01 ff'), // DeviceMode.READER
       Buffer.fromHexString('11ef 07d7 0000 0008 1a 6007ffffffffffff 9f'),
       Buffer.fromHexString('11ef 07d8 0000 0008 19 6007ffffffffffff 9f'),
       Buffer.fromHexString('11ef 07d9 0000 0018 08 6104ffffffffffff00000000000000000000000000000000 a1'),

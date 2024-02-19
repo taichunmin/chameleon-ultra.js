@@ -7,12 +7,12 @@ import * as Decoder from './ResponseDecoder'
 
 import {
   Cmd,
+  DeviceMode,
   Mf1KeyType,
   RespStatus,
   type AnimationMode,
   type ButtonAction,
   type ButtonType,
-  type DeviceMode,
   type DeviceModel,
   type FreqType,
   type Mf1EmuWriteMode,
@@ -98,6 +98,12 @@ export class ChameleonUltra {
    * @group Internal
    */
   supportedCmds: Set<Cmd> = new Set<Cmd>()
+
+  /**
+   * @internal
+   * @group Internal
+   */
+  deviceMode: DeviceMode | null = null
 
   /**
    * The supported version of SDK.
@@ -260,6 +266,7 @@ export class ChameleonUltra {
       await this.invokeHook('disconnect', { err }, async (ctx, next) => {
         try {
           // clean up
+          this.deviceMode = null
           this.supportedCmds.clear()
 
           // close port
@@ -454,6 +461,7 @@ export class ChameleonUltra {
     const cmd = Cmd.CHANGE_DEVICE_MODE // cmd = 1001
     await this._writeCmd({ cmd, data: Buffer.pack('!B', mode) })
     await this._readRespTimeout({ cmd })
+    this.deviceMode = mode
   }
 
   /**
@@ -476,7 +484,17 @@ export class ChameleonUltra {
     const cmd = Cmd.GET_DEVICE_MODE // cmd = 1002
     await this._writeCmd({ cmd })
     const data = (await this._readRespTimeout({ cmd }))?.data
-    return data[0]
+    this.deviceMode = data[0]
+    return this.deviceMode
+  }
+
+  /**
+   * Automatically change the device mode to `mode` if the current device mode is not equal to `mode`.
+   * @group Device Related
+   */
+  async assureDeviceMode (mode: DeviceMode): Promise<void> {
+    if (this.deviceMode === mode) return
+    await this.cmdChangeDeviceMode(mode)
   }
 
   /**
@@ -1301,8 +1319,6 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const antiColl = _.first(await ultra.cmdHf14aScan())
    *   console.log(_.mapValues(antiColl, val => val.toString('hex')))
    *   // { uid: '040dc4420d2981', atqa: '4400', sak: '00', ats: ''}
@@ -1312,6 +1328,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdHf14aScan (): Promise<Decoder.Hf14aAntiColl[]> {
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.HF14A_SCAN // cmd = 2000
     await this._writeCmd({ cmd })
@@ -1325,8 +1342,6 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   console.log(await ultra.cmdMf1IsSupport()) // true
    * }
    *
@@ -1335,6 +1350,7 @@ export class ChameleonUltra {
    */
   async cmdMf1IsSupport (): Promise<boolean> {
     try {
+      await this.assureDeviceMode(DeviceMode.READER)
       this._clearRxBufs()
       const cmd = Cmd.MF1_DETECT_SUPPORT // cmd = 2001
       await this._writeCmd({ cmd })
@@ -1353,8 +1369,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode, Mf1PrngType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Mf1PrngType } = window.ChameleonUltraJS
    *   console.log(Mf1PrngType[await ultra.cmdMf1TestPrngType()]) // 'WEAK'
    * }
    *
@@ -1362,6 +1377,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1TestPrngType (): Promise<Mf1PrngType> {
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_DETECT_NT_LEVEL // cmd = 2002
     await this._writeCmd({ cmd })
@@ -1382,8 +1398,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1AcquireStaticNested({
    *     block: 0,
@@ -1417,6 +1432,7 @@ export class ChameleonUltra {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!isMf1BlockNo(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_STATIC_NESTED_ACQUIRE // cmd = 2003
     await this._writeCmd({ cmd, data: Buffer.pack('!BB6sBB', known.keyType, known.block, known.key, target.keyType, target.block) })
@@ -1434,8 +1450,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode, Mf1KeyType, DarksideStatus } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Mf1KeyType, DarksideStatus } = window.ChameleonUltraJS
    *   const res1 = await ultra.cmdMf1AcquireDarkside(0, Mf1KeyType.KEY_A, true)
    *   console.log(res1)
    *   const res2 = {
@@ -1468,8 +1483,7 @@ export class ChameleonUltra {
    *
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer, DarksideStatus, Mf1KeyType } = window.ChameleonUltraJS
    *   const block = 0
    *   const keyType = Mf1KeyType.KEY_A
    *   const key = await Crypto1.darkside(
@@ -1500,6 +1514,7 @@ export class ChameleonUltra {
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (_.isNil(isFirst)) throw new TypeError('Invalid isFirst')
     if (!_.isSafeInteger(syncMax)) throw new TypeError('Invalid syncMax')
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_DARKSIDE_ACQUIRE // cmd = 2004
     await this._writeCmd({ cmd, data: Buffer.pack('!BB?B', keyType, block, isFirst, syncMax) })
@@ -1517,8 +1532,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
    *   const res2 = await ultra.cmdMf1AcquireNested(
@@ -1550,6 +1564,7 @@ export class ChameleonUltra {
    */
   async cmdMf1TestNtDistance (known: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<Decoder.Mf1NtDistanceRes> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_DETECT_NT_DIST // cmd = 2005
     await this._writeCmd({ cmd, data: Buffer.pack('!BB6s', known.keyType, known.block, known.key) })
@@ -1570,8 +1585,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
    *   const res2 = await ultra.cmdMf1AcquireNested(
@@ -1608,6 +1622,7 @@ export class ChameleonUltra {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_NESTED_ACQUIRE // cmd = 2006
     await this._writeCmd({ cmd, data: Buffer.pack('!BB6sBB', known.keyType, known.block, known.key, target.keyType, target.block) })
@@ -1626,7 +1641,6 @@ export class ChameleonUltra {
    * ```js
    * async function run (ultra) {
    *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   console.log(await ultra.cmdMf1CheckBlockKey({
    *     block: 0,
@@ -1642,6 +1656,7 @@ export class ChameleonUltra {
     const { block, keyType, key } = opts
     try {
       validateMf1BlockKey(block, keyType, key)
+      await this.assureDeviceMode(DeviceMode.READER)
       this._clearRxBufs()
       const cmd = Cmd.MF1_AUTH_ONE_KEY_BLOCK // cmd = 2007
       await this._writeCmd({ cmd, data: Buffer.pack('!BB6s', keyType, block, key) })
@@ -1665,7 +1680,6 @@ export class ChameleonUltra {
    * ```js
    * async function run (ultra) {
    *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const block1 = await ultra.cmdMf1ReadBlock({
    *     block: 1,
@@ -1681,6 +1695,7 @@ export class ChameleonUltra {
   async cmdMf1ReadBlock (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<Buffer> {
     const { block, keyType, key } = opts
     validateMf1BlockKey(block, keyType, key)
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_READ_ONE_BLOCK // cmd = 2008
     await this._writeCmd({ cmd, data: Buffer.pack('!BB6s', keyType, block, key) })
@@ -1699,7 +1714,6 @@ export class ChameleonUltra {
    * ```js
    * async function run (ultra) {
    *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const block1 = Buffer.from('00000000000000000000000000000000', 'hex')
    *   await ultra.cmdMf1WriteBlock({
@@ -1722,6 +1736,7 @@ export class ChameleonUltra {
     const { block, keyType, key, data } = opts
     validateMf1BlockKey(block, keyType, key)
     if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_WRITE_ONE_BLOCK // cmd = 2009
     await this._writeCmd({ cmd, data: Buffer.pack('!BB6s16s', keyType, block, key, data) })
@@ -1735,8 +1750,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode, Mf1PrngType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Mf1PrngType } = window.ChameleonUltraJS
    *   const tag = _.first(await ultra.hf14aInfo())
    *   console.log(tag.nxpTypeBySak) // 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'
    *   console.log(Mf1PrngType[tag.prngType]) // 'WEAK'
@@ -1815,6 +1829,7 @@ export class ChameleonUltra {
       [5, checkResponseCrc],
     ] as Array<[number, boolean]>) buf1.writeBitMSB(val, bitOffset)
 
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.HF14A_RAW // cmd = 2010
     await this._writeCmd({ cmd, data: buf1 })
@@ -1842,8 +1857,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
@@ -1869,6 +1883,7 @@ export class ChameleonUltra {
     validateMf1BlockKey(dst.block, dst.keyType, dst.key, 'dst.')
     if (!isMf1VblockOperator(operator)) throw new TypeError('Invalid operator')
     if (!_.isSafeInteger(operand)) throw new TypeError('Invalid operand')
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_MANIPULATE_VALUE_BLOCK // cmd = 2011
     const data = Buffer.pack('!BB6sBiBB6s', src.keyType, src.block, src.key, operator, operand, dst.keyType, dst.block, dst.key)
@@ -1887,8 +1902,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
@@ -1920,8 +1934,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
@@ -1952,9 +1965,6 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
-   *
    *   const id = await ultra.cmdEm410xScan()
    *   console.log(id.toString('hex')) // 'deadbeef88'
    * }
@@ -1963,6 +1973,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdEm410xScan (): Promise<Buffer> {
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.EM410X_SCAN // cmd = 3000
     await this._writeCmd({ cmd })
@@ -1976,8 +1987,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer } = window.ChameleonUltraJS
    *   await ultra.cmdEm410xWriteToT55xx(Buffer.from('deadbeef88', 'hex'))
    * }
    *
@@ -1986,6 +1996,7 @@ export class ChameleonUltra {
    */
   async cmdEm410xWriteToT55xx (id: Buffer): Promise<void> {
     if (!Buffer.isBuffer(id) || id.length !== 5) throw new TypeError('id should be a Buffer with length 5')
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.EM410X_WRITE_TO_T55XX // cmd = 3001
     const oldKeys = [0x51243648, 0x19920427]
@@ -2467,8 +2478,6 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const data = await ultra.mfuReadPages({ pageOffset: 0 })
    *   console.log(data.toString('hex')) // '040dc445420d2981e7480000e1100600'
    * }
@@ -2496,8 +2505,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer } = window.ChameleonUltraJS
    *   const data = await ultra.mfuWritePage({ pageOffset: 9, data: Buffer.from('00000000', 'hex') })
    * }
    *
@@ -2522,8 +2530,6 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   await ultra.mf1Halt()
    * }
    *
@@ -2564,8 +2570,6 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const card = await ultra.mf1Gen1aReadBlocks(0, 64)
    *   console.log(_.map(card.chunk(16), chunk => chunk.toString('hex')).join('\n'))
    * }
@@ -2598,8 +2602,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer } = window.ChameleonUltraJS
    *   await ultra.mf1Gen1aWriteBlocks(1, new Buffer(16))
    * }
    *
@@ -2649,9 +2652,8 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
+   *   const { Buffer } = window.ChameleonUltraJS
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const sectorKey = await ultra.mf1CheckSectorKeys(0, keys)
    *   console.log(_.mapValues(sectorKey, key => key.toString('hex')))
    *   // { "96": "ffffffffffff", "97": "ffffffffffff" }
@@ -2705,8 +2707,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const { data, success } = await ultra.mf1ReadSectorByKeys(0, keys)
    *   console.log({ data: data.toString('hex'), success })
@@ -2750,8 +2751,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DeviceMode } = window.ChameleonUltraJS
-   *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
+   *   const { Buffer } = window.ChameleonUltraJS
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const data = Buffer.concat([
    *     Buffer.from('00000000000000000000000000000000', 'hex'),

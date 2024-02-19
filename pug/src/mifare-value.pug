@@ -139,7 +139,6 @@ block script
         async cmdVblockGet (src) {
           src = this.mf1ParseBlockKey(src)
           const ultra = this.ultra
-          await ultra.cmdChangeDeviceMode(DeviceMode.READER)
           const res = await ultra.mf1VblockGetValue(src)
           await Swal.fire({ icon: 'success', title: 'Success', text: `block[${src.block}] = ${JSON.stringify(res)}` })
         },
@@ -157,7 +156,6 @@ block script
             this.showLoading({ text: 'Processing...' })
             const src = this.mf1ParseBlockKey(this.ss.src)
             const ultra = this.ultra
-            await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             await ultra.mf1VblockSetValue(src, { adr: src.block, value: this.ss.operand })
             await this.cmdVblockGet(this.ss.src)
           } catch (err) {
@@ -172,7 +170,6 @@ block script
             const dst = this.ss.srcAsDst ? src : this.mf1ParseBlockKey(this.ss.dst)
             const operand = this.ss.operand
             const ultra = this.ultra
-            await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             await ultra.cmdMf1VblockManipulate(src, operator, operand, dst)
             await this.cmdVblockGet(this.ss.src)
           } catch (err) {

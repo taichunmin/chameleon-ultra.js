@@ -160,10 +160,9 @@ block script
           try {
             this.showLoading({ text: 'Scanning tag...' })
             const { ultra } = this
-            await this.setDeviceMode('reader')
             const slot = await ultra.cmdSlotGetActive()
             const tag1 = _.first(await ultra.cmdHf14aScan())
-            await this.setDeviceMode('tag')
+            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             const tag2 = {
               atqa: _.toUpper(tag1.atqa.reverse().toString('hex')),
               sak: _.toUpper(tag1.sak.toString('hex')),
@@ -188,7 +187,7 @@ block script
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating tag...' })
-            await this.setDeviceMode('tag')
+            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             // reset slot
             await ultra.cmdSlotChangeTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
             await ultra.cmdSlotResetTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
@@ -286,13 +285,12 @@ block script
             this.showLoading({ text: 'Checking key...' })
             const { ultra } = this
             const { block, keyType, key } = this.ss
-            await this.setDeviceMode('reader')
             const isCorrect = await ultra.cmdMf1CheckBlockKey({
               block,
               keyType: [Mf1KeyType.KEY_A, Mf1KeyType.KEY_B][keyType],
               key: Buffer.from(key, 'hex'),
             })
-            await this.setDeviceMode('tag')
+            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             if (!isCorrect) return await Swal.fire({ icon: 'error', title: 'Key is incorrect!' })
             await Swal.fire({ icon: 'success', title: 'Key is correct!' })
           } catch (err) {
@@ -328,10 +326,6 @@ block script
             }
             Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
           })
-        },
-        async setDeviceMode (target1 = 'tag') {
-          const target2 = _.toLower(target1) === 'reader' ? DeviceMode.READER : DeviceMode.TAG
-          await this.ultra.cmdChangeDeviceMode(target2)
         },
         async sleep (t) {
           await new Promise(resolve => setTimeout(resolve, t))
