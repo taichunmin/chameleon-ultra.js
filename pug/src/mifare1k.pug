@@ -316,7 +316,6 @@ block script
             })
             this.showLoading(genSwalCfg(0))
             const ultra = this.ultra
-            await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
@@ -339,7 +338,6 @@ block script
             })
             this.showLoading(genSwalCfg(0))
             const ultra = this.ultra
-            await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
               const sectorData = Buffer.fromHexString(this.ss.body[i])
@@ -361,7 +359,6 @@ block script
             this.showLoading(genSwalCfg(0))
             const keys = this.mfCardGetKeys()
             const ultra = this.ultra
-            await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
             const failed = []
             for (let i = 0; i < 16; i++) {
@@ -399,7 +396,6 @@ block script
             this.showLoading(genSwalCfg(0))
             const keys = this.mfCardGetKeys()
             const ultra = this.ultra
-            await ultra.cmdChangeDeviceMode(DeviceMode.READER)
             const failed = []
             for (let i = 0; i < 16; i++) {
               try {
