@@ -1974,9 +1974,9 @@ export class ChameleonUltra {
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const tsStart = Date.now()
    *   const result = await ultra.cmdMf1CheckKeysOfSectors({ keys, mask })
+   *   console.log(`Time: ${Date.now() - tsStart}ms`)
    *   const replacer = function (k, v) { return Buffer.isBuffer(this[k]) ? this[k].toString('hex') : v }
    *   console.log(JSON.stringify(result, replacer, 2))
-   *   console.log(`Time: ${Date.now() - tsStart}ms`)
    * }
    * // {
    * //   "found": "ffffffff000000000000",
