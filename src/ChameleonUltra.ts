@@ -1958,25 +1958,76 @@ export class ChameleonUltra {
     await this.cmdMf1WriteBlock({ ...dst, data: blkDt })
   }
 
-  async cmdMf1CheckKeysOfSectors (opts: { keys: Buffer[], mask: Buffer }): Promise<Array<{
-    [Mf1KeyType.KEY_A]?: Buffer
-    [Mf1KeyType.KEY_B]?: Buffer
-  }>> {
-    let { mask, keys } = opts
+  /**
+   * Given a list of keys, check which is the correct key A and key B of the sectors.
+   * @param opts.keys The keys to be checked.
+   * @param opts.mask 80 bits, 2 bits/sector, the first bit is key A, the second bit is key B, `0b1` represent to skip checking the key.
+   * @returns
+   * - `found`: 80 bits, 2 bits/sector, the first bit is key A, the second bit is key B, `0b1` represent key is found.
+   * - `sectorKeys`: 80 keys, 2 keys/sector, the first key is key A, the second key is key B. `null` represent key is not found.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { Buffer } = window.ChameleonUltraJS
+   *   const mask = Buffer.from('00000000FFFFFFFFFFFF', 'hex')
+   *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
+   *   const tsStart = Date.now()
+   *   const result = await ultra.cmdMf1CheckKeysOfSectors({ keys, mask })
+   *   const replacer = function (k, v) { return Buffer.isBuffer(this[k]) ? this[k].toString('hex') : v }
+   *   console.log(JSON.stringify(result, replacer, 2))
+   *   console.log(`Time: ${Date.now() - tsStart}ms`)
+   * }
+   * // {
+   * //   "found": "ffffffff000000000000",
+   * //   "sectorKeys": [
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //   ]
+   * // }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMf1CheckKeysOfSectors (opts: { keys: Buffer[], mask: Buffer }): Promise<null | {
+    found: Buffer
+    sectorKeys: Array<Buffer | null>
+  }> {
+    const { keys, mask } = opts
     if (!Buffer.isBuffer(mask) || mask.length !== 10) throw new TypeError('mask should be a Buffer with length 10')
-    keys = _.chain(keys)
-      .filter(key => Buffer.isBuffer(key) && key.length === 6)
-      .uniqWith(Buffer.equals)
-      .value()
     if (keys.length < 1 || keys.length > 83) throw new TypeError('Invalid keys.length')
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError(`keys[${i}] should be a Buffer with length 6`)
+    }
+
+    let bitsCnt = 80
+    for (let b of mask) while (b > 0) [bitsCnt, b] = [bitsCnt - (b & 0b1), b >>> 1]
+    if (bitsCnt < 1) return null
+
+    await this.assureDeviceMode(DeviceMode.READER)
     this._clearRxBufs()
     const cmd = Cmd.MF1_CHECK_KEYS_OF_SECTORS // cmd = 2012
     const data = Buffer.concat([mask, ...keys])
-
-    let timeout = 80
-    for (let b of mask) while (b > 0) [timeout, b] = [timeout - (b & 0b1), b >>> 1]
-    timeout = READ_DEFAULT_TIMEOUT + (timeout + 1) * keys.length * 100
-
+    const timeout = READ_DEFAULT_TIMEOUT + bitsCnt * (keys.length + 1) * 100
     await this._writeCmd({ cmd, data })
     return Decoder.Mf1CheckKeysOfSectorsRes.fromCmd2012((await this._readRespTimeout({ cmd, timeout }))?.data)
   }

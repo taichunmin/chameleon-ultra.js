@@ -3,7 +3,6 @@ import { Buffer } from './buffer'
 import { type Class } from 'utility-types'
 
 import {
-  Mf1KeyType,
   type AnimationMode,
   type ButtonAction,
   type DarksideStatus,
@@ -209,22 +208,20 @@ export class Mf1NestedRes {
 }
 
 export class Mf1CheckKeysOfSectorsRes {
-  [Mf1KeyType.KEY_A]?: Buffer
-  [Mf1KeyType.KEY_B]?: Buffer
+  found: Buffer
+  sectorKeys: Array<Buffer | null>
 
-  constructor (keyA?: Buffer, keyB?: Buffer) {
-    if (Buffer.isBuffer(keyA) && keyA.length === 6) this[Mf1KeyType.KEY_A] = keyA
-    if (Buffer.isBuffer(keyB) && keyB.length === 6) this[Mf1KeyType.KEY_B] = keyB
+  constructor (found: Buffer, sectorKeys: Buffer[]) {
+    this.found = found
+    this.sectorKeys = _.times(80, i => found.readBitMSB(i) === 1 ? sectorKeys[i] : null)
   }
 
-  static fromCmd2012 (buf: Buffer): Mf1CheckKeysOfSectorsRes[] {
+  static fromCmd2012 (buf: Buffer): Mf1CheckKeysOfSectorsRes {
     if (!Buffer.isBuffer(buf) || buf.length !== 490) throw new TypeError('buf should be a Buffer with length 490')
-    return _.times(40, i => {
-      const buf1 = buf.subarray(12 * i + 10)
-      const keyA = buf.readBitMSB(i * 2) !== 1 ? undefined : buf1.subarray(0, 6)
-      const keyB = buf.readBitMSB(i * 2 + 1) !== 1 ? undefined : buf1.subarray(6, 12)
-      return new Mf1CheckKeysOfSectorsRes(keyA, keyB)
-    })
+    return new Mf1CheckKeysOfSectorsRes(
+      buf.subarray(0, 10), // found
+      buf.subarray(10).chunk(6), // sectorKeys
+    )
   }
 }
 
