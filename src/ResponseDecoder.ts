@@ -1,7 +1,15 @@
 import _ from 'lodash'
 import { Buffer } from './buffer'
-import { type AnimationMode, type ButtonAction, type DarksideStatus, type Mf1EmuWriteMode, type Mf1PrngType, type TagType } from './enums'
 import { type Class } from 'utility-types'
+
+import {
+  type AnimationMode,
+  type ButtonAction,
+  type DarksideStatus,
+  type Mf1EmuWriteMode,
+  type Mf1PrngType,
+  type TagType,
+} from './enums'
 
 function bufUnpackToClass <T> (buf: Buffer, format: string, Type: Class<T>): T {
   return new Type(...buf.unpack<ConstructorParameters<typeof Type>>(format))
@@ -196,6 +204,24 @@ export class Mf1NestedRes {
   static fromCmd2006 (buf: Buffer): Mf1NestedRes[] {
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
     return _.map(buf.chunk(9), chunk => bufUnpackToClass(chunk, '!4s4sB', Mf1NestedRes))
+  }
+}
+
+export class Mf1CheckKeysOfSectorsRes {
+  found: Buffer
+  sectorKeys: Array<Buffer | null>
+
+  constructor (found: Buffer, sectorKeys: Buffer[]) {
+    this.found = found
+    this.sectorKeys = _.times(80, i => found.readBitMSB(i) === 1 ? sectorKeys[i] : null)
+  }
+
+  static fromCmd2012 (buf: Buffer): Mf1CheckKeysOfSectorsRes {
+    if (!Buffer.isBuffer(buf) || buf.length !== 490) throw new TypeError('buf should be a Buffer with length 490')
+    return new Mf1CheckKeysOfSectorsRes(
+      buf.subarray(0, 10), // found
+      buf.subarray(10).chunk(6), // sectorKeys
+    )
   }
 }
 

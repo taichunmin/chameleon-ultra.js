@@ -113,7 +113,7 @@ export class ChameleonUltra {
 
   /**
    * Create a new instance of ChameleonUltra.
-   * @param debug Enable debug mode.
+   * @param debug - Enable debug mode.
    * @example
    * Example usage in Browser (place at the end of body):
    *
@@ -191,8 +191,8 @@ export class ChameleonUltra {
 
   /**
    * Register a plugin.
-   * @param plugin The plugin to register.
-   * @param option The option to pass to plugin.install().
+   * @param plugin - The plugin to register.
+   * @param option - The option to pass to plugin.install().
    * @group Plugin Related
    */
   async use (plugin: ChameleonPlugin, option?: any): Promise<this> {
@@ -204,8 +204,8 @@ export class ChameleonUltra {
 
   /**
    * Register a hook.
-   * @param hook The hook name.
-   * @param fn The function to register.
+   * @param hook - The hook name.
+   * @param fn - The function to register.
    * @group Plugin Related
    */
   addHook (hook: string, fn: MiddlewareComposeFn): this {
@@ -216,9 +216,9 @@ export class ChameleonUltra {
 
   /**
    * Invoke a hook with context.
-   * @param hook The hook name.
-   * @param ctx The context will be passed to every middleware.
-   * @param next The next middleware function.
+   * @param hook - The hook name.
+   * @param ctx - The context will be passed to every middleware.
+   * @param next - The next middleware function.
    * @returns The return value depent on the middlewares
    * @group Plugin Related
    */
@@ -303,7 +303,7 @@ export class ChameleonUltra {
 
   /**
    * Send a buffer to device.
-   * @param buf The buffer to be sent to device.
+   * @param buf - The buffer to be sent to device.
    * @internal
    * @group Internal
    */
@@ -325,9 +325,9 @@ export class ChameleonUltra {
 
   /**
    * Send a command to device.
-   * @param opts.cmd The command to be sent to device.
-   * @param opts.status The status is always `0x0000`.
-   * @param opts.data `<= 512 bytes`, the data to be sent. This payload depends on the exact command being used. See [Packet payloads](https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/docs/protocol.md#packet-payloads) for more infomation.
+   * @param opts.cmd - The command to be sent to device.
+   * @param opts.status - The status is always `0x0000`.
+   * @param opts.data - `<= 512 bytes`, the data to be sent. This payload depends on the exact command being used. See [Packet payloads](https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/docs/protocol.md#packet-payloads) for more infomation.
    * @internal
    * @group Internal
    */
@@ -363,7 +363,7 @@ export class ChameleonUltra {
 
   /**
    * Read a response from device.
-   * @param timeout The timeout in milliseconds.
+   * @param timeout - The timeout in milliseconds.
    * @internal
    * @group Internal
    */
@@ -443,7 +443,7 @@ export class ChameleonUltra {
 
   /**
    * Change device mode to tag reader or tag emulator.
-   * @param mode The mode to be changed.
+   * @param mode - The mode to be changed.
    * @group Device Related
    * @example
    * ```js
@@ -499,7 +499,7 @@ export class ChameleonUltra {
 
   /**
    * Change the active emulation tag slot of device.
-   * @param slot The slot to be active.
+   * @param slot - The slot to be active.
    * @group Slot Related
    * @example
    * ```js
@@ -521,8 +521,8 @@ export class ChameleonUltra {
 
   /**
    * Change the emulation tag type of specified slot.
-   * @param slot The slot to be set.
-   * @param tagType The tag type to be set.
+   * @param slot - The slot to be set.
+   * @param tagType - The tag type to be set.
    * @group Slot Related
    * @example
    * ```js
@@ -545,8 +545,8 @@ export class ChameleonUltra {
 
   /**
    * Reset the emulation tag data of specified tag type in specified slot to default values.
-   * @param slot The slot to be reset.
-   * @param tagType The tag type to be reset.
+   * @param slot - The slot to be reset.
+   * @param tagType - The tag type to be reset.
    * @group Slot Related
    * @example
    * ```js
@@ -569,8 +569,8 @@ export class ChameleonUltra {
 
   /**
    * Enable or disable the specified slot.
-   * @param slot The slot to be enable/disable.
-   * @param enable `true` to enable the slot, `false` to disable the slot.
+   * @param slot - The slot to be enable/disable.
+   * @param enable - `true` to enable the slot, `false` to disable the slot.
    * @group Slot Related
    * @example
    * ```js
@@ -594,9 +594,9 @@ export class ChameleonUltra {
 
   /**
    * Set the nickname of specified freq type in specified slot.
-   * @param slot The slot to be set.
-   * @param freq The freq type to be set.
-   * @param name The name to be set. The `byteLength` of name should between `1` and `32`.
+   * @param slot - The slot to be set.
+   * @param freq - The freq type to be set.
+   * @param name - The name to be set. The `byteLength` of name should between `1` and `32`.
    * @group Slot Related
    * @example
    * ```js
@@ -622,8 +622,8 @@ export class ChameleonUltra {
 
   /**
    * Get the nickname of specified freq type in specified slot.
-   * @param slot The slot to be get.
-   * @param freq The freq type to be get.
+   * @param slot - The slot to be get.
+   * @param freq - The freq type to be get.
    * @returns The nickname of specified freq type in specified slot.
    * @group Slot Related
    * @example
@@ -774,7 +774,7 @@ export class ChameleonUltra {
 
   /**
    * Set the animation mode of device while wake-up and sleep.
-   * @param mode The animation mode to be set.
+   * @param mode - The animation mode to be set.
    * @group Device Related
    * @example
    * ```js
@@ -913,8 +913,8 @@ export class ChameleonUltra {
 
   /**
    * Delete the nick name of the slot
-   * @param slot Slot number
-   * @param freq Frequency type
+   * @param slot - Slot number
+   * @param freq - Frequency type
    * @returns `true` if success, `false` if slot name is empty.
    * @group Slot Related
    * @example
@@ -975,8 +975,8 @@ export class ChameleonUltra {
 
   /**
    * Delete the emulation tag data of specified freq type in specified slot.
-   * @param slot The slot to be deleted.
-   * @param freq The freq type of slot.
+   * @param slot - The slot to be deleted.
+   * @param freq - The freq type of slot.
    * @group Slot Related
    * @example
    * ```js
@@ -1020,7 +1020,7 @@ export class ChameleonUltra {
 
   /**
    * Get the button press action of specified button.
-   * @param btn The button to be get.
+   * @param btn - The button to be get.
    * @returns The button press action of specified button.
    * @group Device Related
    * @example
@@ -1044,8 +1044,8 @@ export class ChameleonUltra {
 
   /**
    * Set the button press action of specified button.
-   * @param btn The button to be set.
-   * @param action The button press action to be set.
+   * @param btn - The button to be set.
+   * @param action - The button press action to be set.
    * @group Device Related
    * @example
    * ```js
@@ -1068,7 +1068,7 @@ export class ChameleonUltra {
 
   /**
    * Get the button long press action of specified button.
-   * @param btn The button to be get.
+   * @param btn - The button to be get.
    * @returns The button long press action of specified button.
    * @group Device Related
    * @example
@@ -1092,8 +1092,8 @@ export class ChameleonUltra {
 
   /**
    * Set the button long press action of specified button.
-   * @param btn The button to be set.
-   * @param action The button long press action to be set.
+   * @param btn - The button to be set.
+   * @param action - The button long press action to be set.
    * @group Device Related
    * @example
    * ```js
@@ -1116,7 +1116,7 @@ export class ChameleonUltra {
 
   /**
    * Set the ble pairing key of device.
-   * @param key The new ble pairing key.
+   * @param key - The new ble pairing key.
    * @group Device Related
    * @example
    * ```js
@@ -1292,7 +1292,7 @@ export class ChameleonUltra {
 
   /**
    * Set if the ble pairing is required when connecting to device.
-   * @param enable `true` to enable pairing mode, `false` to disable pairing mode.
+   * @param enable - `true` to enable pairing mode, `false` to disable pairing mode.
    * @group Device Related
    * @example
    * ```js
@@ -1386,13 +1386,13 @@ export class ChameleonUltra {
 
   /**
    * Use a known key to do the mifare static nested attack.
-   * @param known The info of known key.
-   * @param known.block The block of known key.
-   * @param known.key The known key.
-   * @param known.keyType The key type of known key.
-   * @param target The info of target key to be attack.
-   * @param target.block The block of target key.
-   * @param target.keyType The key type of target key.
+   * @param known - The info of known key.
+   * @param known.block - The block of known key.
+   * @param known.key - The known key.
+   * @param known.keyType - The key type of known key.
+   * @param target - The info of target key to be attack.
+   * @param target.block - The block of target key.
+   * @param target.keyType - The key type of target key.
    * @returns The result of mifare static nested attack.
    * @group Mifare Classic Related
    * @example
@@ -1441,10 +1441,10 @@ export class ChameleonUltra {
 
   /**
    * Acquire the data from mifare darkside attack.
-   * @param block The target block.
-   * @param keyType The target key type.
-   * @param isFirst `true` if this is the first attack.
-   * @param syncMax The max sync count of darkside attack.
+   * @param block - The target block.
+   * @param keyType - The target key type.
+   * @param isFirst - `true` if this is the first attack.
+   * @param syncMax - The max sync count of darkside attack.
    * @returns The data from mifare darkside attack.
    * @group Mifare Classic Related
    * @example
@@ -1523,10 +1523,10 @@ export class ChameleonUltra {
 
   /**
    * Dectect the nt distance of mifare protocol.
-   * @param known The info of known key.
-   * @param known.block The block of known key.
-   * @param known.key The known key.
-   * @param known.keyType The key type of known key.
+   * @param known - The info of known key.
+   * @param known.block - The block of known key.
+   * @param known.key - The known key.
+   * @param known.keyType - The key type of known key.
    * @returns The nt distance of mifare protocol.
    * @group Mifare Classic Related
    * @example
@@ -1573,13 +1573,13 @@ export class ChameleonUltra {
 
   /**
    * Use a known key to do the mifare nested attack.
-   * @param known The info of known key.
-   * @param known.block The block of known key.
-   * @param known.key The known key.
-   * @param known.keyType The key type of known key.
-   * @param target The info of target key to be attack.
-   * @param target.block The block of target key.
-   * @param target.keyType The key type of target key.
+   * @param known - The info of known key.
+   * @param known.block - The block of known key.
+   * @param known.key - The known key.
+   * @param known.keyType - The key type of known key.
+   * @param target - The info of target key to be attack.
+   * @param target.block - The block of target key.
+   * @param target.keyType - The key type of target key.
    * @returns The result of mifare nested attack.
    * @group Mifare Classic Related
    * @example
@@ -1631,10 +1631,10 @@ export class ChameleonUltra {
 
   /**
    * Check if the key is valid for specified block and key type.
-   * @param opts The info of key to be checked.
-   * @param opts.block The block of key to be checked.
-   * @param opts.keyType The type of key to be checked.
-   * @param opts.key The key to be checked.
+   * @param opts - The info of key to be checked.
+   * @param opts.block - The block of key to be checked.
+   * @param opts.keyType - The type of key to be checked.
+   * @param opts.key - The key to be checked.
    * @returns `true` if the key is valid for specified block and key type.
    * @group Mifare Classic Related
    * @example
@@ -1670,10 +1670,10 @@ export class ChameleonUltra {
 
   /**
    * Read block data from a mifare tag.
-   * @param opts The block to be read and the key info of the block.
-   * @param opts.block The block to be read.
-   * @param opts.keyType The key type of the block.
-   * @param opts.key The key of the block.
+   * @param opts - The block to be read and the key info of the block.
+   * @param opts.block - The block to be read.
+   * @param opts.keyType - The key type of the block.
+   * @param opts.key - The key of the block.
    * @returns The block data read from a mifare tag.
    * @group Mifare Classic Related
    * @example
@@ -1704,11 +1704,11 @@ export class ChameleonUltra {
 
   /**
    * Write data to a mifare tag.
-   * @param opts The block to be written and the key info of the block.
-   * @param opts.block The block to be written.
-   * @param opts.keyType The key type of the block.
-   * @param opts.key The key of the block.
-   * @param opts.data The block data to be written.
+   * @param opts - The block to be written and the key info of the block.
+   * @param opts.block - The block to be written.
+   * @param opts.keyType - The key type of the block.
+   * @param opts.key - The key of the block.
+   * @param opts.data - The block data to be written.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1776,15 +1776,15 @@ export class ChameleonUltra {
 
   /**
    * Send raw NfcA data to a tag and receive the response.
-   * @param opts.activateRfField Set `true` to activate RF field. If `data` is not empty or `autoSelect` is true, `activateRfField` will be set to `true`.
-   * @param opts.appendCrc Set `true` to add CRC before sending data.
-   * @param opts.autoSelect Set `true` to automatically select card before sending data.
-   * @param opts.checkResponseCrc Set `true` to verify CRC of response and remove. If CRC of response is valid, CRC will be removed from response, otherwise will throw HF_ERR_CRC error.
-   * @param opts.data The data to be send. If `appendCrc` is `true`, the maximum length of data is `62`, otherwise is `64`.
-   * @param opts.dataBitLength Number of bits to send. Useful for send partial byte. `dataBitLength` is incompatible with `appendCrc`.
-   * @param opts.keepRfField Set `true` to keep the RF field active after sending.
-   * @param opts.waitResponse Default value is `true`. Set `false` to skip reading tag response.
-   * @param opts.timeout Default value is `1000 ms`. Maximum timeout for reading tag response in ms while `waitResponse` is `true`.
+   * @param opts.activateRfField - Set `true` to activate RF field. If `data` is not empty or `autoSelect` is true, `activateRfField` will be set to `true`.
+   * @param opts.appendCrc - Set `true` to add CRC before sending data.
+   * @param opts.autoSelect - Set `true` to automatically select card before sending data.
+   * @param opts.checkResponseCrc - Set `true` to verify CRC of response and remove. If CRC of response is valid, CRC will be removed from response, otherwise will throw HF_ERR_CRC error.
+   * @param opts.data - The data to be send. If `appendCrc` is `true`, the maximum length of data is `62`, otherwise is `64`.
+   * @param opts.dataBitLength - Number of bits to send. Useful for send partial byte. `dataBitLength` is incompatible with `appendCrc`.
+   * @param opts.keepRfField - Set `true` to keep the RF field active after sending.
+   * @param opts.waitResponse - Default value is `true`. Set `false` to skip reading tag response.
+   * @param opts.timeout - Default value is `1000 ms`. Maximum timeout for reading tag response in ms while `waitResponse` is `true`.
    * @returns The response from tag.
    * @group Reader Related
    */
@@ -1843,16 +1843,16 @@ export class ChameleonUltra {
    * - Increment: increment value by `X` (`0` ~ `2147483647`) from src to dst
    * - Restore: copy value from src to dst (Restore and Transfer)
    *
-   * @param src The key info of src block.
-   * @param src.key The key of src block.
-   * @param src.keyType The key type of src block.
-   * @param src.block The block of src block.
-   * @param operator The operator of value block.
-   * @param operand The operand of value block.
-   * @param dst The key info of dst block.
-   * @param dst.key The key of dst block.
-   * @param dst.keyType The key type of dst block.
-   * @param dst.block The block of dst block.
+   * @param src - The key info of src block.
+   * @param src.key - The key of src block.
+   * @param src.keyType - The key type of src block.
+   * @param src.block - The block of src block.
+   * @param operator - The operator of value block.
+   * @param operand - The operand of value block.
+   * @param dst - The key info of dst block.
+   * @param dst.key - The key of dst block.
+   * @param dst.keyType - The key type of dst block.
+   * @param dst.block - The block of dst block.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1893,10 +1893,10 @@ export class ChameleonUltra {
 
   /**
    * Get value from `opts` block (MIFARE Classic value block)
-   * @param opts The key info of `opts` block.
-   * @param opts.block The block of `opts` block.
-   * @param opts.keyType The key type of `opts` block.
-   * @param opts.key The key of `opts` block.
+   * @param opts - The key info of `opts` block.
+   * @param opts.block - The block of `opts` block.
+   * @param opts.keyType - The key type of `opts` block.
+   * @param opts.key - The key of `opts` block.
    * @returns The value and address of `opts` block.
    * @group Mifare Classic Related
    * @example
@@ -1916,20 +1916,20 @@ export class ChameleonUltra {
     const blkDt = await this.cmdMf1ReadBlock(opts)
     const [val1, val2, val3] = _.times(3, i => blkDt.readInt32LE(i * 4))
     if (val1 !== val3 || val1 + val2 !== -1) throw new Error(`Invalid value of value block: ${blkDt.toString('hex')}`)
-    const [adr1, adr2, adr3, adr4] = blkDt.subarray(12, 16)
+    const [adr1, adr2, adr3, adr4] = blkDt.subarray(12, 16) as unknown as number[]
     if (adr1 !== adr3 || adr2 !== adr4 || adr1 + adr2 !== 0xFF) throw new Error(`Invalid address of value block: ${blkDt.toString('hex')}`)
     return { adr: adr1, value: val1 }
   }
 
   /**
    * Set value X (-2147483647 ~ 2147483647) to `dst` block (MIFARE Classic value block)
-   * @param dst The key info of `dst` block.
-   * @param dst.block The block of `dst` block.
-   * @param dst.keyType The key type of `dst` block.
-   * @param dst.key The key of `dst` block.
-   * @param val The value and address to be set.
-   * @param val.value The value to be set. Default is `0`.
-   * @param val.adr The address to be set. Default is `dst.block`.
+   * @param dst - The key info of `dst` block.
+   * @param dst.block - The block of `dst` block.
+   * @param dst.keyType - The key type of `dst` block.
+   * @param dst.key - The key of `dst` block.
+   * @param val - The value and address to be set.
+   * @param val.value - The value to be set. Default is `0`.
+   * @param val.adr - The address to be set. Default is `dst.block`.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1959,6 +1959,80 @@ export class ChameleonUltra {
   }
 
   /**
+   * Given a list of keys, check which is the correct key A and key B of the sectors. If you want to check more than 83 keys, you can use `mf1CheckKeysOfSectors()`.
+   * @param opts.keys - The keys to be checked. Maximum length is `83`.
+   * @param opts.mask - The mask of sectors. 80 bits, 2 bits/sector, the first bit is key A, the second bit is key B, `0b1` represent to skip checking the key.
+   * @returns
+   * - `found`: 80 bits, 2 bits/sector, the first bit is key A, the second bit is key B, `0b1` represent key is found.
+   * - `sectorKeys`: 80 keys, 2 keys/sector, the first key is key A, the second key is key B. `null` represent key is not found.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { Buffer } = window.ChameleonUltraJS
+   *   const mask = Buffer.from('00000000FFFFFFFFFFFF', 'hex')
+   *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
+   *   const tsStart = Date.now()
+   *   const result = await ultra.cmdMf1CheckKeysOfSectors({ keys, mask })
+   *   console.log(`Time: ${Date.now() - tsStart}ms`)
+   *   const replacer = function (k, v) { return Buffer.isBuffer(this[k]) ? this[k].toString('hex') : v }
+   *   console.log(JSON.stringify(result, replacer, 2))
+   * }
+   * // {
+   * //   "found": "ffffffff000000000000",
+   * //   "sectorKeys": [
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     "ffffffffffff", "ffffffffffff", "ffffffffffff", "ffffffffffff",
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //     null, null, null, null,
+   * //   ]
+   * // }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMf1CheckKeysOfSectors (opts: { keys: Buffer[], mask: Buffer }): Promise<null | {
+    found: Buffer
+    sectorKeys: Array<Buffer | null>
+  }> {
+    const { keys, mask } = opts
+    if (!Buffer.isBuffer(mask) || mask.length !== 10) throw new TypeError('mask should be a Buffer with length 10')
+    if (keys.length < 1 || keys.length > 83) throw new TypeError('Invalid keys.length')
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError(`keys[${i}] should be a Buffer with length 6`)
+    }
+
+    let bitsCnt = 80
+    for (let b of mask as unknown as number[]) while (b > 0) [bitsCnt, b] = [bitsCnt - (b & 0b1), b >>> 1]
+    if (bitsCnt < 1) return null
+
+    await this.assureDeviceMode(DeviceMode.READER)
+    this._clearRxBufs()
+    const cmd = Cmd.MF1_CHECK_KEYS_OF_SECTORS // cmd = 2012
+    const data = Buffer.concat([mask, ...keys])
+    const timeout = READ_DEFAULT_TIMEOUT + bitsCnt * (keys.length + 1) * 100
+    await this._writeCmd({ cmd, data })
+    return Decoder.Mf1CheckKeysOfSectorsRes.fromCmd2012((await this._readRespTimeout({ cmd, timeout }))?.data)
+  }
+
+  /**
    * Scan em410x tag and print id
    * @returns The id of em410x tag.
    * @group Reader Related
@@ -1982,7 +2056,7 @@ export class ChameleonUltra {
 
   /**
    * Write id of em410x tag to t55xx tag.
-   * @param id The id of em410x tag.
+   * @param id - The id of em410x tag.
    * @group Reader Related
    * @example
    * ```js
@@ -2007,8 +2081,8 @@ export class ChameleonUltra {
 
   /**
    * Set the mifare block data of actived slot.
-   * @param offset The start block of actived slot.
-   * @param data The data to be set. the length of data should be multiples of 16.
+   * @param offset - The start block of actived slot.
+   * @param data - The data to be set. the length of data should be multiples of 16.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -2031,10 +2105,10 @@ export class ChameleonUltra {
 
   /**
    * Set the mifare anti-collision data of actived slot.
-   * @param opts.uid The new uid to be set.
-   * @param opts.atqa `2 bytes`, the new atqa to be set.
-   * @param opts.sak `1 byte`, the new sak to be set.
-   * @param opts.ats The new ats to be set.
+   * @param opts.uid - The new uid to be set.
+   * @param opts.atqa - `2 bytes`, the new atqa to be set.
+   * @param opts.sak - `1 byte`, the new sak to be set.
+   * @param opts.ats - The new ats to be set.
    * @group Emulator Related
    * @example
    * ```js
@@ -2069,7 +2143,7 @@ export class ChameleonUltra {
 
   /**
    * Enable or disable the mifare MFKey32 detection and clear the data of detections.
-   * @param enable `true` to enable the detection, `false` to disable the detection.
+   * @param enable - `true` to enable the detection, `false` to disable the detection.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -2110,7 +2184,7 @@ export class ChameleonUltra {
 
   /**
    * Get the data of mifare MFKey32 detections.
-   * @param offset The start log of detections to be get.
+   * @param offset - The start log of detections to be get.
    * @returns The mifare MFKey32 detections.
    * @group Mifare Classic Related
    * @example
@@ -2164,8 +2238,8 @@ export class ChameleonUltra {
 
   /**
    * Get the mifare block data of actived slot.
-   * @param offset The start block of actived slot.
-   * @param length The count of blocks to be get.
+   * @param offset - The start block of actived slot.
+   * @param length - The count of blocks to be get.
    * @returns The mifare block data of actived slot.
    * @group Mifare Classic Related
    * @example
@@ -2237,7 +2311,7 @@ export class ChameleonUltra {
 
   /**
    * Set the mifare gen1a mode of actived slot.
-   * @param enable `true` to enable the gen1a mode, `false` to disable the gen1a mode.
+   * @param enable - `true` to enable the gen1a mode, `false` to disable the gen1a mode.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -2278,7 +2352,7 @@ export class ChameleonUltra {
 
   /**
    * Set the mifare gen2 mode of actived slot.
-   * @param enable `true` to enable the gen2 mode, `false` to disable the gen2 mode.
+   * @param enable - `true` to enable the gen2 mode, `false` to disable the gen2 mode.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -2319,7 +2393,7 @@ export class ChameleonUltra {
 
   /**
    * Set the mode of actived slot that using anti-collision data from block 0 for 4 byte UID tags or not.
-   * @param enable `true` to enable the mode, `false` to disable the mode.
+   * @param enable - `true` to enable the mode, `false` to disable the mode.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -2360,7 +2434,7 @@ export class ChameleonUltra {
 
   /**
    * Set the mifare write mode of actived slot.
-   * @param mode The mifare write mode of actived slot.
+   * @param mode - The mifare write mode of actived slot.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -2410,7 +2484,7 @@ export class ChameleonUltra {
 
   /**
    * Set the em410x id of actived slot.
-   * @param id The em410x id of actived slot.
+   * @param id - The em410x id of actived slot.
    * @group Emulator Related
    * @example
    * ```js
@@ -2471,7 +2545,7 @@ export class ChameleonUltra {
 
   /**
    * Read 4 pages (16 bytes) from Mifare Ultralight
-   * @param opts.pageOffset page number to read
+   * @param opts.pageOffset - page number to read
    * @returns 4 pages (16 bytes)
    * @group Mifare Ultralight Related
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=16)
@@ -2498,8 +2572,8 @@ export class ChameleonUltra {
 
   /**
    * Write 1 page (4 bytes) to Mifare Ultralight
-   * @param opts.pageOffset page number to read
-   * @param opts.data `4 bytes`, the page data to be written.
+   * @param opts.pageOffset - page number to read
+   * @param opts.data - `4 bytes`, the page data to be written.
    * @group Mifare Ultralight Related
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=17)
    * @example
@@ -2534,6 +2608,7 @@ export class ChameleonUltra {
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
    */
   async mf1Halt (): Promise<void> {
     await this.cmdHf14aRaw({ appendCrc: true, data: Buffer.pack('!H', 0x5000), waitResponse: false }) // HALT + close RF field
@@ -2541,7 +2616,7 @@ export class ChameleonUltra {
 
   /**
    * Magic auth helper function for mifare gen1a tag.
-   * @param cb The callback function to be executed after auth.
+   * @param cb - The callback function to be executed after auth.
    * @returns The result of callback function.
    * @group Mifare Classic Related
    */
@@ -2563,8 +2638,8 @@ export class ChameleonUltra {
 
   /**
    * Read blocks from Mifare Classic Gen1a.
-   * @param offset The start block of Mifare Classic Gen1a.
-   * @param length The amount of blocks to read.
+   * @param offset - The start block of Mifare Classic Gen1a.
+   * @param length - The amount of blocks to read.
    * @returns The blocks data.
    * @group Mifare Classic Related
    * @example
@@ -2596,8 +2671,8 @@ export class ChameleonUltra {
 
   /**
    * Write blocks to Mifare Classic Gen1a.
-   * @param offset The start block of Mifare Classic Gen1a.
-   * @param data The blocks data to write.
+   * @param offset - The start block of Mifare Classic Gen1a.
+   * @param data - The blocks data to write.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -2625,7 +2700,7 @@ export class ChameleonUltra {
 
   /**
    * Get the blockNo of sector trailer.
-   * @param sector The sector number.
+   * @param sector - The sector number.
    * @returns The blockNo of sector trailer.
    * @group Mifare Classic Related
    * @example
@@ -2645,8 +2720,8 @@ export class ChameleonUltra {
 
   /**
    * Given a list of keys, check which is the correct key A and key B of the sector.
-   * @param sector The sector number to be checked.
-   * @param keys The keys dictionary.
+   * @param sector - The sector number to be checked.
+   * @param keys - The keys dictionary.
    * @returns The Key A and Key B of the sector.
    * @group Mifare Classic Related
    * @example
@@ -2667,41 +2742,65 @@ export class ChameleonUltra {
     [Mf1KeyType.KEY_B]?: Buffer
   }> {
     if (!_.isSafeInteger(sector)) throw new TypeError('Invalid sector')
+    const mask = Buffer.alloc(10, 0xFF)
+    mask[sector >>> 2] ^= 3 << (6 - sector % 4 * 2)
+    const [ka, kb] = (await this.mf1CheckKeysOfSectors({ keys, mask })).slice(sector * 2, sector * 2 + 2)
+    return {
+      ...(_.isNil(ka) ? {} : { [Mf1KeyType.KEY_A]: ka }),
+      ...(_.isNil(kb) ? {} : { [Mf1KeyType.KEY_B]: kb }),
+    }
+  }
+
+  /**
+   * Mifare Classic check keys of sectors.
+   * @param opts.chunkSize - `keys` will be chunked by this size.
+   * @param opts.keys - The keys to be checked.
+   * @param opts.mask - The mask of sectors. 80 bits, 2 bits/sector, the first bit is key A, the second bit is key B, 0b1 represent to skip checking the key.
+   * @param opts.maxSectors - The max sectors to be check.
+   * @param opts.onChunkKeys - The callback function to be invoked before checking every chunk of keys.
+   * @group Mifare Classic Related
+   * @returns
+   */
+  async mf1CheckKeysOfSectors (opts: {
+    chunkSize?: number
+    keys: Buffer[]
+    mask?: Buffer
+    maxSectors?: number
+    onChunkKeys?: (opts: { keys: Buffer[], mask: Buffer }) => Promise<unknown>
+  }): Promise<Buffer[]> {
+    let { chunkSize = 20, keys, mask = new Buffer(10), maxSectors = 40, onChunkKeys } = opts
     keys = _.chain(keys)
       .filter(key => Buffer.isBuffer(key) && key.length === 6)
       .uniqWith(Buffer.equals)
       .value()
-    const sectorKey: { [Mf1KeyType.KEY_A]?: Buffer, [Mf1KeyType.KEY_B]?: Buffer } = {}
-    const block = ChameleonUltra.mf1TrailerBlockNoOfSector(sector)
-    // check key A
-    for (const key of keys) {
-      if (!await this.cmdMf1CheckBlockKey({ block, key, keyType: Mf1KeyType.KEY_A })) continue
-      sectorKey[Mf1KeyType.KEY_A] = key
-      // shortcut: try to read key B from trailer of sector
-      try {
-        const keyB = (await this.cmdMf1ReadBlock({ block, key, keyType: Mf1KeyType.KEY_A })).subarray(10)
-        if (_.sum(keyB) > 0) { // key B in trailer
-          sectorKey[Mf1KeyType.KEY_B] = keyB
-          return sectorKey
-        }
-      } catch (err) {
-        if (!this.isConnected()) throw err
+    if (keys.length === 0) throw new TypeError('Invalid keys')
+    if (!Buffer.isBuffer(mask)) mask = new Buffer(10)
+    else if (mask.length !== 10) {
+      const buf = new Buffer(10)
+      buf.copy(mask, 0, 0, 10)
+      mask = buf
+    }
+    // console.log({ chunkSize, keys, mask, maxSectors })
+    for (let i = maxSectors ?? 40; i < 40; i++) mask[i >>> 2] |= 3 << (6 - i % 4 * 2)
+
+    const foundKeys = new Array(maxSectors * 2).fill(null)
+    for (const chunkKeys of _.chunk(keys, chunkSize)) {
+      await onChunkKeys?.({ keys: chunkKeys, mask })
+      const tmp = await this.cmdMf1CheckKeysOfSectors({ keys: chunkKeys, mask })
+      if (_.isNil(tmp)) break // all founded
+      for (let i = 0; i < 10; i++) mask[i] |= tmp.found[i]
+      for (let i = 0; i < maxSectors * 2; i++) {
+        if (_.isNil(tmp.sectorKeys[i])) continue
+        foundKeys[i] = tmp.sectorKeys[i]
       }
-      break
     }
-    // check key B
-    for (const key of keys) {
-      if (!await this.cmdMf1CheckBlockKey({ block, key, keyType: Mf1KeyType.KEY_B })) continue
-      sectorKey[Mf1KeyType.KEY_B] = key
-      break
-    }
-    return sectorKey
+    return foundKeys
   }
 
   /**
    * Read the sector data of Mifare Classic by given keys.
-   * @param sector The sector number to be read.
-   * @param keys The keys dictionary.
+   * @param sector - The sector number to be read.
+   * @param keys - The keys dictionary.
    * @returns The sector data and the read status of each block.
    * @group Mifare Classic Related
    * @example
@@ -2719,7 +2818,7 @@ export class ChameleonUltra {
    */
   async mf1ReadSectorByKeys (sector: number, keys: Buffer[]): Promise<{ data: Buffer, success: boolean[] }> {
     const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
-    if (_.keys(sectorKey).length === 0) throw new Error('No valid key')
+    if (_.isEmpty(sectorKey)) throw new Error('No valid key')
     const data = new Buffer(64)
     const success = _.times(4, () => false)
     for (let i = 0; i < 4; i++) {
@@ -2743,9 +2842,9 @@ export class ChameleonUltra {
 
   /**
    * Write the sector data of Mifare Classic by given keys.
-   * @param sector The sector number to be written.
-   * @param keys The key dictionary.
-   * @param data Sector data
+   * @param sector - The sector number to be written.
+   * @param keys - The key dictionary.
+   * @param data - Sector data
    * @returns the write status of each block.
    * @group Mifare Classic Related
    * @example
@@ -2771,7 +2870,7 @@ export class ChameleonUltra {
     if (!Buffer.isBuffer(data) || data.length !== 64) throw new TypeError('data should be a Buffer with length 64')
     if (!this.mf1IsValidAcl(data)) throw new TypeError('Invalid ACL bytes of data')
     const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
-    if (_.keys(sectorKey).length === 0) throw new Error('No valid key')
+    if (_.isEmpty(sectorKey)) throw new Error('No valid key')
     const success = _.times(4, () => false)
     for (let i = 0; i < 4; i++) {
       for (const keyType of [Mf1KeyType.KEY_B, Mf1KeyType.KEY_A]) {
@@ -2792,7 +2891,7 @@ export class ChameleonUltra {
 
   /**
    * Check acl bytes of ACL, block or sector.
-   * @param data Data of ACL, block or sector.
+   * @param data - Data of ACL, block or sector.
    * @returns `true` if the acl bytes is valid, `false` otherwise.
    * @group Mifare Classic Related
    * @example

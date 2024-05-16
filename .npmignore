@@ -156,3 +156,4 @@ out
 /src/example
 /tsconfig.*.json
 /tsconfig.json
+/tsdoc.json
