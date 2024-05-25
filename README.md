@@ -4,7 +4,11 @@
 
 <p>A JavaScript SDK for ChameleonUltra support Web Bluetooth API, Web Serial API and Node.js.</p>
 
-[API Reference](https://taichunmin.idv.tw/chameleon-ultra.js/docs/) | [Demos](https://github.com/taichunmin/chameleon-ultra.js/blob/master/pages/demos.md)
+<p>
+<a href="https://github.com/taichunmin/chameleon-ultra.js/blob/master/pages/demos.md"><b>Demo</b></a> •
+<a href="https://taichunmin.idv.tw/chameleon-ultra.js/"><b>Documentation</b></a> •
+<a href="https://taichunmin.idv.tw/chameleon-ultra.js/classes/index.ChameleonUltra.html"><b>Reference</b></a>
+</p>
 
 [![npm version](https://img.shields.io/npm/v/chameleon-ultra.js.svg?logo=npm)](https://www.npmjs.org/package/chameleon-ultra.js)
 [![jsdelivr hits](https://img.shields.io/jsdelivr/npm/hm/chameleon-ultra.js?logo=jsdelivr)](https://www.jsdelivr.com/package/npm/chameleon-ultra.js)
@@ -20,22 +24,6 @@
 </div>
 
 ![](https://i.imgur.com/bWJGSGq.png)
-
-## TOC
-
-- [TOC](#toc)
-- [Browser \& OS compatibility](#browser--os-compatibility)
-  - [SerialPort (Node.js)](#serialport-nodejs)
-  - [Web Bluetooth API](#web-bluetooth-api)
-  - [Web Serial API](#web-serial-api)
-  - [Web Serial API Polyfill](#web-serial-api-polyfill)
-- [Installing](#installing)
-  - [Package manager](#package-manager)
-  - [CDN](#cdn)
-- [Getting Started](#getting-started)
-  - [Slot Enable and Emulate Mifare 1K](#slot-enable-and-emulate-mifare-1k)
-  - [Set new BLE Pairing Key and Enable BLE Pairing](#set-new-ble-pairing-key-and-enable-ble-pairing)
-- [Related links](#related-links)
 
 ## Browser & OS compatibility
 
@@ -63,38 +51,30 @@ On Android, support for USB-based serial ports is possible using the WebUSB API 
 
 ### Package manager
 
-Using npm:
+Use npm or yarn to install the package.
 
 ```bash
+# Use npm
 $ npm install chameleon-ultra.js
 
-# Also install SerialPort if you want to run in node.js
-$ npm install serialport
-```
-
-Using yarn:
-
-```bash
+# Use yarn
 $ yarn add chameleon-ultra.js
-
-# Also install SerialPort if you want to run in node.js
-$ yarn add serialport
 ```
 
 Once the package is installed, you can import the library using `import` or `require`:
 
 ```js
 // import
-import { ChameleonUltra } from 'chameleon-ultra.js'
+import { Buffer, ChameleonUltra } from 'chameleon-ultra.js'
+import SerialPortAdapter from 'chameleon-ultra.js/plugin/SerialPortAdapter'
 import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
 import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
-import SerialPortAdapter from 'chameleon-ultra.js/plugin/SerialPortAdapter'
 
 // require
-const { ChameleonUltra } = require('chameleon-ultra.js')
+const { Buffer, ChameleonUltra } = require('chameleon-ultra.js')
+const SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
 const WebbleAdapter = require('chameleon-ultra.js/plugin/WebbleAdapter')
 const WebserialAdapter = require('chameleon-ultra.js/plugin/WebserialAdapter')
-const SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
 ```
 
 ### CDN
@@ -102,24 +82,33 @@ const SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
 Using jsDelivr CDN:
 
 ```html
-<!-- chameleon-ultra.js require lodash@4, place before any chameleon-ultra libraries -->
-<script src="https://cdn.jsdelivr.net/npm/lodash@4/lodash.min.js"></script>
+<!-- script -->
+<script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.global.js"></script>
+<script>
+  const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+</script>
 
-<!-- chameleon-ultra.js Core -->
-<script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/index.min.js"></script>
-<!-- chameleon-ultra.js Crypto1 -->
-<script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/Crypto1.min.js"></script>
-<!-- chameleon-ultra.js WebbleAdapter plugin -->
-<script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebbleAdapter.min.js"></script>
-<!-- chameleon-ultra.js WebserialAdapter plugin -->
-<script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebserialAdapter.min.js"></script>
+<!-- module -->
+<script type="module">
+  import { Buffer, ChameleonUltra } from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm'
+  import WebbleAdapter from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm'
+  import WebserialAdapter from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm'
+</script>
+
+<!-- module + async import -->
+<script type="module">
+  const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm')
+  const { default: WebbleAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm')
+  const { default: WebserialAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm')
+</script>
 ```
 
-After the `script` tag, you can use the `chameleon-ultra.js` as following:
+After importing the SDK, you need to register exactly one adapter to the `ChameleonUltra` instance:
 
 ```js
-const { Buffer, ChameleonUltra, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
-
 const ultraUsb = new ChameleonUltra()
 ultraUsb.use(new WebserialAdapter())
 const ultraBle = new ChameleonUltra()
@@ -132,7 +121,7 @@ ultraBle.use(new WebbleAdapter())
 
 ```js
 async function run (ultra) {
-  const { Buffer, DeviceMode, FreqType, Slot, TagType } = window.ChameleonUltraJS
+  const { Buffer, DeviceMode, FreqType, Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm')
   // set slot tag type and reset data
   await ultra.cmdSlotChangeTagType(Slot.SLOT_8, TagType.MIFARE_1024)
   await ultra.cmdSlotResetTagType(Slot.SLOT_8, TagType.MIFARE_1024)
@@ -157,7 +146,8 @@ async function run (ultra) {
 await run(vm.ultra)
 
 // or run with new ChaneleonUltra instance
-const { ChameleonUltra, WebserialAdapter } = window.ChameleonUltraJS
+const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm')
+const { default: WebserialAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm')
 const ultraUsb = new ChameleonUltra()
 ultraUsb.use(new WebserialAdapter())
 await run(ultraUsb)
@@ -176,7 +166,8 @@ async function run (ultra) {
 await run(vm.ultra)
 
 // or run with new ChaneleonUltra instance
-const { ChameleonUltra, WebserialAdapter } = window.ChameleonUltraJS
+const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm')
+const { default: WebserialAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm')
 const ultraUsb = new ChameleonUltra()
 ultraUsb.use(new WebserialAdapter())
 await run(ultraUsb)

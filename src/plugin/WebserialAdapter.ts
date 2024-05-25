@@ -1,7 +1,18 @@
 import _ from 'lodash'
-import { serial, type SerialPort } from './WebSerialPolyfill'
 import { sleep } from '../helper'
 import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
+import { serial, type SerialPort } from 'web-serial-polyfill'
+
+type SerialPort1 = SerialPort & {
+  addEventListener: (
+    eventName: string,
+    listener: (...args: any[]) => void,
+    opts?: {
+      once: boolean
+    }
+  ) => any
+}
+const serial1: typeof serial = serial ?? (globalThis as any).serial
 
 const WEBSERIAL_FILTERS = [
   { usbVendorId: 0x6868, usbProductId: 0x8686 }, // Chameleon Tiny
@@ -11,7 +22,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
   isOpen: boolean = false
   logger: Record<string, Logger> = {}
   name = 'adapter'
-  port?: SerialPort
+  port?: SerialPort1
 
   static u16ToHex (num: number): string {
     return _.toUpper(`000${num.toString(16)}`.slice(-4))
@@ -24,14 +35,14 @@ export default class WebserialAdapter implements ChameleonPlugin {
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))
     const adapter: any = {}
 
-    adapter.isSupported = (): boolean => !_.isNil(serial)
+    adapter.isSupported = (): boolean => !_.isNil(serial1)
 
     ultra.addHook('connect', async (ctx: any, next: () => Promise<unknown>) => {
       if (ultra.$adapter !== adapter) return await next() // 代表已經被其他 adapter 接管
 
       try {
         if (adapter.isSupported() !== true) throw new Error('WebSerial not supported')
-        this.port = await serial.requestPort({ filters: WEBSERIAL_FILTERS })
+        this.port = await serial1.requestPort({ filters: WEBSERIAL_FILTERS }) as SerialPort1
         if (_.isNil(this.port)) throw new Error('user canceled')
 
         // port.open
@@ -64,6 +75,8 @@ export default class WebserialAdapter implements ChameleonPlugin {
     return adapter as AdapterInstallResp
   }
 }
+
+;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).WebserialAdapter = WebserialAdapter // eslint-disable-line @typescript-eslint/prefer-optional-chain
 
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }

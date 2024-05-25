@@ -1,16 +1,15 @@
 {
   "author": "taichunmin <taichunmin@gmail.com>",
-  "browser": "dist/iife/index.min.js",
+  "browser": "dist/index.global.js",
   "description": "A JavaScript SDK for ChameleonUltra using Web Bluetooth, Web Serial and SerialPort.",
-  "homepage": "https://taichunmin.idv.tw/chameleon-ultra.js/docs/",
-  "jsdelivr": "dist/iife/index.min.js",
+  "homepage": "https://taichunmin.idv.tw/chameleon-ultra.js/",
+  "jsdelivr": "dist/index.global.js",
   "license": "MIT",
   "main": "index.js",
   "name": "chameleon-ultra.js",
   "repository": "git@github.com:taichunmin/chameleon-ultra.js.git",
-  "type": "module",
-  "unpkg": "dist/iife/index.min.js",
-  "version": "0.2.22",
+  "unpkg": "dist/index.global.js",
+  "version": "0.3.0",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -22,133 +21,118 @@
     }
   ],
   "dependencies": {
+    "@taichunmin/buffer": "^0.13.0",
     "debug": "^4.3.4",
     "lodash": "^4.17.21",
-    "serialport": "^12.0.0",
-    "web-serial-polyfill": "^1.0.15",
-    "webbluetooth": "^3.2.1"
+    "serialport": "^12.0.0"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^25.0.7",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^11.1.6",
     "@tsconfig/node-lts": "^20.1.3",
     "@types/debug": "^4.1.12",
     "@types/finalhandler": "^1.2.3",
     "@types/html-minifier": "^4.0.5",
     "@types/jest": "^29.5.12",
     "@types/livereload": "^0.9.5",
-    "@types/lodash": "^4.17.1",
-    "@types/node": "^20.12.11",
+    "@types/lodash": "^4.17.4",
+    "@types/node": "^20.12.13",
     "@types/pug": "^2.0.10",
     "@types/serve-static": "^1.15.7",
     "@types/uglify-js": "^3.17.5",
     "@types/web-bluetooth": "^0.0.20",
-    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/eslint-plugin": "^7.11.0",
+    "@typescript-eslint/parser": "^7.11.0",
     "chokidar": "^3.6.0",
     "concurrently": "^8.2.2",
     "dayjs": "^1.11.11",
     "dotenv": "^16.4.5",
-    "eslint": "^8.57.0",
-    "eslint-config-standard-with-typescript": "^43.0.0",
+    "esbuild-plugins-node-modules-polyfill": "^1.6.4",
+    "eslint-config-love": "^43",
+    "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-n": "^17.6.0",
-    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-n": "^17.7.0",
+    "eslint-plugin-promise": "^6.2.0",
     "eslint-plugin-pug": "^1.2.5",
-    "eslint-plugin-tsdoc": "^0.2.17",
+    "eslint-plugin-tsdoc": "^0.3.0",
+    "eslint": "^8.57.0",
     "finalhandler": "^1.2.0",
     "html-minifier": "^4.0.0",
     "jest": "^29.7.0",
     "jstransformer-sass": "^1.0.0",
     "livereload": "^0.9.3",
     "node-watch": "^0.7.4",
-    "nodemon": "^3.1.0",
-    "pug": "^3.0.2",
-    "rimraf": "^5.0.5",
-    "rollup": "^4.17.2",
-    "rollup-plugin-dts": "^6.1.0",
-    "rollup-plugin-polyfill-node": "^0.13.0",
-    "rollup-plugin-version-injector": "^1.3.3",
+    "nodemon": "^3.1.2",
+    "pug": "^3.0.3",
+    "rimraf": "^5.0.7",
     "serve-static": "^1.15.0",
     "supports-color": "^9.4.0",
-    "ts-jest": "^29.1.2",
-    "tslib": "^2.6.2",
-    "tsx": "^4.9.3",
-    "typedoc": "^0.25.13",
-    "typedoc-plugin-mdn-links": "^3.1.24",
+    "ts-jest": "^29.1.4",
+    "tsup": "^8.0.2",
+    "tsx": "^4.11.0",
+    "typedoc-plugin-mdn-links": "^3.1.27",
     "typedoc-plugin-missing-exports": "^2.2.0",
     "typedoc-plugin-rename-defaults": "^0.7.0",
     "typedoc-plugin-zod": "^1.1.2",
+    "typedoc": "^0.25.13",
     "typescript": "^5.4.5",
-    "uglify-js": "^3.17.4",
-    "utility-types": "^3.11.0"
+    "utility-types": "^3.11.0",
+    "web-serial-polyfill": "^1.0.15",
+    "webbluetooth": "^3.2.1"
   },
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "browser": "./dist/iife/index.min.js",
+      "browser": "./dist/index.global.js",
       "import": {
-        "default": "./dist/es/index.mjs",
-        "types": "./dist/es/index.d.mts"
+        "default": "./dist/index.mjs",
+        "types": "./dist/index.d.mts"
       },
       "require": {
-        "default": "./dist/cjs/index.cjs",
-        "types": "./dist/cjs/index.d.cts"
+        "default": "./dist/index.js",
+        "types": "./dist/index.d.ts"
       }
     },
     "./Crypto1": {
-      "browser": "./dist/iife/Crypto1.min.js",
+      "browser": "./dist/Crypto1.global.js",
       "import": {
-        "default": "./dist/es/Crypto1.mjs",
-        "types": "./dist/es/Crypto1.d.mts"
+        "default": "./dist/Crypto1.mjs",
+        "types": "./dist/Crypto1.d.mts"
       },
       "require": {
-        "default": "./dist/cjs/Crypto1.cjs",
-        "types": "./dist/cjs/Crypto1.d.cts"
-      }
-    },
-    "./buffer": {
-      "browser": "./dist/iife/buffer.min.js",
-      "import": {
-        "default": "./dist/es/buffer.mjs",
-        "types": "./dist/es/buffer.d.mts"
-      },
-      "require": {
-        "default": "./dist/cjs/buffer.cjs",
-        "types": "./dist/cjs/buffer.d.cts"
+        "default": "./dist/Crypto1.js",
+        "types": "./dist/Crypto1.d.ts"
       }
     },
     "./plugin/SerialPortAdapter": {
+      "browser": "./dist/plugin/SerialPortAdapter.global.js",
       "import": {
-        "default": "./dist/es/plugin/SerialPortAdapter.mjs",
-        "types": "./dist/es/plugin/SerialPortAdapter.d.mts"
+        "default": "./dist/plugin/SerialPortAdapter.mjs",
+        "types": "./dist/plugin/SerialPortAdapter.d.mts"
       },
       "require": {
-        "default": "./dist/cjs/plugin/SerialPortAdapter.cjs",
-        "types": "./dist/cjs/plugin/SerialPortAdapter.d.cts"
+        "default": "./dist/plugin/SerialPortAdapter.js",
+        "types": "./dist/plugin/SerialPortAdapter.d.ts"
       }
     },
     "./plugin/WebbleAdapter": {
-      "browser": "./dist/iife/plugin/WebbleAdapter.min.js",
+      "browser": "./dist/plugin/WebbleAdapter.global.js",
       "import": {
-        "default": "./dist/es/plugin/WebbleAdapter.mjs",
-        "types": "./dist/es/plugin/WebbleAdapter.d.mts"
+        "default": "./dist/plugin/WebbleAdapter.mjs",
+        "types": "./dist/plugin/WebbleAdapter.d.mts"
       },
       "require": {
-        "default": "./dist/cjs/plugin/WebbleAdapter.cjs",
-        "types": "./dist/cjs/plugin/WebbleAdapter.d.cts"
+        "default": "./dist/plugin/WebbleAdapter.js",
+        "types": "./dist/plugin/WebbleAdapter.d.ts"
       }
     },
     "./plugin/WebserialAdapter": {
-      "browser": "./dist/iife/plugin/WebserialAdapter.min.js",
+      "browser": "./dist/plugin/WebserialAdapter.global.js",
       "import": {
-        "default": "./dist/es/plugin/WebserialAdapter.mjs",
-        "types": "./dist/es/plugin/WebserialAdapter.d.mts"
+        "default": "./dist/plugin/WebserialAdapter.mjs",
+        "types": "./dist/plugin/WebserialAdapter.d.mts"
       },
       "require": {
-        "default": "./dist/cjs/plugin/WebserialAdapter.cjs",
-        "types": "./dist/cjs/plugin/WebserialAdapter.d.cts"
+        "default": "./dist/plugin/WebserialAdapter.js",
+        "types": "./dist/plugin/WebserialAdapter.d.ts"
       }
     }
   },
@@ -173,20 +157,21 @@
     "**/jstransformer-scss": "^2.0.0"
   },
   "scripts": {
-    "build": "set -ex && rimraf ./dist && mkdir -p dist && cp -r public/* dist && yarn build:dts && tsx ./pug/build.ts && rollup --config rollup.config.mjs && yarn docs && tsx ./sitemap.ts && touch ./dist/.nojekyll",
-    "build:dts": "tsc -p tsconfig.types.json --emitDeclarationOnly",
-    "dev": "DEBUG_COLORS=1 concurrently --names \"DOC,HTTPS,PUBLIC,PUG,TS\" -c \"bgGray,bgGreen,bgGray,bgBlue,bgYellow\" \"yarn dev:docs\" \"yarn dev:https\" \"yarn dev:public\" \"yarn dev:pug\" \"yarn dev:ts\"",
-    "dev:docs": "nodemon --watch src --watch pages --ext ts,md --exec \"yarn docs\"",
+    "build:docs": "typedoc && tsx ./typedoc.ts",
+    "build:js": "tsup",
+    "build:pug": "tsx ./pug/build.ts",
+    "build:sitemap": "tsx ./sitemap.ts",
+    "build": "yarn build:js && yarn build:docs && yarn build:pug && yarn build:sitemap",
+    "dev:docs": "nodemon --watch src --ext ts,md --exec \"yarn build:docs\"",
     "dev:https": "tsx ./https.ts",
-    "dev:public": "nodemon --watch public --ext svg,png,jpg,jpeg --exec \"cp -r public/* dist\"",
-    "dev:pug": "nodemon --watch pug --ext pug --exec \"tsx ./pug/build.ts\"",
-    "dev:ts": "nodemon --watch src --ext ts,json --exec \"rollup --config rollup.config.mjs\"",
-    "docs": "typedoc && tsx ./typedoc.ts",
+    "dev:js": "yarn build:js --watch",
+    "dev:pug": "nodemon --watch pug --ext pug --exec \"yarn build:pug\"",
+    "dev": "DEBUG_COLORS=1 concurrently --names \"DOC,HTTPS,PUBLIC,PUG,TS\" -c \"bgGray,bgGreen,bgGray,bgBlue,bgYellow\" \"yarn dev:docs\" \"yarn dev:https\" \"yarn dev:public\" \"yarn dev:pug\" \"yarn dev:js\"",
+    "lint:ci": "eslint --ext .mjs,.js,.js,.ts,.pug .",
     "lint": "yarn lint:ci --fix",
-    "lint:ci": "eslint --ext .mjs,.cjs,.js,.ts,.pug .",
     "mkcert": "mkdir ./mkcert && mkcert -key-file ./mkcert/key.pem -cert-file ./mkcert/cert.pem -ecdsa localhost",
     "publish:test": "npm publish --dry-run",
-    "test": "jest --roots ./src --",
-    "test:ci": "jest --roots ./src --ci --coverage"
+    "test:ci": "jest --roots ./src --ci --coverage",
+    "test": "jest --roots ./src --"
   }
 }

@@ -5,16 +5,16 @@ module.exports = {
     "jest": true,
     "node": true
   },
-  extends: ['standard-with-typescript'],
+  extends: ['love'],
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc'],
-  root: true,
   parserOptions: {
-    project: './tsconfig.json'
+    project: true,
   },
   rules: {
     '@typescript-eslint/no-unsafe-argument': 'off',
     '@typescript-eslint/return-await': 'off',
+    '@typescript-eslint/strict-boolean-expressions': 'off',
     'multiline-ternary': 'off',
     'no-extra-boolean-cast': 'off',
     'no-return-await': 'off',
@@ -33,9 +33,11 @@ module.exports = {
       arrays: 'always-multiline',
       enums: 'always-multiline',
       exports: 'always-multiline',
-      functions: 'only-multiline',
+      generics: 'always-multiline',
       imports: 'always-multiline',
       objects: 'always-multiline',
+      tuples: 'always-multiline',
+      functions: 'only-multiline',
     }],
     '@typescript-eslint/unbound-method': ['error', {
       ignoreStatic: true,

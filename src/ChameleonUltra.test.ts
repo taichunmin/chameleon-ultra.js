@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { Buffer } from './buffer'
+import { Buffer } from '@taichunmin/buffer'
 import { ChameleonUltra } from './ChameleonUltra'
 import BufferMockAdapter from './plugin/BufferMockAdapter'
 import {

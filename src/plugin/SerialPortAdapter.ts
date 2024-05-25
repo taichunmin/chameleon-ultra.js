@@ -62,6 +62,8 @@ export default class SerialPortAdapter implements ChameleonPlugin {
   }
 }
 
+;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).SerialPortAdapter = SerialPortAdapter // eslint-disable-line @typescript-eslint/prefer-optional-chain
+
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }
 }

@@ -1,4 +1,7 @@
-export { Buffer } from './buffer'
+/** SDK version of chameleon-ultra.js */
+export const version = process.env.VERSION ?? 'unknown'
+
+export { Buffer } from '@taichunmin/buffer'
 export { ChameleonUltra } from './ChameleonUltra'
 export {
   AnimationMode,
@@ -16,6 +19,3 @@ export {
   Slot,
   TagType,
 } from './enums'
-
-/** The version of `chameleon-ultra.js`. */
-export const version: string = '[VI]{version}[/VI]'
