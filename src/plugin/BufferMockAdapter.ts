@@ -1,7 +1,10 @@
 import _ from 'lodash'
 import { ReadableStream, WritableStream, type ReadableStreamController } from 'node:stream/web'
-import { type Buffer } from '../buffer'
+import { type Buffer } from '@taichunmin/buffer'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
+
+const ReadableStream1: typeof ReadableStream = ReadableStream ?? (globalThis as any).ReadableStream
+const WritableStream1: typeof WritableStream = WritableStream ?? (globalThis as any).WritableStream
 
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }
@@ -26,12 +29,12 @@ export default class BufferMockAdapter implements ChameleonPlugin {
 
       this.port = {
         isOpen: () => true,
-        readable: new ReadableStream({
+        readable: new ReadableStream1({
           start: async controller => {
             this.controller = controller
           },
         }),
-        writable: new WritableStream({
+        writable: new WritableStream1({
           write: async chunk => {
             this.recv.push(chunk)
             if (this.sendIdx >= this.send.length) return // no more data to send
@@ -47,3 +50,5 @@ export default class BufferMockAdapter implements ChameleonPlugin {
     return adapter
   }
 }
+
+;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).BufferMockAdapter = BufferMockAdapter // eslint-disable-line @typescript-eslint/prefer-optional-chain

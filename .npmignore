@@ -149,7 +149,7 @@ out
 /.github
 /.rollup.cache
 /*.ts
-/dist/docs
+/dist/assets
 /jest.config.cjs
 /pages
 /pug
@@ -157,3 +157,4 @@ out
 /tsconfig.*.json
 /tsconfig.json
 /tsdoc.json
+/typedoc.json

@@ -1,9 +1,13 @@
 import _ from 'lodash'
-import { bluetooth } from 'webbluetooth'
-import { Buffer } from '../buffer'
+import { type bluetooth } from 'webbluetooth'
+import { Buffer } from '@taichunmin/buffer'
 import { ReadableStream, type ReadableStreamDefaultController, type UnderlyingSink, type UnderlyingSource, WritableStream } from 'node:stream/web'
 import { sleep } from '../helper'
 import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
+
+const bluetooth1: typeof bluetooth = (globalThis as any).bluetooth
+const ReadableStream1: typeof ReadableStream = ReadableStream ?? (globalThis as any).ReadableStream
+const WritableStream1: typeof WritableStream = WritableStream ?? (globalThis as any).WritableStream
 
 const BLESERIAL_FILTERS = [
   { name: 'ChameleonUltra' },
@@ -37,7 +41,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))
     const adapter: any = {}
 
-    const _isSupported = await bluetooth?.getAvailability() ?? false
+    const _isSupported = await bluetooth1?.getAvailability() ?? false
     adapter.isSupported = (): boolean => _isSupported
 
     // connect gatt
@@ -48,7 +52,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
 
       try {
         if (adapter.isSupported() !== true) throw new Error('WebSerial not supported')
-        this.device = await bluetooth?.requestDevice({
+        this.device = await bluetooth1?.requestDevice({
           filters: BLESERIAL_FILTERS,
           optionalServices: _.uniq(_.map(BLESERIAL_UUID, 'serv')),
         })
@@ -94,8 +98,8 @@ export default class WebbleAdapter implements ChameleonPlugin {
 
         ultra.port = {
           isOpen: () => { return this.isOpen },
-          readable: new ReadableStream(this.rxSource),
-          writable: new WritableStream(this.txSink),
+          readable: new ReadableStream1(this.rxSource),
+          writable: new WritableStream1(this.txSink),
         }
         return await next()
       } catch (err) {
@@ -126,6 +130,8 @@ export default class WebbleAdapter implements ChameleonPlugin {
     return adapter as AdapterInstallResp
   }
 }
+
+;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).WebbleAdapter = WebbleAdapter // eslint-disable-line @typescript-eslint/prefer-optional-chain
 
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }

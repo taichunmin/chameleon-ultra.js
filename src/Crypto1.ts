@@ -3,7 +3,7 @@
  * import Crypto1 from 'chameleon-ultra.js/Crypto1'
  */
 import _ from 'lodash'
-import { Buffer } from './buffer'
+import { Buffer } from '@taichunmin/buffer'
 import { Mf1KeyType } from './enums'
 
 const LF_POLY_ODD = 0x29CE5C
@@ -1135,6 +1135,8 @@ export default class Crypto1 {
     throw new Error(`failed to find key, darkside attempts = ${attempts}, keys checked = ${checkedKeys.size}`)
   }
 }
+
+;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).Crypto1 = Crypto1 // eslint-disable-line @typescript-eslint/prefer-optional-chain
 
 type UInt32Like = Buffer | number | string
 

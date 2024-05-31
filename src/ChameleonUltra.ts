@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { Buffer } from './buffer'
+import { Buffer } from '@taichunmin/buffer'
 import { debug as createDebugger, type Debugger } from 'debug'
 import { errToJson, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
@@ -37,6 +37,8 @@ const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
 const VERSION_SUPPORTED = { gte: '2.0', lt: '3.0' } as const
 
+const WritableStream1: typeof WritableStream = WritableStream ?? (globalThis as any).WritableStream
+
 function isMf1BlockNo (block: any): boolean {
   return _.isInteger(block) && block >= 0 && block <= 0xFF
 }
@@ -51,23 +53,16 @@ function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string
  * The core library of "chameleon-ultra.js". The instance of this class must use exactly one adapter plugin to communication to ChameleonUltra.
  */
 export class ChameleonUltra {
-  /**
-   * @internal
-   * @group Internal
-   */
-  debug: boolean
+  #isDisconnecting: boolean = false
+  #rxSink?: ChameleonRxSink
+  #supportedCmds: Set<Cmd> = new Set<Cmd>()
+  readonly #debug: boolean
 
   /**
    * @internal
    * @group Internal
    */
   hooks: Record<string, MiddlewareComposeFn[]>
-
-  /**
-   * @internal
-   * @group Internal
-   */
-  isDisconnecting: boolean = false
 
   /**
    * @internal
@@ -91,19 +86,7 @@ export class ChameleonUltra {
    * @internal
    * @group Internal
    */
-  rxSink?: ChameleonRxSink
-
-  /**
-   * @internal
-   * @group Internal
-   */
-  supportedCmds: Set<Cmd> = new Set<Cmd>()
-
-  /**
-   * @internal
-   * @group Internal
-   */
-  deviceMode: DeviceMode | null = null
+  #deviceMode: DeviceMode | null = null
 
   /**
    * The supported version of SDK.
@@ -118,11 +101,10 @@ export class ChameleonUltra {
    * Example usage in Browser (place at the end of body):
    *
    * ```html
-   * <script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/index.min.js"></script>
-   * <script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebbleAdapter.min.js"></script>
-   * <script src="https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebserialAdapter.min.js"></script>
-   * <script>
-   *   const { ChameleonUltra, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS
+   * <script type="module">
+   *   import { Buffer, ChameleonUltra } from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm'
+   *   import WebbleAdapter from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm'
+   *   import WebserialAdapter from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm'
    *
    *   const ultraUsb = new ChameleonUltra()
    *   ultraUsb.use(new WebserialAdapter())
@@ -135,43 +117,43 @@ export class ChameleonUltra {
    * Example usage in CommonJS:
    *
    * ```js
-   * const { ChameleonUltra } = require('chameleon-ultra.js')
+   * const { Buffer, ChameleonUltra } = require('chameleon-ultra.js')
+   * const SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
    * const WebbleAdapter = require('chameleon-ultra.js/plugin/WebbleAdapter')
    * const WebserialAdapter = require('chameleon-ultra.js/plugin/WebserialAdapter')
-   * const SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
+   *
+   * const ultraNode = new ChameleonUltra()
+   * ultraNode.use(new SerialPortAdapter())
    *
    * const ultraUsb = new ChameleonUltra()
    * ultraUsb.use(new WebserialAdapter())
    *
    * const ultraBle = new ChameleonUltra()
    * ultraBle.use(new WebbleAdapter())
-   *
-   * const ultraNode = new ChameleonUltra()
-   * ultraNode.use(new SerialPortAdapter())
    * ```
    *
    * Example usage in ESM:
    *
    * ```js
-   * import { ChameleonUltra } from 'chameleon-ultra.js'
+   * import { Buffer, ChameleonUltra } from 'chameleon-ultra.js'
+   * import SerialPortAdapter from 'chameleon-ultra.js/plugin/SerialPortAdapter'
    * import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
    * import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
-   * import SerialPortAdapter from 'chameleon-ultra.js/plugin/SerialPortAdapter'
+   *
+   * const ultraNode = new ChameleonUltra()
+   * ultraNode.use(new SerialPortAdapter())
    *
    * const ultraUsb = new ChameleonUltra()
    * ultraUsb.use(new WebserialAdapter())
    *
    * const ultraBle = new ChameleonUltra()
    * ultraBle.use(new WebbleAdapter())
-   *
-   * const ultraNode = new ChameleonUltra()
-   * ultraNode.use(new SerialPortAdapter())
    * ```
    */
   constructor (debug = false) {
     this.hooks = {}
     this.plugins = new Map()
-    this.debug = debug
+    this.#debug = debug
     _.extend(this.logger, {
       core: this.createDebugger('core'),
       resp: this.createDebugger('resp'),
@@ -185,7 +167,7 @@ export class ChameleonUltra {
    * @group Plugin Related
    */
   createDebugger (name: string): Logger {
-    if (!this.debug) return (...args: any[]) => {}
+    if (!this.#debug) return (...args: any[]) => {}
     return createDebugger(`ultra:${name}`)
   }
 
@@ -237,9 +219,9 @@ export class ChameleonUltra {
         if (_.isNil(this.port)) throw new Error('this.port is undefined. Did you remember to use adapter plugin?')
 
         // serial.readable pipeTo this.rxSink
-        this.rxSink = new ChameleonRxSink()
-        void this.port.readable.pipeTo(new WritableStream(this.rxSink), {
-          signal: this.rxSink.signal,
+        this.#rxSink = new ChameleonRxSink()
+        void this.port.readable.pipeTo(new WritableStream1(this.#rxSink), {
+          signal: this.#rxSink.signal,
         }).catch(async err => {
           if (err.message === 'disconnect()') return // disconnected by invoke disconnect()
           await this.disconnect(_.merge(new Error(`Failed to read resp: ${err.message}`), { originalError: err }))
@@ -260,17 +242,17 @@ export class ChameleonUltra {
    */
   async disconnect (err: Error = new Error('disconnect()')): Promise<void> {
     try {
-      if (this.isDisconnecting) return
+      if (this.#isDisconnecting) return
       this.logger.core('%s %O', err.message, errToJson(err))
-      this.isDisconnecting = true // 避免重複執行
+      this.#isDisconnecting = true // 避免重複執行
       await this.invokeHook('disconnect', { err }, async (ctx, next) => {
         try {
           // clean up
-          this.deviceMode = null
-          this.supportedCmds.clear()
+          this.#deviceMode = null
+          this.#supportedCmds.clear()
 
           // close port
-          this.rxSink?.controller.abort(err)
+          this.#rxSink?.controller.abort(err)
           while (this.port?.readable?.locked === true) await sleep(10)
           await this.port?.readable?.cancel(err)
           await this.port?.writable?.close()
@@ -280,7 +262,7 @@ export class ChameleonUltra {
         }
       })
     } finally {
-      this.isDisconnecting = false
+      this.#isDisconnecting = false
     }
   }
 
@@ -358,7 +340,7 @@ export class ChameleonUltra {
    * @group Internal
    */
   _clearRxBufs (): Buffer[] {
-    return this.rxSink?.bufs.splice(0, this.rxSink.bufs.length) ?? []
+    return this.#rxSink?.bufs.splice(0, this.#rxSink.bufs.length) ?? []
   }
 
   /**
@@ -376,7 +358,7 @@ export class ChameleonUltra {
     }
     return await this.invokeHook('_readRespTimeout', { timeout }, async (ctx: Context, next) => {
       if (!this.isConnected()) await this.connect()
-      if (_.isNil(this.rxSink)) throw new Error('rxSink is undefined')
+      if (_.isNil(this.#rxSink)) throw new Error('rxSink is undefined')
       ctx.timeout = ctx.timeout ?? READ_DEFAULT_TIMEOUT
       ctx.startedAt = Date.now()
       while (true) {
@@ -397,7 +379,7 @@ export class ChameleonUltra {
           ctx.resp = new ChameleonUltraFrame(buf.subarray(0, lenFrame))
           if (!_.isNil(cmd) && ctx.resp.cmd !== cmd) throw _.merge(new Error(`expect cmd=${cmd} but receive cmd=${ctx.resp.cmd}`), { skip: lenFrame })
           // resp is valid
-          if (buf.length > lenFrame) this.rxSink.bufs.unshift(buf.subarray(lenFrame))
+          if (buf.length > lenFrame) this.#rxSink.bufs.unshift(buf.subarray(lenFrame))
           break
         } catch (err) {
           const skip = err.skip ?? 0
@@ -405,7 +387,7 @@ export class ChameleonUltra {
             this.logger.respError(`readRespTimeout skip ${skip} byte(s), reason = ${err.message}`)
             buf = buf.subarray(skip)
           }
-          this.rxSink.bufs.unshift(buf)
+          this.#rxSink.bufs.unshift(buf)
         }
         await sleep(10)
       }
@@ -461,7 +443,7 @@ export class ChameleonUltra {
     const cmd = Cmd.CHANGE_DEVICE_MODE // cmd = 1001
     await this._writeCmd({ cmd, data: Buffer.pack('!B', mode) })
     await this._readRespTimeout({ cmd })
-    this.deviceMode = mode
+    this.#deviceMode = mode
   }
 
   /**
@@ -484,8 +466,8 @@ export class ChameleonUltra {
     const cmd = Cmd.GET_DEVICE_MODE // cmd = 1002
     await this._writeCmd({ cmd })
     const data = (await this._readRespTimeout({ cmd }))?.data
-    this.deviceMode = data[0]
-    return this.deviceMode
+    this.#deviceMode = data[0]
+    return this.#deviceMode
   }
 
   /**
@@ -493,7 +475,7 @@ export class ChameleonUltra {
    * @group Device Related
    */
   async assureDeviceMode (mode: DeviceMode): Promise<void> {
-    if (this.deviceMode === mode) return
+    if (this.#deviceMode === mode) return
     await this.cmdChangeDeviceMode(mode)
   }
 
@@ -1266,8 +1248,8 @@ export class ChameleonUltra {
    * ```
    */
   async isCmdSupported (cmd: Cmd): Promise<boolean> {
-    if (this.supportedCmds.size === 0) this.supportedCmds = await this.cmdGetSupportedCmds()
-    return this.supportedCmds.has(cmd)
+    if (this.#supportedCmds.size === 0) this.#supportedCmds = await this.cmdGetSupportedCmds()
+    return this.#supportedCmds.has(cmd)
   }
 
   /**

@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { Buffer } from './buffer'
+import { Buffer } from '@taichunmin/buffer'
 import { type Class } from 'utility-types'
 
 import {
