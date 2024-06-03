@@ -889,7 +889,7 @@ export default class Crypto1 {
    * @returns candidates keys
    * @example
    * ```js
-   * const { Mf1KeyType } = window.ChameleonUltraJS
+   * const { Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    * const args = {
    *   uid: 'b908a16d',
    *   keyType: Mf1KeyType.KEY_A,
@@ -1068,7 +1068,7 @@ export default class Crypto1 {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const block = 0
    *   const keyType = Mf1KeyType.KEY_A

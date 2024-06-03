@@ -5,7 +5,7 @@ import { ReadableStream, type ReadableStreamDefaultController, type UnderlyingSi
 import { sleep } from '../helper'
 import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
 
-const bluetooth1: typeof bluetooth = (globalThis as any).bluetooth
+const bluetooth1: typeof bluetooth = (globalThis as any)?.navigator?.bluetooth
 const ReadableStream1: typeof ReadableStream = ReadableStream ?? (globalThis as any).ReadableStream
 const WritableStream1: typeof WritableStream = WritableStream ?? (globalThis as any).WritableStream
 
