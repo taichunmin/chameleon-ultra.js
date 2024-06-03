@@ -1,9 +1,9 @@
 import _ from 'lodash'
 import { Buffer } from '@taichunmin/buffer'
-import { debug as createDebugger, type Debugger } from 'debug'
 import { errToJson, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { type ReadableStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
 import * as Decoder from './ResponseDecoder'
+import createDebugger, { type Debugger } from 'debug'
 
 import {
   Cmd,
@@ -102,7 +102,7 @@ export class ChameleonUltra {
    *
    * ```html
    * <script type="module">
-   *   import { Buffer, ChameleonUltra } from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm'
+   *   import { Buffer, ChameleonUltra } from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm'
    *   import WebbleAdapter from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm'
    *   import WebserialAdapter from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm'
    *

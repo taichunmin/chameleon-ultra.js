@@ -93,14 +93,14 @@ Using jsDelivr CDN:
 
 <!-- module -->
 <script type="module">
-  import { Buffer, ChameleonUltra } from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm'
+  import { Buffer, ChameleonUltra } from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm'
   import WebbleAdapter from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm'
   import WebserialAdapter from 'https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm'
 </script>
 
 <!-- module + async import -->
 <script type="module">
-  const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm')
+  const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
   const { default: WebbleAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm')
   const { default: WebserialAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm')
 </script>
@@ -121,7 +121,7 @@ ultraBle.use(new WebbleAdapter())
 
 ```js
 async function run (ultra) {
-  const { Buffer, DeviceMode, FreqType, Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm')
+  const { Buffer, DeviceMode, FreqType, Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
   // set slot tag type and reset data
   await ultra.cmdSlotChangeTagType(Slot.SLOT_8, TagType.MIFARE_1024)
   await ultra.cmdSlotResetTagType(Slot.SLOT_8, TagType.MIFARE_1024)
@@ -146,7 +146,7 @@ async function run (ultra) {
 await run(vm.ultra)
 
 // or run with new ChaneleonUltra instance
-const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm')
+const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
 const { default: WebserialAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm')
 const ultraUsb = new ChameleonUltra()
 ultraUsb.use(new WebserialAdapter())
@@ -166,7 +166,7 @@ async function run (ultra) {
 await run(vm.ultra)
 
 // or run with new ChaneleonUltra instance
-const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm')
+const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
 const { default: WebserialAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm')
 const ultraUsb = new ChameleonUltra()
 ultraUsb.use(new WebserialAdapter())
