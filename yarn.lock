@@ -1088,10 +1088,10 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@taichunmin/buffer@^0.13.0":
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/@taichunmin/buffer/-/buffer-0.13.0.tgz#6164cd0349ce52bde442dad410b2953700b1f6cb"
-  integrity sha512-XY7tvdml7QsnU2CL+yIzMHveLpWcLsOwasr0qcAsoMykx/01bkm+IGS5UWL/I3XvKYtAgZgDeP+YT1BDqcfyRg==
+"@taichunmin/buffer@^0.13.4":
+  version "0.13.4"
+  resolved "https://registry.yarnpkg.com/@taichunmin/buffer/-/buffer-0.13.4.tgz#8c5519a60c10d6eada4c0a3688f6188454cd0bfd"
+  integrity sha512-uwtPpQf7+S0mV6D4oM39NErrVkLkL0+RcyzKLZEkex3umngMhIQH/tin8eW5jGORwJJzcSeSTx58vMXD/jQRqA==
   dependencies:
     lodash "^4.17.21"
 

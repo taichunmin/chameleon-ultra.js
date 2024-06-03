@@ -85,12 +85,11 @@ jobs:
         uses: egad13/purge-jsdelivr-cache@v1
         with:
           url: |
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js/dist/iife/index.min.js
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js/dist/iife/Crypto1.min.js
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js/dist/iife/plugin/WebbleAdapter.min.js
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js/dist/iife/plugin/WebserialAdapter.min.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.global.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.global.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.global.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.global.js
 
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/index.min.js
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/Crypto1.min.js
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebbleAdapter.min.js
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/iife/plugin/WebserialAdapter.min.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm
