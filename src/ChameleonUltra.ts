@@ -430,7 +430,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode } = window.ChameleonUltraJS
+   *   const { DeviceMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
    * }
    *
@@ -453,7 +453,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceMode } = window.ChameleonUltraJS
+   *   const { DeviceMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const deviceMode = await ultra.cmdGetDeviceMode()
    *   console.log(DeviceMode[deviceMode]) // 'TAG'
    * }
@@ -486,7 +486,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Slot } = window.ChameleonUltraJS
+   *   const { Slot } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotSetActive(Slot.SLOT_1)
    * }
    *
@@ -509,7 +509,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Slot, TagType } = window.ChameleonUltraJS
+   *   const { Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotChangeTagType(Slot.SLOT_1, TagType.MIFARE_1024)
    * }
    *
@@ -533,7 +533,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Slot, TagType } = window.ChameleonUltraJS
+   *   const { Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotResetTagType(Slot.SLOT_1, TagType.MIFARE_1024)
    * }
    *
@@ -557,7 +557,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { FreqType, Slot } = window.ChameleonUltraJS
+   *   const { FreqType, Slot } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotSetEnable(Slot.SLOT_1, FreqType.HF, true)
    * }
    *
@@ -583,7 +583,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Slot, FreqType } = window.ChameleonUltraJS
+   *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotSetFreqName(Slot.SLOT_1, FreqType.HF, 'My Tag')
    * }
    *
@@ -611,7 +611,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Slot, FreqType } = window.ChameleonUltraJS
+   *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const name = await ultra.cmdSlotGetFreqName(Slot.SLOT_1, FreqType.HF)
    *   console.log(name) // 'My Tag'
    * }
@@ -639,7 +639,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdMf1EmuWriteBlock(1, Buffer.alloc(16))
    *   await ultra.cmdSlotSaveSettings()
    * }
@@ -761,7 +761,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { AnimationMode } = window.ChameleonUltraJS
+   *   const { AnimationMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSetAnimationMode(AnimationMode.SHORT)
    * }
    *
@@ -783,7 +783,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { AnimationMode } = window.ChameleonUltraJS
+   *   const { AnimationMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const mode = await ultra.cmdGetAnimationMode()
    *   console.log(AnimationMode[mode]) // 'FULL'
    * }
@@ -826,7 +826,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Slot } = window.ChameleonUltraJS
+   *   const { Slot } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const slot = await ultra.cmdSlotGetActive()
    *   console.log(Slot[slot]) // 'SLOT_1'
    * }
@@ -902,7 +902,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Slot, FreqType } = window.ChameleonUltraJS
+   *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(await ultra.cmdSlotDeleteFreqName(Slot.SLOT_1, FreqType.HF)) // true
    * }
    *
@@ -963,7 +963,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Slot, FreqType } = window.ChameleonUltraJS
+   *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotDeleteFreqType(Slot.SLOT_1, FreqType.HF)
    * }
    *
@@ -1008,7 +1008,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { ButtonAction, ButtonType } = window.ChameleonUltraJS
+   *   const { ButtonAction, ButtonType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const btnAction = await ultra.cmdGetButtonPressAction(ButtonType.BUTTON_A)
    *   console.log(ButtonAction[btnAction]) // 'CYCLE_SLOT_INC'
    * }
@@ -1032,7 +1032,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { ButtonAction, ButtonType } = window.ChameleonUltraJS
+   *   const { ButtonAction, ButtonType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSetButtonPressAction(ButtonType.BUTTON_A, ButtonAction.CYCLE_SLOT_INC)
    * }
    *
@@ -1056,7 +1056,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { ButtonAction, ButtonType } = window.ChameleonUltraJS
+   *   const { ButtonAction, ButtonType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const btnAction = await ultra.cmdGetButtonLongPressAction(ButtonType.BUTTON_A)
    *   console.log(ButtonAction[btnAction]) // 'CLONE_IC_UID'
    * }
@@ -1080,7 +1080,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { ButtonAction, ButtonType } = window.ChameleonUltraJS
+   *   const { ButtonAction, ButtonType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSetButtonLongPressAction(ButtonType.BUTTON_A, ButtonAction.CYCLE_SLOT_INC)
    * }
    *
@@ -1163,7 +1163,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DeviceModel } = window.ChameleonUltraJS
+   *   const { DeviceModel } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const model = await ultra.cmdGetDeviceModel()
    *   console.log(DeviceModel[model]) // 'ULTRA'
    * }
@@ -1351,7 +1351,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Mf1PrngType } = window.ChameleonUltraJS
+   *   const { Mf1PrngType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(Mf1PrngType[await ultra.cmdMf1TestPrngType()]) // 'WEAK'
    * }
    *
@@ -1380,7 +1380,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1AcquireStaticNested({
    *     block: 0,
@@ -1432,7 +1432,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Mf1KeyType, DarksideStatus } = window.ChameleonUltraJS
+   *   const { Mf1KeyType, DarksideStatus } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const res1 = await ultra.cmdMf1AcquireDarkside(0, Mf1KeyType.KEY_A, true)
    *   console.log(res1)
    *   const res2 = {
@@ -1465,7 +1465,7 @@ export class ChameleonUltra {
    *
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, DarksideStatus, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, DarksideStatus, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const block = 0
    *   const keyType = Mf1KeyType.KEY_A
    *   const key = await Crypto1.darkside(
@@ -1514,7 +1514,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
    *   const res2 = await ultra.cmdMf1AcquireNested(
@@ -1567,7 +1567,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
    *   const res2 = await ultra.cmdMf1AcquireNested(
@@ -1622,7 +1622,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   console.log(await ultra.cmdMf1CheckBlockKey({
    *     block: 0,
@@ -1661,7 +1661,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const block1 = await ultra.cmdMf1ReadBlock({
    *     block: 1,
@@ -1695,7 +1695,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const block1 = Buffer.from('00000000000000000000000000000000', 'hex')
    *   await ultra.cmdMf1WriteBlock({
@@ -1732,7 +1732,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Mf1PrngType } = window.ChameleonUltraJS
+   *   const { Mf1PrngType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const tag = _.first(await ultra.hf14aInfo())
    *   console.log(tag.nxpTypeBySak) // 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'
    *   console.log(Mf1PrngType[tag.prngType]) // 'WEAK'
@@ -1839,7 +1839,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
@@ -1884,7 +1884,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
@@ -1916,7 +1916,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
@@ -1951,7 +1951,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const mask = Buffer.from('00000000FFFFFFFFFFFF', 'hex')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const tsStart = Date.now()
@@ -2043,7 +2043,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdEm410xWriteToT55xx(Buffer.from('deadbeef88', 'hex'))
    * }
    *
@@ -2069,7 +2069,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdMf1EmuWriteBlock(1, Buffer.alloc(16))
    * }
    *
@@ -2095,7 +2095,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdHf14aSetAntiCollData({
    *     atqa: Buffer.from('0400', 'hex'),
    *     sak: Buffer.from('08', 'hex'),
@@ -2421,7 +2421,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Mf1EmuWriteMode } = window.ChameleonUltraJS
+   *   const { Mf1EmuWriteMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdMf1SetWriteMode(Mf1EmuWriteMode.NORMAL)
    * }
    *
@@ -2471,7 +2471,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdEm410xSetEmuId(Buffer.from('deadbeef88', 'hex'))
    * }
    *
@@ -2561,7 +2561,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const data = await ultra.mfuWritePage({ pageOffset: 9, data: Buffer.from('00000000', 'hex') })
    * }
    *
@@ -2659,7 +2659,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.mf1Gen1aWriteBlocks(1, new Buffer(16))
    * }
    *
@@ -2688,7 +2688,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run () {
-   *   const { ChameleonUltra } = window.ChameleonUltraJS
+   *   const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(ChameleonUltra.mf1TrailerBlockNoOfSector(0))
    *   // 3
    * }
@@ -2709,7 +2709,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const sectorKey = await ultra.mf1CheckSectorKeys(0, keys)
    *   console.log(_.mapValues(sectorKey, key => key.toString('hex')))
@@ -2788,7 +2788,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer, Mf1KeyType } = window.ChameleonUltraJS
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const { data, success } = await ultra.mf1ReadSectorByKeys(0, keys)
    *   console.log({ data: data.toString('hex'), success })
@@ -2832,7 +2832,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const data = Buffer.concat([
    *     Buffer.from('00000000000000000000000000000000', 'hex'),
@@ -2879,7 +2879,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = window.ChameleonUltraJS
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(ultra.mf1IsValidAcl(Buffer.from('ff078069', 'hex'))) // true
    * }
    *
