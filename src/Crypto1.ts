@@ -1136,7 +1136,7 @@ export default class Crypto1 {
   }
 }
 
-;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).Crypto1 = Crypto1 // eslint-disable-line @typescript-eslint/prefer-optional-chain
+;(globalThis as any ?? {}).Crypto1 = Crypto1 // eslint-disable-line @typescript-eslint/prefer-optional-chain
 
 type UInt32Like = Buffer | number | string
 
