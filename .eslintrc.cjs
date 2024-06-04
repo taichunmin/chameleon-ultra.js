@@ -13,8 +13,10 @@ module.exports = {
   },
   rules: {
     '@typescript-eslint/no-unsafe-argument': 'off',
+    '@typescript-eslint/non-nullable-type-assertion-style': 'off',
     '@typescript-eslint/return-await': 'off',
     '@typescript-eslint/strict-boolean-expressions': 'off',
+    '@typescript-eslint/unbound-method': 'off',
     'multiline-ternary': 'off',
     'no-extra-boolean-cast': 'off',
     'no-return-await': 'off',
@@ -39,8 +41,5 @@ module.exports = {
       tuples: 'always-multiline',
       functions: 'only-multiline',
     }],
-    '@typescript-eslint/unbound-method': ['error', {
-      ignoreStatic: true,
-    }]
   },
 }

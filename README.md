@@ -178,3 +178,8 @@ await run(ultraUsb)
 - [GitHub RfidResearchGroup/ChameleonUltra](https://github.com/RfidResearchGroup/ChameleonUltra)
 - [Chameleon Ultra Guide](https://chameleonultra.com/docs)
 - [Chameleon Ultra GUI Documentation](https://docs.chameleonultragui.dev/)
+
+## Dependents (projects / website using chameleon-ultra.js)
+
+- Sil's Website: `https://drosi.nl/cu` (link is broken!)
+- [Tech Security Tools's Website](https://chameleon-ultra.com/)

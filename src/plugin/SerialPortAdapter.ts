@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import { Duplex } from 'stream'
 import { SerialPort } from 'serialport'
-import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
+import { type ChameleonPlugin, type PluginInstallContext, type ChameleonUltra } from '../ChameleonUltra'
 
 async function findDevicePath (): Promise<string> {
   const device = _.find(await SerialPort.list(), { vendorId: '6868', productId: '8686' }) // ChameleonUltra
@@ -11,12 +11,15 @@ async function findDevicePath (): Promise<string> {
 
 export default class SerialPortAdapter implements ChameleonPlugin {
   duplex?: SerialPort
-  logger: Record<string, Logger> = {}
   name = 'adapter'
+  ultra?: ChameleonUltra
+
+  #debug (formatter: any, ...args: [] | any[]): void {
+    this.ultra?.emitter.emit('debug', 'serial', formatter, ...args)
+  }
 
   async install (context: AdapterInstallContext, pluginOption: SerialPortOption = {}): Promise<AdapterInstallResp> {
-    const { ultra } = context
-    this.logger.serial = ultra.createDebugger('serial')
+    const ultra = this.ultra = context.ultra
 
     if (!_.isNil(ultra.$adapter)) {
       await ultra.disconnect(new Error('adapter replaced'))
@@ -39,13 +42,13 @@ export default class SerialPortAdapter implements ChameleonPlugin {
           const tmp = new SerialPort({ baudRate, path }, err => { _.isNil(err) ? resolve(tmp) : reject(err) })
         })
         this.duplex?.once('close', () => { void ultra.disconnect(new Error('SerialPort closed')) })
-        this.logger.serial(`port connected, path = ${path}, baudRate = ${baudRate}`)
+        this.#debug(`port connected, path = ${path}, baudRate = ${baudRate}`)
         ultra.port = _.merge(Duplex.toWeb(this.duplex), {
           isOpen: () => { return this.duplex?.isOpen ?? false },
         })
         return await next()
       } catch (err) {
-        this.logger.serial(err)
+        this.#debug(err)
         throw err
       }
     })

@@ -1,5 +1,7 @@
 {
   "cleanOutputDir": false,
+  "customCss": "./typedoc/custom.css",
+  "darkHighlightTheme": "dark-plus",
   "exclude": ["**/*.spec.ts", "**/*.test.ts", "**/node_modules/**"],
   "includeVersion": true,
   "out": "dist",
