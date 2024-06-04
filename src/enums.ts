@@ -6,7 +6,7 @@ export interface EnumLike {
 }
 
 export function createIsEnum <T extends EnumLike> (e: T): (val: any) => val is T[keyof T] {
-  const ev = new Set(_.chain(e).toPairs().filter(([k, v]) => !_.isNumber(e[v])).map(1).value())
+  const ev = new Set(_.values(_.pickBy(e, (v, k) => !_.isNumber(e[v]))))
   return (val: any): val is T[keyof T] => ev.has(val)
 }
 
@@ -276,5 +276,4 @@ export const isMf1VblockOperator = createIsEnum(Mf1VblockOperator)
 export const isRespStatus = createIsEnum(RespStatus)
 export const isSlot = createIsEnum(Slot)
 export const isTagType = createIsEnum(TagType)
-
 export const isValidFreqType = createIsEnum(_.pick(FreqType, ['HF', 'LF']))

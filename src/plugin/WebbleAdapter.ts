@@ -1,14 +1,13 @@
 import _ from 'lodash'
-import { type bluetooth } from 'webbluetooth'
-import { Buffer } from '@taichunmin/buffer'
 import { ReadableStream, type ReadableStreamDefaultController, type UnderlyingSink, type UnderlyingSource, WritableStream } from 'node:stream/web'
 import { sleep } from '../helper'
+import { type bluetooth } from 'webbluetooth'
+import { type Buffer } from '@taichunmin/buffer'
 import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
 
 const bluetooth1: typeof bluetooth = (globalThis as any)?.navigator?.bluetooth
-const ReadableStream1: typeof ReadableStream = (globalThis as any).ReadableStream ?? ReadableStream
-const WritableStream1: typeof WritableStream = (globalThis as any).WritableStream ?? WritableStream
-console.log({ bluetooth1, ReadableStream1, WritableStream1 })
+const ReadableStream1: typeof ReadableStream = (globalThis as any)?.ReadableStream ?? ReadableStream
+const WritableStream1: typeof WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
 
 const BLESERIAL_FILTERS = [
   { name: 'ChameleonUltra' },
@@ -159,23 +158,26 @@ class ChameleonWebbleAdapterRxSource implements UnderlyingSource<Buffer> {
 }
 
 class ChameleonWebbleAdapterTxSink implements UnderlyingSink<Buffer> {
-  adapter: WebbleAdapter
-  isFirstEsc = true
+  readonly #adapter: WebbleAdapter
+  readonly #Buffer: typeof Buffer
 
-  constructor (adapter: WebbleAdapter) { this.adapter = adapter }
+  constructor (adapter: WebbleAdapter) {
+    this.#adapter = adapter
+    if (_.isNil(this.#adapter.send)) throw new Error('this.adapter.send can not be null')
+    if (_.isNil(this.#adapter.Buffer)) throw new Error('this.adapter.Buffer can not be null')
+    this.#Buffer = this.#adapter.Buffer
+  }
 
   async write (chunk: Buffer): Promise<void> {
-    if (_.isNil(this.adapter.send)) throw new Error('this.adapter.send can not be null')
-
     // 20 bytes are left for the attribute data
     // https://stackoverflow.com/questions/38913743/maximum-packet-length-for-bluetooth-le
     let buf1: Buffer | null = null
     for (let i = 0; i < chunk.length; i += 20) {
       const buf2 = chunk.subarray(i, i + 20)
-      if (_.isNil(buf1) || buf1.length !== buf2.length) buf1 = new Buffer(buf2.length)
+      if (_.isNil(buf1) || buf1.length !== buf2.length) buf1 = new this.#Buffer(buf2.length)
       buf1.set(buf2)
-      this.adapter.logger.webble(`bleWrite = ${buf1.toString('hex')}`)
-      await this.adapter.send?.writeValueWithoutResponse(buf1.buffer)
+      this.#adapter.logger.webble(`bleWrite = ${buf1.toString('hex')}`)
+      await this.#adapter.send?.writeValueWithoutResponse(buf1.buffer)
     }
   }
 }

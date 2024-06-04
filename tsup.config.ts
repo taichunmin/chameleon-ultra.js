@@ -4,10 +4,8 @@ import pkg from './package.json' assert { type: 'json' }
 
 const sharedConfig: Options = {
   cjsInterop: true,
-  clean: true,
   dts: true,
   env: { VERSION: pkg.version },
-  external: ['module'],
   format: ['cjs', 'esm', 'iife'],
   keepNames: true,
   plugins: [],
@@ -31,6 +29,7 @@ const sharedConfig: Options = {
 export default defineConfig((options): Options[] => [
   {
     ...sharedConfig,
+    clean: !options.watch, // only clean once when not watching
     minify: !options.watch,
     globalName: 'ChameleonUltraJS',
     entry: ['src/index.ts'],

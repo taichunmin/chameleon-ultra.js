@@ -8,7 +8,7 @@
   "module": "./dist/index.mjs",
   "name": "chameleon-ultra.js",
   "type": "commonjs",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -23,7 +23,9 @@
     "@taichunmin/buffer": "^0.13.4",
     "debug": "^4.3.4",
     "lodash": "^4.17.21",
-    "serialport": "^12.0.0"
+    "serialport": "^12.0.0",
+    "web-serial-polyfill": "^1.0.15",
+    "webbluetooth": "^3.2.1"
   },
   "devDependencies": {
     "@tsconfig/node-lts": "^20.1.3",
@@ -73,9 +75,7 @@
     "typedoc-plugin-rename-defaults": "^0.7.0",
     "typedoc-plugin-zod": "^1.1.2",
     "typescript": "^5.4.5",
-    "utility-types": "^3.11.0",
-    "web-serial-polyfill": "^1.0.15",
-    "webbluetooth": "^3.2.1"
+    "utility-types": "^3.11.0"
   },
   "exports": {
     "./package.json": "./package.json",
