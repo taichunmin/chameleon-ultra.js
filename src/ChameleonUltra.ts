@@ -37,7 +37,7 @@ const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
 const VERSION_SUPPORTED = { gte: '2.0', lt: '3.0' } as const
 
-const WritableStream1: typeof WritableStream = (globalThis as any).WritableStream ?? WritableStream
+const WritableStream1: typeof WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
 
 function isMf1BlockNo (block: any): boolean {
   return _.isInteger(block) && block >= 0 && block <= 0xFF
@@ -711,9 +711,7 @@ export class ChameleonUltra {
     const cmd = Cmd.GET_DEVICE_ADDRESS // cmd = 1012
     await this._writeCmd({ cmd })
     const data = (await this._readRespTimeout({ cmd }))?.data
-    const arr = []
-    for (let i = 0; i < data.length; i++) arr.push(data.subarray(i, i + 1).toString('hex'))
-    return _.toUpper(arr.join(':'))
+    return (_.toUpper(data.toString('hex')).match(/.{2}/g) ?? []).join(':')
   }
 
   /**

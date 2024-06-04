@@ -242,7 +242,6 @@ block script
         async btnEmuRead () {
           try {
             this.showLoading({ text: 'Loading emulator' })
-            /** @type ChameleonUltra */
             const ultra = this.ultra
             await ultra.cmdSlotSetActive(this.ss.slot)
             this.$set(this, 'ss', {
