@@ -6,8 +6,9 @@ import { sleep } from '../helper'
 import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
 
 const bluetooth1: typeof bluetooth = (globalThis as any)?.navigator?.bluetooth
-const ReadableStream1: typeof ReadableStream = ReadableStream ?? (globalThis as any).ReadableStream
-const WritableStream1: typeof WritableStream = WritableStream ?? (globalThis as any).WritableStream
+const ReadableStream1: typeof ReadableStream = (globalThis as any).ReadableStream ?? ReadableStream
+const WritableStream1: typeof WritableStream = (globalThis as any).WritableStream ?? WritableStream
+console.log({ bluetooth1, ReadableStream1, WritableStream1 })
 
 const BLESERIAL_FILTERS = [
   { name: 'ChameleonUltra' },
