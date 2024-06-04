@@ -3,8 +3,8 @@ import { ReadableStream, WritableStream, type ReadableStreamController } from 'n
 import { type Buffer } from '@taichunmin/buffer'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
 
-const ReadableStream1: typeof ReadableStream = ReadableStream ?? (globalThis as any).ReadableStream
-const WritableStream1: typeof WritableStream = WritableStream ?? (globalThis as any).WritableStream
+const ReadableStream1: typeof ReadableStream = (globalThis as any).ReadableStream ?? ReadableStream
+const WritableStream1: typeof WritableStream = (globalThis as any).WritableStream ?? WritableStream
 
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }

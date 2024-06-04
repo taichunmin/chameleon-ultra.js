@@ -37,7 +37,7 @@ const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
 const VERSION_SUPPORTED = { gte: '2.0', lt: '3.0' } as const
 
-const WritableStream1: typeof WritableStream = WritableStream ?? (globalThis as any).WritableStream
+const WritableStream1: typeof WritableStream = (globalThis as any).WritableStream ?? WritableStream
 
 function isMf1BlockNo (block: any): boolean {
   return _.isInteger(block) && block >= 0 && block <= 0xFF

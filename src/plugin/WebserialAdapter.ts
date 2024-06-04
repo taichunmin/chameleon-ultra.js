@@ -12,7 +12,7 @@ type SerialPort1 = SerialPort & {
     }
   ) => any
 }
-const serial1: typeof serial = serial ?? (globalThis as any)?.navigator?.serial
+const serial1: typeof serial = (globalThis as any)?.navigator?.serial ?? serial
 
 const WEBSERIAL_FILTERS = [
   { usbVendorId: 0x6868, usbProductId: 0x8686 }, // Chameleon Tiny
