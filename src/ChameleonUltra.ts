@@ -291,17 +291,13 @@ export class ChameleonUltra {
    */
   async _writeBuffer (buf: Buffer): Promise<void> {
     await this.invokeHook('_writeBuffer', { buf }, async (ctx, next) => {
-      try {
-        if (!Buffer.isBuffer(ctx.buf)) throw new TypeError('buf should be a Buffer')
-        if (!this.isConnected()) await this.connect()
-        this.logger.send(ChameleonUltraFrame.inspect(ctx.buf))
-        const writer = (this.port?.writable as any)?.getWriter()
-        if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
-        await writer.write(ctx.buf)
-        writer.releaseLock()
-      } catch (err) {
-        throw _.merge(new Error(err.message ?? 'Failed to connect'), { originalError: err })
-      }
+      if (!Buffer.isBuffer(ctx.buf)) throw new TypeError('buf should be a Buffer')
+      if (!this.isConnected()) await this.connect()
+      this.logger.send(ChameleonUltraFrame.inspect(ctx.buf))
+      const writer = (this.port?.writable as any)?.getWriter()
+      if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
+      await writer.write(ctx.buf)
+      writer.releaseLock()
     })
   }
 
