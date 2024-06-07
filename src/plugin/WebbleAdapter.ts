@@ -142,18 +142,17 @@ interface AdapterInstallResp {
 }
 
 class ChameleonWebbleAdapterRxSource implements UnderlyingSource<Buffer> {
-  adapter: WebbleAdapter
-  bufs: Buffer[] = []
-  controller?: ReadableStreamDefaultController<Buffer>
+  #controller?: ReadableStreamDefaultController<Buffer>
+  readonly #adapter: WebbleAdapter
 
-  constructor (adapter: WebbleAdapter) { this.adapter = adapter }
+  constructor (adapter: WebbleAdapter) { this.#adapter = adapter }
 
-  start (controller: ReadableStreamDefaultController<Buffer>): void { this.controller = controller }
+  start (controller: ReadableStreamDefaultController<Buffer>): void { this.#controller = controller }
 
   onNotify (event: any): void {
-    const buf = this.adapter.Buffer?.from((event?.target?.value as Uint8Array))
-    this.adapter.logger.webble(`onNotify = ${buf?.toString('hex')}`)
-    this.controller?.enqueue(buf)
+    const buf = this.#adapter.Buffer?.fromView((event?.target?.value as DataView))
+    this.#adapter.logger.webble(`onNotify = ${buf?.toString('hex')}`)
+    this.#controller?.enqueue(buf)
   }
 }
 
@@ -163,12 +162,13 @@ class ChameleonWebbleAdapterTxSink implements UnderlyingSink<Buffer> {
 
   constructor (adapter: WebbleAdapter) {
     this.#adapter = adapter
-    if (_.isNil(this.#adapter.send)) throw new Error('this.adapter.send can not be null')
-    if (_.isNil(this.#adapter.Buffer)) throw new Error('this.adapter.Buffer can not be null')
+    if (_.isNil(this.#adapter.Buffer)) throw new Error('this.#adapter.Buffer can not be null')
     this.#Buffer = this.#adapter.Buffer
   }
 
   async write (chunk: Buffer): Promise<void> {
+    if (_.isNil(this.#adapter.send)) throw new Error('this.#adapter.send can not be null')
+
     // 20 bytes are left for the attribute data
     // https://stackoverflow.com/questions/38913743/maximum-packet-length-for-bluetooth-le
     let buf1: Buffer | null = null
