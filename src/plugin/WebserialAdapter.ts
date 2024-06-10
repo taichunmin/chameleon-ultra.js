@@ -1,22 +1,15 @@
 import _ from 'lodash'
-import { sleep } from '../helper'
-import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
 import { serial, type SerialPort } from 'web-serial-polyfill'
+import { sleep } from '../helper'
+import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
+import { type EventEmitter } from '../EventEmitter'
 
-type SerialPort1 = SerialPort & {
-  addEventListener: (
-    eventName: string,
-    listener: (...args: any[]) => void,
-    opts?: {
-      once: boolean
-    }
-  ) => any
-}
+type SerialPort1 = SerialPort & EventEmitter
 const navigator = (globalThis as any)?.navigator ?? {}
 const serial1: typeof serial = navigator.serial ?? ('usb' in navigator ? serial : null)
 
 const WEBSERIAL_FILTERS = [
-  { usbVendorId: 0x6868, usbProductId: 0x8686 }, // Chameleon Tiny
+  { usbVendorId: 0x6868, usbProductId: 0x8686 }, // Chameleon Ultra
 ]
 
 function u16ToHex (num: number): string {
@@ -25,13 +18,16 @@ function u16ToHex (num: number): string {
 
 export default class WebserialAdapter implements ChameleonPlugin {
   isOpen: boolean = false
-  logger: Record<string, Logger> = {}
   name = 'adapter'
   port?: SerialPort1
+  ultra?: ChameleonUltra
+
+  #debug (formatter: any, ...args: [] | any[]): void {
+    this.ultra?.emitter.emit('debug', 'webserial', formatter, ...args)
+  }
 
   async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
-    const { ultra } = context
-    this.logger.webserial = ultra.createDebugger('webserial')
+    const ultra = this.ultra = context.ultra
 
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))
     const adapter: any = {}
@@ -52,14 +48,14 @@ export default class WebserialAdapter implements ChameleonPlugin {
         this.isOpen = true
 
         const info = await this.port.getInfo() as { usbVendorId: number, usbProductId: number }
-        this.logger.webserial(`port selected, usbVendorId = 0x${u16ToHex(info.usbVendorId)}, usbProductId = 0x${u16ToHex(info.usbProductId)}`)
+        this.#debug(`port selected, usbVendorId = 0x${u16ToHex(info.usbVendorId)}, usbProductId = 0x${u16ToHex(info.usbProductId)}`)
         this.port.addEventListener('disconnect', () => { void ultra.disconnect(new Error('Webserial disconnect')) })
         ultra.port = _.merge(this.port, {
           isOpen: () => this.isOpen,
         })
         return await next()
       } catch (err) {
-        this.logger.webserial(err)
+        this.#debug(err)
         throw err
       }
     })

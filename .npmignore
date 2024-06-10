@@ -157,4 +157,5 @@ out
 /tsconfig.*.json
 /tsconfig.json
 /tsdoc.json
+/typedoc
 /typedoc.json

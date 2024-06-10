@@ -1,0 +1,13 @@
+code {
+  :not(pre)>& {
+    background-color: #2c3437;
+    border-radius: 0.4rem;
+    border: .1rem solid rgba(255, 255, 255, .1);
+    color: #e9edf0;
+    font-family: SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 90%;
+    line-height: 1.5rem;
+    margin: 0;
+    padding: 1px 4px;
+  }
+}

@@ -1,8 +1,10 @@
 import { ChameleonUltra } from '../ChameleonUltra'
+import ChameleonDebug from '../plugin/Debug'
 import SerialPortAdapter from '../plugin/SerialPortAdapter'
 
 async function main (): Promise<void> {
-  const ultra = new ChameleonUltra(true)
+  const ultra = new ChameleonUltra()
+  await ultra.use(new ChameleonDebug())
   await ultra.use(new SerialPortAdapter())
 
   console.log(`version: ${await ultra.cmdGetAppVersion()} (${await ultra.cmdGetGitVersion()})`)

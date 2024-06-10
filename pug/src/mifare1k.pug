@@ -161,10 +161,12 @@ block content
 block script
   script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/joi@17/dist/joi-browser.min.js")
   script.
-    const { AnimationMode, Buffer, ButtonAction, ChameleonUltra, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
+    const { AnimationMode, Buffer, ButtonAction, ChameleonDebug, ChameleonUltra, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
     const ultraUsb = new ChameleonUltra(true)
+    ultraUsb.use(new ChameleonDebug())
     ultraUsb.use(new WebserialAdapter())
     const ultraBle = new ChameleonUltra(true)
+    ultraBle.use(new ChameleonDebug())
     ultraBle.use(new WebbleAdapter())
 
     const WELL_KNOWN_KEYS = ['ffffffffffff', 'a0a1a2a3a4a5', 'd3f7d3f7d3f7']
@@ -275,14 +277,14 @@ block script
             await ultra.cmdMf1SetGen2Mode(this.ss.gen2)
             await ultra.cmdMf1SetWriteMode(this.ss.write)
             await ultra.cmdHf14aSetAntiCollData({
-              atqa: Buffer.fromHexString(this.ss.atqa).reverse(),
-              ats: Buffer.fromHexString(this.ss.ats),
-              sak: Buffer.fromHexString(this.ss.sak),
-              uid: Buffer.fromHexString(this.ss.uid),
+              atqa: Buffer.from(this.ss.atqa, 'hex').reverse(),
+              ats: Buffer.from(this.ss.ats, 'hex'),
+              sak: Buffer.from(this.ss.sak, 'hex'),
+              uid: Buffer.from(this.ss.uid, 'hex'),
             })
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              const sectorData = Buffer.fromHexString(this.ss.body[i])
+              const sectorData = Buffer.from(this.ss.body[i], 'hex')
               await ultra.cmdMf1EmuWriteBlock(i << 2, sectorData)
             }
             await Swal.fire({ icon: 'success', title: 'Emulate success' })
@@ -339,7 +341,7 @@ block script
             const ultra = this.ultra
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              const sectorData = Buffer.fromHexString(this.ss.body[i])
+              const sectorData = Buffer.from(this.ss.body[i], 'hex')
               await ultra.mf1Gen1aWriteBlocks(i << 2, sectorData)
               this.showLoading(genSwalCfg(i + 1))
             }
@@ -399,7 +401,7 @@ block script
             for (let i = 0; i < 16; i++) {
               try {
                 if (!this.ss.toggle[i]) continue
-                const sectorData = Buffer.fromHexString(this.ss.body[i])
+                const sectorData = Buffer.from(this.ss.body[i], 'hex')
                 const { success } = await ultra.mf1WriteSectorByKeys(i, keys, sectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
               } catch (err) {
@@ -424,7 +426,7 @@ block script
             let keys = []
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              const sectorData = Buffer.fromHexString(this.ss.body[i])
+              const sectorData = Buffer.from(this.ss.body[i], 'hex')
               if (sectorData.length !== 64) continue
               keys.push(..._.map([48, 58], offset => sectorData.subarray(offset, offset + 6).toString('hex')))
             }
@@ -490,7 +492,7 @@ block script
           const json = JSON5.parse(buf.toString('utf8'))
           if (json.FileType !== 'mfcard') throw new Error(`Invalid file type: ${json.FileType}`)
           if (!_.isNil(json?.Card?.UID)) this.$set(this.ss, 'uid', _.toLower(json.Card.UID))
-          if (!_.isNil(json?.Card?.ATQA)) this.$set(this.ss, 'atqa', Buffer.fromHexString(json.Card.ATQA).reverse().toString('hex'))
+          if (!_.isNil(json?.Card?.ATQA)) this.$set(this.ss, 'atqa', Buffer.from(json.Card.ATQA, 'hex').reverse().toString('hex'))
           if (!_.isNil(json?.Card?.SAK)) this.$set(this.ss, 'sak', json.Card.SAK)
           if (!_.isNil(json?.blocks)) {
             for (let i = 0; i < 16; i++) {
@@ -498,7 +500,7 @@ block script
               for (let j = 0; j < 4; j++) {
                 const blockhex = json?.blocks?.[i * 4 + j] ?? ''
                 if (blockhex.length !== 32) continue
-                const blockbuf = Buffer.fromHexString(blockhex.replaceAll('-', '0'))
+                const blockbuf = Buffer.from(blockhex.replaceAll('-', '0'), 'hex')
                 if (blockbuf.length !== 16) continue
                 blockbuf.copy(sectorData, j * 16)
               }
@@ -507,7 +509,7 @@ block script
           }
         },
         async btnCardImportEml (file, buf) {
-          buf = Buffer.fromHexString(buf.toString('utf8').replaceAll('-', '0'))
+          buf = Buffer.from(buf.toString('utf8').replaceAll('-', '0'), 'hex')
           if (buf.length !== 1024) throw new Error(`Invalid eml size: ${buf.length} bytes`)
           for (let i = 0; i < 16; i++) {
             const sectorData = buf.subarray(i * 64, (i + 1) * 64)
@@ -523,7 +525,7 @@ block script
               blockNo = _.parseInt(row.slice(9)) * 4
             } else if (/^[0-9a-fA-F-]{32}$/.test(row)) { // hex
               if (blockNo >= 64) throw new Error(`Invalid block number: ${blockNo}`)
-              const blockbuf = Buffer.fromHexString(row.replaceAll('-', '0'))
+              const blockbuf = Buffer.from(row.replaceAll('-', '0'), 'hex')
               if (blockbuf.length !== 16) throw new Error(`Invalid block size: ${blockbuf.length} bytes`)
               blockbuf.copy(buf, blockNo * 16)
               blockNo++
@@ -534,13 +536,13 @@ block script
         async btnCardExport () {
           const card = new Buffer(1024)
           for (let i = 0; i < 16; i++) {
-            const sectorData = Buffer.fromHexString(this.ss.body[i])
+            const sectorData = Buffer.from(this.ss.body[i], 'hex')
             if (sectorData.length !== 64) continue // skip invalid sector
             sectorData.copy(card, i * 64)
           }
-          const uid = Buffer.fromHexString(this.ss.uid)
-          const atqa = Buffer.fromHexString(this.ss.atqa).reverse()
-          const sak = Buffer.fromHexString(this.ss.sak)
+          const uid = Buffer.from(this.ss.uid, 'hex')
+          const atqa = Buffer.from(this.ss.atqa, 'hex').reverse()
+          const sak = Buffer.from(this.ss.sak, 'hex')
 
           // helper
           const toHex = buf => _.toUpper(buf.toString('hex'))

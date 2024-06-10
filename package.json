@@ -8,7 +8,7 @@
   "module": "./dist/index.mjs",
   "name": "chameleon-ultra.js",
   "type": "commonjs",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -20,7 +20,7 @@
     }
   ],
   "dependencies": {
-    "@taichunmin/buffer": "^0.13.4",
+    "@taichunmin/buffer": "^0.13.6",
     "debug": "^4.3.4",
     "lodash": "^4.17.21",
     "serialport": "^12.0.0",
@@ -67,6 +67,7 @@
     "serve-static": "^1.15.0",
     "supports-color": "^9.4.0",
     "ts-jest": "^29.1.4",
+    "ts-node": "^10.9.2",
     "tsup": "^8.0.2",
     "tsx": "^4.11.0",
     "typedoc": "^0.25.13",
@@ -159,7 +160,7 @@
     "dev:https": "tsx ./https.ts",
     "dev:js": "yarn build:js --watch",
     "dev:pug": "nodemon --watch pug --ext pug --exec \"yarn build:pug\"",
-    "dev": "DEBUG_COLORS=1 concurrently --names \"DOC,HTTPS,PUBLIC,PUG,TS\" -c \"bgGray,bgGreen,bgGray,bgBlue,bgYellow\" \"yarn dev:docs\" \"yarn dev:https\" \"yarn dev:public\" \"yarn dev:pug\" \"yarn dev:js\"",
+    "dev": "DEBUG_COLORS=1 concurrently --names \"DOC,HTTPS,PUG,TS\" -c \"bgGray,bgGreen,bgGray,bgBlue,bgYellow\" \"yarn dev:docs\" \"yarn dev:https\" \"yarn dev:pug\" \"yarn dev:js\"",
     "lint:ci": "eslint --ext .mjs,.js,.js,.ts,.pug .",
     "lint": "yarn lint:ci --fix",
     "mkcert": "mkdir ./mkcert && mkcert -key-file ./mkcert/key.pem -cert-file ./mkcert/cert.pem -ecdsa localhost",

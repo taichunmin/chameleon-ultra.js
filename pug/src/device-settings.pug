@@ -106,10 +106,12 @@ block content
 block script
   script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/joi@17/dist/joi-browser.min.js")
   script.
-    const { AnimationMode, ButtonAction, ButtonType, ChameleonUltra, DeviceMode, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
+    const { AnimationMode, ButtonAction, ButtonType, ChameleonDebug, ChameleonUltra, DeviceMode, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
     const ultraUsb = new ChameleonUltra(true)
+    ultraUsb.use(new ChameleonDebug())
     ultraUsb.use(new WebserialAdapter())
     const ultraBle = new ChameleonUltra(true)
+    ultraBle.use(new ChameleonDebug())
     ultraBle.use(new WebbleAdapter())
 
     const { joi: Joi } = window

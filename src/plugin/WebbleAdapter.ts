@@ -3,7 +3,7 @@ import { ReadableStream, type ReadableStreamDefaultController, type UnderlyingSi
 import { sleep } from '../helper'
 import { type bluetooth } from 'webbluetooth'
 import { type Buffer } from '@taichunmin/buffer'
-import { type ChameleonPlugin, type Logger, type PluginInstallContext } from '../ChameleonUltra'
+import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
 
 const bluetooth1: typeof bluetooth = (globalThis as any)?.navigator?.bluetooth
 const ReadableStream1: typeof ReadableStream = (globalThis as any)?.ReadableStream ?? ReadableStream
@@ -25,18 +25,21 @@ export default class WebbleAdapter implements ChameleonPlugin {
   Buffer?: typeof Buffer
   device?: BluetoothDevice
   isOpen: boolean = false
-  logger: Record<string, Logger> = {}
   name = 'adapter'
   recv?: BluetoothRemoteGATTCharacteristic
   rxSource?: ChameleonWebbleAdapterRxSource
   send?: BluetoothRemoteGATTCharacteristic
   serv?: BluetoothRemoteGATTService
   txSink?: ChameleonWebbleAdapterTxSink
+  ultra?: ChameleonUltra
+
+  #debug (formatter: any, ...args: [] | any[]): void {
+    this.ultra?.emitter.emit('debug', 'webble', formatter, ...args)
+  }
 
   async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
     const { ultra, Buffer } = context
-    this.Buffer = Buffer
-    this.logger.webble = ultra.createDebugger('webble')
+    ;[this.ultra, this.Buffer] = [ultra, Buffer]
 
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))
     const adapter: any = {}
@@ -57,19 +60,19 @@ export default class WebbleAdapter implements ChameleonPlugin {
           optionalServices: _.uniq(_.map(BLESERIAL_UUID, 'serv')),
         })
         if (_.isNil(this.device)) throw new Error('no device')
-        this.logger.webble(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)
+        this.#debug(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)
 
         this.rxSource = new ChameleonWebbleAdapterRxSource(this)
         this.txSink = new ChameleonWebbleAdapterTxSink(this)
 
         for (let i = 0; i < 100; i++) {
-          this.logger.webble(`gatt connecting, retry = ${i}`)
-          if (!gattIsConnected()) await this.device.gatt?.connect().catch((err: any) => { this.logger.webble(err.message) })
+          this.#debug(`gatt connecting, retry = ${i}`)
+          if (!gattIsConnected()) await this.device.gatt?.connect().catch((err: any) => { this.#debug(err.message) })
 
           // find serv, send, recv, ctrl
           // uuid from [bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055) is uppercase
           const primaryServices = _.map(await this.device.gatt?.getPrimaryServices(), serv => _.toLower(serv.uuid))
-          this.logger.webble(`primaryServices = ${JSON.stringify(primaryServices)}`)
+          this.#debug(`primaryServices = ${JSON.stringify(primaryServices)}`)
           for (const uuids of BLESERIAL_UUID) {
             try {
               if (!_.includes(primaryServices, uuids.serv)) continue
@@ -85,7 +88,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
             }
 
             if (!_.isNil(this.send) && !_.isNil(this.recv)) {
-              this.logger.webble(`gatt connected, serv = ${this.serv?.uuid ?? '?'}, recv = ${this.recv?.uuid ?? '?'}, send = ${this.send?.uuid ?? '?'}'`)
+              this.#debug(`gatt connected, serv = ${this.serv?.uuid ?? '?'}, recv = ${this.recv?.uuid ?? '?'}, send = ${this.send?.uuid ?? '?'}'`)
               this.isOpen = true
               break
             }
@@ -103,7 +106,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
         }
         return await next()
       } catch (err) {
-        this.logger.webble(`Failed to connect: ${err.message as string}`)
+        this.#debug(`Failed to connect: ${err.message as string}`)
         throw err
       }
     })
@@ -145,13 +148,17 @@ class ChameleonWebbleAdapterRxSource implements UnderlyingSource<Buffer> {
   #controller?: ReadableStreamDefaultController<Buffer>
   readonly #adapter: WebbleAdapter
 
+  #debug (formatter: any, ...args: [] | any[]): void {
+    this.#adapter.ultra?.emitter.emit('debug', 'webble', formatter, ...args)
+  }
+
   constructor (adapter: WebbleAdapter) { this.#adapter = adapter }
 
   start (controller: ReadableStreamDefaultController<Buffer>): void { this.#controller = controller }
 
   onNotify (event: any): void {
     const buf = this.#adapter.Buffer?.fromView((event?.target?.value as DataView))
-    this.#adapter.logger.webble(`onNotify = ${buf?.toString('hex')}`)
+    this.#debug(`onNotify = ${buf?.toString('hex')}`)
     this.#controller?.enqueue(buf)
   }
 }
@@ -166,6 +173,10 @@ class ChameleonWebbleAdapterTxSink implements UnderlyingSink<Buffer> {
     this.#Buffer = this.#adapter.Buffer
   }
 
+  #debug (formatter: any, ...args: [] | any[]): void {
+    this.#adapter.ultra?.emitter.emit('debug', 'webble', formatter, ...args)
+  }
+
   async write (chunk: Buffer): Promise<void> {
     if (_.isNil(this.#adapter.send)) throw new Error('this.#adapter.send can not be null')
 
@@ -176,7 +187,7 @@ class ChameleonWebbleAdapterTxSink implements UnderlyingSink<Buffer> {
       const buf2 = chunk.subarray(i, i + 20)
       if (_.isNil(buf1) || buf1.length !== buf2.length) buf1 = new this.#Buffer(buf2.length)
       buf1.set(buf2)
-      this.#adapter.logger.webble(`bleWrite = ${buf1.toString('hex')}`)
+      this.#debug(`bleWrite = ${buf1.toString('hex')}`)
       await this.#adapter.send?.writeValueWithoutResponse(buf1.buffer)
     }
   }
