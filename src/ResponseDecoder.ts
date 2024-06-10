@@ -108,7 +108,7 @@ export class Hf14aAntiColl {
     const uidLen = buf[0]
     if (buf.length < uidLen + 4) throw new Error('invalid length of uid')
     const atsLen = buf[uidLen + 4]
-    if (buf.length < uidLen + atsLen + 5) throw new Error('invalid invalid length of ats')
+    if (buf.length < uidLen + atsLen + 5) throw new Error('invalid length of ats')
     return bufUnpackToClass(buf, `!${uidLen + 1}p2ss${atsLen + 1}p`, Hf14aAntiColl)
   }
 

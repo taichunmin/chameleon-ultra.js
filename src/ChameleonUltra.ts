@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { Buffer } from '@taichunmin/buffer'
-import { errToJson, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
+import { middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { EventAsyncGenerator } from './EventAsyncGenerator'
 import { EventEmitter } from './EventEmitter'
 import { type ReadableStream, type UnderlyingSink, type WritableStreamDefaultController, WritableStream } from 'node:stream/web'
@@ -212,7 +212,6 @@ export class ChameleonUltra {
       } catch (err) {
         err.message = `Failed to connect: ${err.message}`
         this.emitter.emit('error', err)
-        this.#debug('error', `${err.message}\n${err.stack}`)
         if (this.isConnected()) await this.disconnect(err)
         throw err
       }
@@ -227,7 +226,7 @@ export class ChameleonUltra {
     try {
       if (this.#isDisconnecting) return
       this.#isDisconnecting = true // 避免重複執行
-      this.#debug('core', '%s %O', err.message, errToJson(err))
+      this.emitter.emit('error', err)
       this.#debug('core', 'disconnecting...')
       await this.invokeHook('disconnect', { err }, async (ctx, next) => {
         try {
@@ -345,7 +344,7 @@ export class ChameleonUltra {
         return resp
       }
     } catch (err) {
-      this.#debug('error', `${err.message}\n${err.stack}`)
+      this.emitter.emit('error', err)
       throw err
     }
   }

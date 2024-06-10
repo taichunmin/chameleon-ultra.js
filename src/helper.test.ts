@@ -1,4 +1,3 @@
-import _ from 'lodash'
 import * as sut from './helper'
 
 test('sleep', async () => {
@@ -7,33 +6,6 @@ test('sleep', async () => {
   await sut.sleep(100)
   const end = Date.now()
   expect(end - start).toBeGreaterThanOrEqual(90)
-})
-
-test('errToJson', async () => {
-  const err = _.merge(new Error('test'), { originalError: new Error('test') })
-  const actual = sut.errToJson(err)
-  expect(actual).toMatchObject({
-    name: 'Error',
-    message: 'test',
-    originalError: {
-      name: 'Error',
-      message: 'test',
-    },
-  })
-})
-
-test('jsonStringify', async () => {
-  const circular = { b: 1 }
-  const obj = {
-    circular1: circular,
-    circular2: circular,
-    map: new Map([['a', 1]]),
-    number: 1,
-    set: new Set([1, 2, 3]),
-    string: 'abc',
-  }
-  const actual = sut.jsonStringify(obj)
-  expect(actual).toBe('{"circular1":{"b":1},"circular2":"[Circular]","map":{"a":1},"number":1,"set":[1,2,3],"string":"abc"}')
 })
 
 describe('middlewareCompose', () => {
@@ -326,6 +298,18 @@ describe('middlewareCompose', () => {
 
     expect(actual).toBe(1)
   })
+
+  test('should set default ctx', async () => {
+    const actual: number[] = []
+    await sut.middlewareCompose([
+      async (ctx, next) => {
+        actual.push(1)
+        await next()
+      },
+    ])()
+
+    expect(actual).toEqual([1])
+  })
 })
 
 describe('versionCompare', () => {
@@ -352,5 +336,21 @@ describe('versionCompare', () => {
     { str1: '1.0.0', str2: '2.0.0', expected: -1 },
   ])('versionCompare(\'$str1\', \'$str2\') = $expected', ({ str1, str2, expected }) => {
     expect(sut.versionCompare(str1, str2)).toBe(expected)
+  })
+
+  test('should throw error when version is invalid', () => {
+    expect.hasAssertions()
+    try {
+      sut.versionCompare('test', '1.0.0')
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/invalid version/)
+    }
+    try {
+      sut.versionCompare('1.0.0', 'test')
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+      expect(err.message).toMatch(/invalid version/)
+    }
   })
 })
