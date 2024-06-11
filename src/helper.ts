@@ -9,7 +9,7 @@ enum MiddlewareStatus {
   ERROR,
 }
 
-export function middlewareCompose (middlewares: MiddlewareComposeFn[]): (ctx: Record<string, any>, next?: MiddlewareComposeFn) => Promise<unknown> {
+export function middlewareCompose (middlewares: MiddlewareComposeFn[]): (ctx?: Record<string, any>, next?: MiddlewareComposeFn) => Promise<unknown> {
   // 型態檢查
   if (!_.isArray(middlewares)) throw new TypeError('Middleware stack must be an array!')
   if (_.some(middlewares, fn => !_.isFunction(fn))) throw new TypeError('Middleware must be composed of functions!')
@@ -44,60 +44,9 @@ export async function sleep (ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-const ERROR_KEYS = [
-  'address',
-  'args',
-  'code',
-  'data',
-  'dest',
-  'errno',
-  'info',
-  'message',
-  'name',
-  'path',
-  'port',
-  'positions',
-  'reason',
-  'response.data',
-  'response.headers',
-  'response.status',
-  'source',
-  'stack',
-  'status',
-  'statusCode',
-  'statusMessage',
-  'syscall',
-] as const
-
-export function errToJson<T extends Error & { originalError?: any, stack?: any }> (err: T): Partial<T> {
-  const tmp: any = {
-    ..._.pick(err, ERROR_KEYS),
-    ...(_.isNil(err.originalError) ? {} : { originalError: errToJson(err.originalError) }),
-  }
-  return tmp
-}
-
-export function jsonStringify (obj: object, space?: number): string {
-  try {
-    const preventCircular = new Set()
-    return JSON.stringify(obj, function (this: any, key: string, value: any) {
-      if (Buffer.isBuffer(this[key])) return { type: 'Buffer', hex: this[key].toString('hex') }
-      if (value instanceof Map) return _.fromPairs([...value.entries()])
-      if (value instanceof Set) return [...value.values()]
-      if (_.isObject(value) && !_.isEmpty(value)) {
-        if (preventCircular.has(value)) return '[Circular]'
-        preventCircular.add(value)
-      }
-      return value
-    }, space)
-  } catch (err) {
-    return `[UnexpectedJSONParseError]: ${err.message as string}`
-  }
-}
-
 export function versionCompare (str1: string, str2: string): number {
   const tmp = _.map([str1, str2], (str, idx) => {
-    const matched = _.trim(str).match(/^(?:(\d+)[.]?)?(?:(\d+)[.]?)?(?:(\d+)[.]?)?/)
+    const matched = _.trim(str).match(/^(?:(\d+)[.]?)(?:(\d+)[.]?)?(?:(\d+)[.]?)?/)
     if (_.isNil(matched)) throw new Error(`invalid version: str${idx + 1} = ${str}`)
     return _.map(matched.slice(1), v => _.isNil(v) ? 0 : _.toSafeInteger(v))
   })
