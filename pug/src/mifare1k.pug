@@ -130,7 +130,7 @@ block content
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
           .modal-header
-            h5.modal-title #[i.fa.fa-fw.fa-floppy-o] Card Export
+            h5.modal-title #[i.fa.fa-fw.fa-floppy-o] Export Dump
             button.close(type="button", data-dismiss="modal") #[span &times;]
           .modal-body
             a.btn.btn-block.btn-outline-primary.mb-2.text-left(
@@ -242,9 +242,9 @@ block script
           })
         },
         async btnEmuRead () {
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Loading emulator' })
-            const ultra = this.ultra
             await ultra.cmdSlotSetActive(this.ss.slot)
             this.$set(this, 'ss', {
               ...this.ss,
@@ -258,16 +258,16 @@ block script
             }
             await Swal.fire({ icon: 'success', title: 'Load success' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Load failed', text: err.message })
           }
         },
         async btnEmuWrite () {
+          const { ultra } = this
           try {
             const msg1 = `Slot ${this.ss.slot + 1} will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating' })
-            const ultra = this.ultra
             await ultra.cmdSlotSetActive(this.ss.slot)
             const freqName = this.ss.name
             if (_.isString(freqName) && freqName.length > 0) await ultra.cmdSlotSetFreqName(this.ss.slot, FreqType.HF, freqName)
@@ -289,16 +289,16 @@ block script
             }
             await Swal.fire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Emulate failed', text: err.message })
           }
         },
         async btnEmuReset () {
+          const { ultra } = this
           try {
             const msg1 = `Slot ${this.ss.slot + 1} will be RESET! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Resetting' })
-            const ultra = this.ultra
             // reset slot
             await ultra.cmdSlotChangeTagType(this.ss.slot, TagType.MIFARE_1024)
             await ultra.cmdSlotResetTagType(this.ss.slot, TagType.MIFARE_1024)
@@ -306,17 +306,17 @@ block script
             await ultra.cmdSlotSetActive(this.ss.slot)
             await Swal.fire({ icon: 'success', title: 'Reset success' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
         },
         async btnGen1aRead () {
+          const { ultra } = this
           try {
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading mifare gen1a:</span><span>${i} / 16</span></div></div>`,
             })
             this.showLoading(genSwalCfg(0))
-            const ultra = this.ultra
             this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
@@ -326,11 +326,12 @@ block script
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             await Swal.fire({ icon: 'success', title: 'Read success' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Read failed', text: err.message })
           }
         },
         async btnGen1aWrite () {
+          const { ultra } = this
           try {
             const msg1 = 'Mifare Gen1a Tag will be REPLACE! Continue?'
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
@@ -338,7 +339,6 @@ block script
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Writing mifare gen1a:</span><span>${i} / 16</span></div></div>`,
             })
             this.showLoading(genSwalCfg(0))
-            const ultra = this.ultra
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
               const sectorData = Buffer.from(this.ss.body[i], 'hex')
@@ -348,18 +348,18 @@ block script
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             await Swal.fire({ icon: 'success', title: 'Write success' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
           }
         },
         async btnGen2Read () {
+          const { ultra } = this
           try {
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
             })
             this.showLoading(genSwalCfg(0))
             const keys = this.mfCardGetKeys()
-            const ultra = this.ultra
             this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
             const failed = []
             for (let i = 0; i < 16; i++) {
@@ -375,19 +375,20 @@ block script
                 }
               } catch (err) {
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
-                console.error(err)
+                ultra.emitter.emit('error', err)
               }
               this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             if (failed.length === 0) return await Swal.fire({ icon: 'success', title: 'Read success' })
-            await Swal.fire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed: ${failed.join(',')}` })
+            await Swal.fire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Read failed', text: err.message })
           }
         },
         async btnGen2Write () {
+          const { ultra } = this
           try {
             const msg1 = 'Mifare / Gen2 Tag will be REPLACE! Continue?'
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
@@ -396,7 +397,6 @@ block script
             })
             this.showLoading(genSwalCfg(0))
             const keys = this.mfCardGetKeys()
-            const ultra = this.ultra
             const failed = []
             for (let i = 0; i < 16; i++) {
               try {
@@ -406,19 +406,20 @@ block script
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
               } catch (err) {
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
-                console.error(err)
+                ultra.emitter.emit('error', err)
               }
               this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             if (failed.length === 0) return await Swal.fire({ icon: 'success', title: 'Write success' })
-            await Swal.fire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed: ${failed.join(',')}` })
+            await Swal.fire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
           }
         },
         async btnKeysGrab () {
+          const { ultra } = this
           try {
             const msg1 = 'Tool\'s mifare keys will be REPLACE! Continue?'
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
@@ -435,7 +436,7 @@ block script
             this.$set(this.ss, 'keys', keys.join('\n'))
             await Swal.fire({ icon: 'success', title: 'Grab success', text: `Grab ${keys.length} keys.` })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Grab failed', text: err.message })
           }
         },
@@ -445,6 +446,7 @@ block script
           this.$set(this.ss, 'keys', WELL_KNOWN_KEYS.join('\n'))
         },
         async btnCardImport () {
+          const { ultra } = this
           try {
             const file = await new Promise(resolve => {
               this.$set(this.cardImport, 'cb', tmpFile => { if (!_.isNil(tmpFile)) resolve(tmpFile) })
@@ -477,7 +479,7 @@ block script
             }
             await Swal.fire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Import failed', text: err.message })
           }
         },
@@ -590,8 +592,9 @@ block script
           $ref.modal('show')
         },
         async btnCardReset () {
+          const { ultra } = this
           try {
-            const msg1 = 'Tool\'s mifare card data will be RESET! Continue?'
+            const msg1 = 'Mifare dump will be RESET! Continue?'
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             const tmp = {
               uid: 'deadbeef',
@@ -603,7 +606,7 @@ block script
             }
             this.$set(this, 'ss', { ...this.ss, ...tmp })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
         },
@@ -633,8 +636,7 @@ block script
           }
         },
         mfCardSetSector (sectorNo, sectorData) {
-          const blocks = _.times(4, i => sectorData.subarray(i * 16, i * 16 + 16))
-          const sectorEml = _.map(blocks, block => block.toString('hex')).join('\n')
+          const sectorEml = _.map(sectorData.chunk(16), block => block.toString('hex')).join('\n')
           this.$set(this.ss.body, sectorNo, sectorEml)
         },
         mfCardGetKeys () {

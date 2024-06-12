@@ -159,9 +159,9 @@ block script
           })
         },
         async btnScanTag () {
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Scanning tag...' })
-            const { ultra } = this
             const slot = await ultra.cmdSlotGetActive()
             const tag1 = _.first(await ultra.cmdHf14aScan())
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
@@ -176,13 +176,13 @@ block script
             _.merge(this.ss, tag2)
             Swal.close()
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
           }
         },
         async btnEmulateTag () {
+          const { ultra } = this
           try {
-            const { ultra } = this
             const { atqa, sak, slot, tagType, uid } = this.ss
             console.log({ atqa, sak, slot, tagType, uid })
             const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
@@ -214,11 +214,12 @@ block script
             await ultra.cmdSlotSaveSettings()
             await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
           }
         },
         async btnRecover () {
+          const { ultra } = this
           try {
             const swalCfg = {
               text: 'Connecting device...',
@@ -226,7 +227,6 @@ block script
               currentProgressStep: 0,
             }
             this.showLoading(swalCfg)
-            const { ultra } = this
             const logCnt = await ultra.cmdMf1GetDetectionCount()
             if (logCnt < 2) throw new Error('Please let reader to read ChameleonUltra more than 2 times to collect data.')
 
@@ -278,14 +278,14 @@ block script
             }
             await Swal.fire({ icon: 'success', title: 'Recover successfully!' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Failed to recover key.', text: err.message })
           }
         },
         async btnCheck () {
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Checking key...' })
-            const { ultra } = this
             const { block, keyType, key } = this.ss
             const isCorrect = await ultra.cmdMf1CheckBlockKey({
               block,
@@ -296,7 +296,7 @@ block script
             if (!isCorrect) return await Swal.fire({ icon: 'error', title: 'Key is incorrect!' })
             await Swal.fire({ icon: 'success', title: 'Key is correct!' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Failed to check key.', text: err.message })
           }
         },

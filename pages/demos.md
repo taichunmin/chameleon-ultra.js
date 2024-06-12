@@ -8,8 +8,10 @@
     - [Related links](#related-links)
   - [mifare1k.html](#mifare1khtml)
     - [Features](#features-2)
-  - [mifare-value.html](#mifare-valuehtml)
+  - [mifare-xiaomi.html](#mifare-xiaomihtml)
     - [Features](#features-3)
+  - [mifare-value.html](#mifare-valuehtml)
+    - [Features](#features-4)
 
 ## [device-settings.html](https://taichunmin.idv.tw/chameleon-ultra.js/device-settings.html)
 
@@ -57,22 +59,36 @@ A ChameleonUltra tool for mifare class 1k.
 
 ### Features
 
-- Load/Emulate from slot of ChameleonUltra.
-- Read/Write from Mifare Gen1a Tag (UID).
-- Read/Write from Mifare Classic 1k, Gen2 Tag (CUID, FUID, UFUID).
-- Import/Export from `.json`, `.bin`, `.eml`, `.mct` files.
+- Load/Emulate for slot of ChameleonUltra.
+- Read/Write for Mifare Gen1a Tag (UID).
+- Read/Write for Mifare Classic 1k, Gen2 Tag (CUID, FUID, UFUID).
+- Import/Export dump for `.json`, `.bin`, `.eml`, `.mct` files.
+
+- - -
+
+## [mifare-xiaomi.html](https://taichunmin.idv.tw/chameleon-ultra.js/mifare-xiaomi.html)
+
+A tool for Xiaomi Watch to clone encrypted Mifare Classic tag.
+
+![](https://i.imgur.com/M39Y0Be.png)
+
+### Features
+
+- Import/Export dump for `.json`, `.bin`, `.eml`, `.mct` files.
+- Emulate ChameleonUltra as non-encrypted Mifare Classic tag.
+- Write/Verify/Read for Xiaomi Watch.
 
 - - -
 
 ## [mifare-value.html](https://taichunmin.idv.tw/chameleon-ultra.js/mifare-value.html)
 
-![](https://i.imgur.com/jJ3pNvn.png)
-
 在台灣有些 MIFARE Classic 卡片使用 value block 來儲存卡片的餘額，但是有些中國魔術卡不支援 value block 指令，所以無法使用這些魔術卡來複製 MIFARE Classic 卡片。這個工具可以讓你測試卡片是否支援 value block 指令。
 
 A ChameleonUltra tool for MIFARE Classic value block commands. Some MIFARE Classic cards in Taiwan are using value block to store the balance of the card. But some chinese magic cards didn't support value block commands. So you can't use these magic cards to clone original MIFARE Classic cards. This tool can help you to test whether the card support value block commands or not.
 
+![](https://i.imgur.com/jJ3pNvn.png)
+
 ### Features
 
-- Get/Set mifare value block
-- Increase/Decrease/Restore mifare value block
+- Get/Set for mifare value block
+- Increase/Decrease/Restore for mifare value block
