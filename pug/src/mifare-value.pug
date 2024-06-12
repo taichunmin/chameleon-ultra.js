@@ -139,43 +139,44 @@ block script
           })
         },
         async cmdVblockGet (src) {
+          const { ultra } = this
           src = this.mf1ParseBlockKey(src)
-          const ultra = this.ultra
           const res = await ultra.mf1VblockGetValue(src)
           await Swal.fire({ icon: 'success', title: 'Success', text: `block[${src.block}] = ${JSON.stringify(res)}` })
         },
         async btnGetValue () {
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Processing...' })
             await this.cmdVblockGet(this.ss.src)
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Failed to get value from src', text: err.message })
           }
         },
         async btnSetValue () {
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Processing...' })
             const src = this.mf1ParseBlockKey(this.ss.src)
-            const ultra = this.ultra
             await ultra.mf1VblockSetValue(src, { adr: src.block, value: this.ss.operand })
             await this.cmdVblockGet(this.ss.src)
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Failed to set value to src', text: err.message })
           }
         },
         async btnManipulateValue (operator) {
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Processing...' })
             const src = this.mf1ParseBlockKey(this.ss.src)
             const dst = this.ss.srcAsDst ? src : this.mf1ParseBlockKey(this.ss.dst)
             const operand = this.ss.operand
-            const ultra = this.ultra
             await ultra.cmdMf1VblockManipulate(src, operator, operand, dst)
             await this.cmdVblockGet(this.ss.src)
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: `Failed to ${Mf1VblockOperator[operator]} value`, text: err.message })
           }
         },

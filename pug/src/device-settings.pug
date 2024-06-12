@@ -178,9 +178,9 @@ block script
           })
         },
         async btnLoadDevice () {
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Loading settings...' })
-            const { ultra } = this
             const batteryInfo = await ultra.cmdGetBatteryInfo()
             const ss = {
               animationMode: await ultra.cmdGetAnimationMode(),
@@ -204,14 +204,14 @@ block script
             this.$set(this, 'ss', { ...this.ss, ...ss, blePairingKeyVisible: false })
             Swal.close()
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', text: err.message })
           }
         },
         async btnSaveDevice () {
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Saving settings...' })
-            const { ultra } = this
             const ss = await joiDeviceSettings.validateAsync(this.ss, { stripUnknown: true })
             await ultra.cmdSetAnimationMode(ss.animationMode)
             await ultra.cmdBleSetPairingMode(ss.blePairingMode)
@@ -225,25 +225,25 @@ block script
             await ultra.cmdSaveSettings()
             await Swal.fire({ icon: 'success', text: 'Settings save successfully!' })
           } catch (err) {
-            console.error(err)
+            ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', text: err.message })
           }
         },
         async btnEnterBootloader () {
           if (!await this.confirm('Enter bootloader?', 'Yes', 'Cancel')) return
-          await this.ultra.cmdEnterBootloader().catch(console.error)
+          await this.ultra.cmdEnterBootloader().catch(err => { this.ultra.emitter.emit('error', err) })
         },
         async btnResetSettings () {
           if (!await this.confirm('Reset to default settings?', 'Yes', 'Cancel')) return
-          await this.ultra.cmdResetSettings().catch(console.error)
+          await this.ultra.cmdResetSettings().catch(err => { this.ultra.emitter.emit('error', err) })
         },
         async btnBleDeleteAllBonds () {
           if (!await this.confirm('Delete ALL BLE bonds?', 'Yes', 'Cancel')) return
-          await this.ultra.cmdBleDeleteAllBonds().catch(console.error)
+          await this.ultra.cmdBleDeleteAllBonds().catch(err => { this.ultra.emitter.emit('error', err) })
         },
         async btnWipeFds () {
           if (!await this.confirm('Factory reset?', 'Yes', 'Cancel')) return
-          await this.ultra.cmdWipeFds().catch(console.error)
+          await this.ultra.cmdWipeFds().catch(err => { this.ultra.emitter.emit('error', err) })
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
           return await new Promise((resolve, reject) => {
