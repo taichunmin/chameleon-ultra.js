@@ -316,11 +316,14 @@ export class ChameleonUltra {
       const respGenerator = new EventAsyncGenerator<Buffer>()
       this.emitter.on('resp', respGenerator.onData)
       this.emitter.once('disconnected', respGenerator.onClose)
-      let timeout: any | undefined
+      let timeout: NodeJS.Timeout | undefined
       respGenerator.removeCallback = () => {
         this.emitter.removeListener('resp', respGenerator.onData)
         this.emitter.removeListener('disconnected', respGenerator.onClose)
-        if (!_.isNil(timeout)) clearTimeout(timeout)
+        if (!_.isNil(timeout)) {
+          clearTimeout(timeout)
+          timeout = undefined // prevent memory leak: https://lucumr.pocoo.org/2024/6/5/node-timeout/
+        }
       }
       return async () => {
         timeout = setTimeout(() => {

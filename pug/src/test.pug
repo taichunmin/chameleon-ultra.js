@@ -24,11 +24,11 @@ block script
   script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/vconsole@3/dist/vconsole.min.js")
   script.
     window.vConsole = new window.VConsole()
-    const { Buffer, ChameleonDebug, ChameleonUltra, Debug, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
-    const ultraUsb = new ChameleonUltra(true)
+    const { Buffer, ChameleonDebug, ChameleonUltra, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS // eslint-disable-line no-unused-vars, @typescript-eslint/no-unused-vars
+    const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new ChameleonDebug())
     ultraUsb.use(new WebserialAdapter())
-    const ultraBle = new ChameleonUltra(true)
+    const ultraBle = new ChameleonUltra()
     ultraBle.use(new ChameleonDebug())
     ultraBle.use(new WebbleAdapter())
 

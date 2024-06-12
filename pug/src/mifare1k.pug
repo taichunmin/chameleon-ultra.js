@@ -96,11 +96,11 @@ block content
     .card.shadow-sm.mb-2
       h6.card-header.bg-light #[i.fa.fa-id-card.mr-1] Mifare Dump
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        input.d-none(type="file", ref="cardImport", @change="cardImport?.cb?.($event.target.files[0])")
+        input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])")
         .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnCardImport") #[i.fa.fa-fw.fa-file-code-o] Import
-          .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnCardExport") #[i.fa.fa-fw.fa-floppy-o] Export
-        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnCardReset") #[i.fa.mr-1.fa-repeat] Reset to empty dump
+          .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnImportDump") #[i.fa.fa-fw.fa-file-code-o] Import
+          .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnExportDump") #[i.fa.fa-fw.fa-floppy-o] Export
+        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnResetDump") #[i.fa.mr-1.fa-repeat] Reset to empty dump
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
         h6.card-title Anit Collision
         .input-group.input-group-sm.mb-2.was-validated
@@ -125,8 +125,8 @@ block content
           .input-group-prepend: label.input-group-text.justify-content-center.flex-column(style="width: 2rem", :for="`i-toggle-${i}`")
             input.my-2(type="checkbox", v-model="ss.toggle[i]", :id="`i-toggle-${i}`")
             span {{ `0${i}`.slice(-2) }}
-          textarea.form-control(rows="4", v-model="ss.body[i]", :class="isValidBlock(ss.body[i]) ? 'is-valid' : 'is-invalid'")
-    .modal.fade(tabindex="-1", ref="cardExport")
+          textarea.form-control(rows="4", v-model="ss.dump[i]", :class="isValidBlock(ss.dump[i]) ? 'is-valid' : 'is-invalid'")
+    .modal.fade(tabindex="-1", ref="dumpExport")
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
           .modal-header
@@ -134,57 +134,55 @@ block content
             button.close(type="button", data-dismiss="modal") #[span &times;]
           .modal-body
             a.btn.btn-block.btn-outline-primary.mb-2.text-left(
-              :download="cardExport.json.download",
-              :href="cardExport.json.href",
+              :download="dumpExport.json.download",
+              :href="dumpExport.json.href",
               target="_blank")
-              .my-1 {{ cardExport.json.download }}
+              .my-1 {{ dumpExport.json.download }}
               h6.text-muted.mb-1 Click to download as JSON format. This format can be used in Proxmark3 and Chameleon Mini GUI.
             a.btn.btn-block.btn-outline-primary.text-left(
-              :download="cardExport.bin.download",
-              :href="cardExport.bin.href",
+              :download="dumpExport.bin.download",
+              :href="dumpExport.bin.href",
               target="_blank")
-              .my-1 {{ cardExport.bin.download }}
+              .my-1 {{ dumpExport.bin.download }}
               h6.text-muted.mb-1 Click to download as BIN format. This format can be used in Proxmark3, libnfc, mfoc...
             a.btn.btn-block.btn-outline-primary.text-left(
-              :download="cardExport.eml.download",
-              :href="cardExport.eml.href",
+              :download="dumpExport.eml.download",
+              :href="dumpExport.eml.href",
               target="_blank")
-              .my-1 {{ cardExport.eml.download }}
+              .my-1 {{ dumpExport.eml.download }}
               h6.text-muted.mb-1 Click to download as EML format. This format can be used in Proxmark3 emulator.
             a.btn.btn-block.btn-outline-primary.text-left(
-              :download="cardExport.mct.download",
-              :href="cardExport.mct.href",
+              :download="dumpExport.mct.download",
+              :href="dumpExport.mct.href",
               target="_blank")
-              .my-1 {{ cardExport.mct.download }}
+              .my-1 {{ dumpExport.mct.download }}
               h6.text-muted.mb-1 Click to download as MCT format. This format can be used in Mifare Classic Tool.
 
 block script
   script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/joi@17/dist/joi-browser.min.js")
   script.
-    const { AnimationMode, Buffer, ButtonAction, ChameleonDebug, ChameleonUltra, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
-    const ultraUsb = new ChameleonUltra(true)
+    const { Buffer, ChameleonDebug, ChameleonUltra, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+    const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new ChameleonDebug())
     ultraUsb.use(new WebserialAdapter())
-    const ultraBle = new ChameleonUltra(true)
+    const ultraBle = new ChameleonUltra()
     ultraBle.use(new ChameleonDebug())
     ultraBle.use(new WebbleAdapter())
 
-    const WELL_KNOWN_KEYS = ['ffffffffffff', 'a0a1a2a3a4a5', 'd3f7d3f7d3f7']
+    const toHex = buf => _.toUpper(buf.toString('hex'))
+    const WELL_KNOWN_KEYS = ['FFFFFFFFFFFF', 'A0A1A2A3A4A5', 'D3F7D3F7D3F7']
 
-    function getEmptyCardBody () {
-      const blkDefault = {
-        factory: 'deadbeef220804000177a2cc35afa51d',
-        empty: '00000000000000000000000000000000',
-        acl: 'ffffffffffffff078069ffffffffffff',
-      }
-      return _.times(16, secNo => {
-        const blocks = _.times(4, blkNo => {
-          if (secNo === 0 && blkNo === 0) return blkDefault.factory
-          else if (blkNo === 3) return blkDefault.acl
-          else return blkDefault.empty
-        })
-        return blocks.join('\n')
-      })
+    function getEmptyDump () {
+      const buf = new Buffer(1024)
+      const blkFactory = Buffer.from('DEADBEEF220804000177A2CC35AFA51D', 'hex')
+      const blkAcl = Buffer.from('FFFFFFFFFFFFFF078069FFFFFFFFFFFF', 'hex')
+      buf.set(blkFactory, 0) // block 0
+      for (let i = 0; i < 16; i++) buf.set(blkAcl, i * 64 + 48) // block 4n+3
+      return buf
+    }
+
+    function toSectorsHex (dump) {
+      return _.map(dump.chunk(64), sectorDump => _.map(sectorDump.chunk(16), toHex).join('\n'))
     }
 
     window.vm = new Vue({
@@ -197,7 +195,7 @@ block script
           antiColl: 0,
           atqa: '0004',
           ats: '',
-          body: getEmptyCardBody(),
+          dump: toSectorsHex(getEmptyDump()),
           detection: 0,
           gen1a: 0,
           gen2: 0,
@@ -206,11 +204,11 @@ block script
           sak: '08',
           slot: 0,
           toggle: _.times(16, () => true),
-          uid: 'deadbeef',
+          uid: 'DEADBEEF',
           write: 0,
         },
-        cardImport: { cb: null },
-        cardExport: {
+        dumpImport: { cb: null },
+        dumpExport: {
           json: { download: '', href: '' },
           bin: { download: '', href: '' },
           eml: { download: '', href: '' },
@@ -243,18 +241,19 @@ block script
         },
         async btnEmuRead () {
           const { ultra } = this
+          const { slot } = this.ss
           try {
             this.showLoading({ text: 'Loading emulator' })
-            await ultra.cmdSlotSetActive(this.ss.slot)
+            await ultra.cmdSlotSetActive(slot)
             this.$set(this, 'ss', {
               ...this.ss,
-              name: await ultra.cmdSlotGetFreqName(this.ss.slot, FreqType.HF),
+              name: await ultra.cmdSlotGetFreqName(slot, FreqType.HF),
               ..._.mapValues(await ultra.cmdMf1GetEmuSettings(), _.toInteger), // antiColl, detection, gen1a, gen2, write
             })
             this.mfCardSetAntiColl(await ultra.cmdHf14aGetAntiCollData())
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              this.mfCardSetSector(i, await ultra.cmdMf1EmuReadBlock(i << 2, 4))
+              this.mfSetSectorDump(i, await ultra.cmdMf1EmuReadBlock(i << 2, 4))
             }
             await Swal.fire({ icon: 'success', title: 'Load success' })
           } catch (err) {
@@ -264,29 +263,35 @@ block script
         },
         async btnEmuWrite () {
           const { ultra } = this
+          const { antiColl, atqa, ats, detection, dump, gen1a, gen2, name, sak, slot, toggle, uid, write } = this.ss
           try {
-            const msg1 = `Slot ${this.ss.slot + 1} will be REPLACE! Continue?`
+            this.showLoading({ text: 'Emulating tag...' })
+            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
+            const msg1 = `Slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Emulating' })
-            await ultra.cmdSlotSetActive(this.ss.slot)
-            const freqName = this.ss.name
-            if (_.isString(freqName) && freqName.length > 0) await ultra.cmdSlotSetFreqName(this.ss.slot, FreqType.HF, freqName)
-            await ultra.cmdMf1SetAntiCollMode(this.ss.antiColl)
-            await ultra.cmdMf1SetDetectionEnable(this.ss.detection)
-            await ultra.cmdMf1SetGen1aMode(this.ss.gen1a)
-            await ultra.cmdMf1SetGen2Mode(this.ss.gen2)
-            await ultra.cmdMf1SetWriteMode(this.ss.write)
+            this.showLoading({ text: 'Emulating tag...' })
+            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.cmdSlotChangeTagType(slot, TagType.MIFARE_1024)
+            await ultra.cmdSlotResetTagType(slot, TagType.MIFARE_1024)
+            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
+            if (_.isString(name) && name.length > 0) await ultra.cmdSlotSetFreqName(slot, FreqType.HF, name)
+            await ultra.cmdMf1SetAntiCollMode(antiColl)
+            await ultra.cmdMf1SetDetectionEnable(detection)
+            await ultra.cmdMf1SetGen1aMode(gen1a)
+            await ultra.cmdMf1SetGen2Mode(gen2)
+            await ultra.cmdMf1SetWriteMode(write)
             await ultra.cmdHf14aSetAntiCollData({
-              atqa: Buffer.from(this.ss.atqa, 'hex').reverse(),
-              ats: Buffer.from(this.ss.ats, 'hex'),
-              sak: Buffer.from(this.ss.sak, 'hex'),
-              uid: Buffer.from(this.ss.uid, 'hex'),
+              atqa: Buffer.from(atqa, 'hex').reverse(),
+              ats: Buffer.from(ats, 'hex'),
+              sak: Buffer.from(sak, 'hex'),
+              uid: Buffer.from(uid, 'hex'),
             })
             for (let i = 0; i < 16; i++) {
-              if (!this.ss.toggle[i]) continue
-              const sectorData = Buffer.from(this.ss.body[i], 'hex')
+              if (!toggle[i]) continue
+              const sectorData = Buffer.from(dump[i], 'hex')
               await ultra.cmdMf1EmuWriteBlock(i << 2, sectorData)
             }
+            await ultra.cmdSlotSetActive(slot)
             await Swal.fire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
@@ -295,15 +300,19 @@ block script
         },
         async btnEmuReset () {
           const { ultra } = this
+          const { slot } = this.ss
           try {
-            const msg1 = `Slot ${this.ss.slot + 1} will be RESET! Continue?`
+            this.showLoading({ text: 'Resetting...' })
+            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
+            const msg1 = `Slot ${slot + 1} "${slotName}" will be RESET! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Resetting' })
+            this.showLoading({ text: 'Resetting...' })
+            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             // reset slot
-            await ultra.cmdSlotChangeTagType(this.ss.slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotResetTagType(this.ss.slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotSetEnable(this.ss.slot, FreqType.HF, true)
-            await ultra.cmdSlotSetActive(this.ss.slot)
+            await ultra.cmdSlotChangeTagType(slot, TagType.MIFARE_1024)
+            await ultra.cmdSlotResetTagType(slot, TagType.MIFARE_1024)
+            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
+            await ultra.cmdSlotSetActive(slot)
             await Swal.fire({ icon: 'success', title: 'Reset success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
@@ -320,7 +329,7 @@ block script
             this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              this.mfCardSetSector(i, await ultra.mf1Gen1aReadBlocks(i << 2, 4))
+              this.mfSetSectorDump(i, await ultra.mf1Gen1aReadBlocks(i << 2, 4))
               this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
@@ -341,7 +350,7 @@ block script
             this.showLoading(genSwalCfg(0))
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              const sectorData = Buffer.from(this.ss.body[i], 'hex')
+              const sectorData = Buffer.from(this.ss.dump[i], 'hex')
               await ultra.mf1Gen1aWriteBlocks(i << 2, sectorData)
               this.showLoading(genSwalCfg(i + 1))
             }
@@ -366,7 +375,7 @@ block script
               try {
                 if (!this.ss.toggle[i]) continue
                 const { data: sectorData, success } = await ultra.mf1ReadSectorByKeys(i, keys)
-                this.mfCardSetSector(i, sectorData)
+                this.mfSetSectorDump(i, sectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
                 // reorder keys: found key will be put to first of keys
                 for (const key1 of _.map([48, 58], i => sectorData.subarray(i, i + 6))) {
@@ -374,6 +383,7 @@ block script
                   if (idx >= 0) keys.unshift(...keys.splice(idx, 1))
                 }
               } catch (err) {
+                if (!ultra.isConnected()) throw err
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
                 ultra.emitter.emit('error', err)
               }
@@ -401,10 +411,11 @@ block script
             for (let i = 0; i < 16; i++) {
               try {
                 if (!this.ss.toggle[i]) continue
-                const sectorData = Buffer.from(this.ss.body[i], 'hex')
+                const sectorData = Buffer.from(this.ss.dump[i], 'hex')
                 const { success } = await ultra.mf1WriteSectorByKeys(i, keys, sectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
               } catch (err) {
+                if (!ultra.isConnected()) throw err
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
                 ultra.emitter.emit('error', err)
               }
@@ -427,9 +438,9 @@ block script
             let keys = []
             for (let i = 0; i < 16; i++) {
               if (!this.ss.toggle[i]) continue
-              const sectorData = Buffer.from(this.ss.body[i], 'hex')
+              const sectorData = Buffer.from(this.ss.dump[i], 'hex')
               if (sectorData.length !== 64) continue
-              keys.push(..._.map([48, 58], offset => sectorData.subarray(offset, offset + 6).toString('hex')))
+              keys.push(..._.map([48, 58], offset => toHex(sectorData.subarray(offset, offset + 6))))
             }
             keys = _.uniq(keys)
             if (keys.length === 0) throw new Error('No keys found')
@@ -445,12 +456,12 @@ block script
           if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
           this.$set(this.ss, 'keys', WELL_KNOWN_KEYS.join('\n'))
         },
-        async btnCardImport () {
+        async btnImportDump () {
           const { ultra } = this
           try {
             const file = await new Promise(resolve => {
-              this.$set(this.cardImport, 'cb', tmpFile => { if (!_.isNil(tmpFile)) resolve(tmpFile) })
-              const $ref = this.$refs.cardImport
+              this.$set(this.dumpImport, 'cb', tmpFile => { if (!_.isNil(tmpFile)) resolve(tmpFile) })
+              const $ref = this.$refs.dumpImport
               $ref.value = ''
               $ref.click()
             })
@@ -462,17 +473,17 @@ block script
             const buf = new Buffer(await file.arrayBuffer())
             switch (ext) {
               case 'bin':
-                await this.btnCardImportBin(file, buf)
+                await this.btnImportDumpBin(file, buf)
                 break
               case 'json':
               case 'json5':
-                await this.btnCardImportJson(file, buf)
+                await this.btnImportDumpJson(file, buf)
                 break
               case 'eml':
-                await this.btnCardImportEml(file, buf)
+                await this.btnImportDumpEml(file, buf)
                 break
               case 'mct':
-                await this.btnCardImportMct(file, buf)
+                await this.btnImportDumpMct(file, buf)
                 break
               default:
                 throw new Error(`Unsupported file extension: ${ext}`)
@@ -483,42 +494,35 @@ block script
             await Swal.fire({ icon: 'error', title: 'Import failed', text: err.message })
           }
         },
-        async btnCardImportBin (file, buf) {
+        async btnImportDumpBin (file, buf) {
           if (file.size !== 1024) throw new Error(`Invalid file size: ${file.size} bytes`)
-          for (let i = 0; i < 16; i++) {
-            const sectorData = buf.subarray(i * 64, (i + 1) * 64)
-            this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
-          }
+          _.each(buf.chunk(64), (sectorDump, i) => this.mfSetSectorDump(i, sectorDump))
         },
-        async btnCardImportJson (file, buf) {
+        async btnImportDumpJson (file, buf) {
           const json = JSON5.parse(buf.toString('utf8'))
           if (json.FileType !== 'mfcard') throw new Error(`Invalid file type: ${json.FileType}`)
-          if (!_.isNil(json?.Card?.UID)) this.$set(this.ss, 'uid', _.toLower(json.Card.UID))
-          if (!_.isNil(json?.Card?.ATQA)) this.$set(this.ss, 'atqa', Buffer.from(json.Card.ATQA, 'hex').reverse().toString('hex'))
-          if (!_.isNil(json?.Card?.SAK)) this.$set(this.ss, 'sak', json.Card.SAK)
+          if (!_.isNil(json?.Card?.UID)) this.$set(this.ss, 'uid', toHex(Buffer.from(json.Card.UID, 'hex')))
+          if (!_.isNil(json?.Card?.ATQA)) this.$set(this.ss, 'atqa', toHex(Buffer.from(json.Card.ATQA, 'hex').reverse()))
+          if (!_.isNil(json?.Card?.SAK)) this.$set(this.ss, 'sak', toHex(Buffer.from(json.Card.SAK, 'hex')))
           if (!_.isNil(json?.blocks)) {
             for (let i = 0; i < 16; i++) {
-              const sectorData = new Buffer(64)
+              const sectorDump = new Buffer(64)
               for (let j = 0; j < 4; j++) {
-                const blockhex = json?.blocks?.[i * 4 + j] ?? ''
-                if (blockhex.length !== 32) continue
-                const blockbuf = Buffer.from(blockhex.replaceAll('-', '0'), 'hex')
-                if (blockbuf.length !== 16) continue
-                blockbuf.copy(sectorData, j * 16)
+                const blkHex = (json?.blocks?.[i * 4 + j] ?? '').replaceAll('-', '0')
+                const blkBuf = Buffer.from(blkHex, 'hex')
+                if (blkBuf.length !== 16) continue
+                blkBuf.copy(sectorDump, j * 16)
               }
-              this.mfCardSetSector(i, sectorData)
+              this.mfSetSectorDump(i, sectorDump)
             }
           }
         },
-        async btnCardImportEml (file, buf) {
+        async btnImportDumpEml (file, buf) {
           buf = Buffer.from(buf.toString('utf8').replaceAll('-', '0'), 'hex')
           if (buf.length !== 1024) throw new Error(`Invalid eml size: ${buf.length} bytes`)
-          for (let i = 0; i < 16; i++) {
-            const sectorData = buf.subarray(i * 64, (i + 1) * 64)
-            this.$set(this.ss.body, i, _.map(sectorData.chunk(16), chunk => chunk.toString('hex')).join('\n'))
-          }
+          _.each(buf.chunk(64), (sectorDump, i) => this.mfSetSectorDump(i, sectorDump))
         },
-        async btnCardImportMct (file, buf) {
+        async btnImportDumpMct (file, buf) {
           const rows = buf.toString('utf8').split(/\r?\n/)
           buf = new Buffer(1024)
           let blockNo = 0
@@ -533,65 +537,62 @@ block script
               blockNo++
             }
           }
-          for (let i = 0; i < 16; i++) this.mfCardSetSector(i, buf.subarray(i * 64))
+          _.each(buf.chunk(64), (sectorDump, i) => this.mfSetSectorDump(i, sectorDump))
         },
-        async btnCardExport () {
-          const card = new Buffer(1024)
+        async btnExportDump () {
+          const dump = new Buffer(1024)
           for (let i = 0; i < 16; i++) {
-            const sectorData = Buffer.from(this.ss.body[i], 'hex')
+            const sectorData = Buffer.from(this.ss.dump[i], 'hex')
             if (sectorData.length !== 64) continue // skip invalid sector
-            sectorData.copy(card, i * 64)
+            sectorData.copy(dump, i * 64)
           }
-          const uid = Buffer.from(this.ss.uid, 'hex')
-          const atqa = Buffer.from(this.ss.atqa, 'hex').reverse()
-          const sak = Buffer.from(this.ss.sak, 'hex')
-
-          // helper
-          const toHex = buf => _.toUpper(buf.toString('hex'))
+          const uid = toHex(Buffer.from(this.ss.uid, 'hex'))
+          const atqa = toHex(Buffer.from(this.ss.atqa, 'hex').reverse())
+          const sak = toHex(Buffer.from(this.ss.sak, 'hex'))
 
           // json
           const json = {
             Created: 'chameleon-ultra.js',
             FileType: 'mfcard',
             Card: {
-              UID: toHex(uid),
-              ATQA: toHex(atqa),
-              SAK: toHex(sak),
+              UID: uid,
+              ATQA: atqa,
+              SAK: sak,
             },
-            blocks: _.fromPairs(_.times(64, i => [i, toHex(card.subarray(i * 16, i * 16 + 16))])),
+            blocks: _.fromPairs(_.entries(_.map(dump.chunk(16), toHex))),
           }
-          this.$set(this.cardExport, 'json', {
+          this.$set(this.dumpExport, 'json', {
             href: URL.createObjectURL(new Blob([JSON.stringify(json, null, 2)], { type: 'application/octet-stream' })),
-            download: `hf-mf-${toHex(uid)}.json`,
+            download: `hf-mf-${uid}.json`,
           })
 
           // bin
-          this.$set(this.cardExport, 'bin', {
-            href: URL.createObjectURL(new Blob([card], { type: 'application/octet-stream' })),
-            download: `hf-mf-${toHex(uid)}.bin`,
+          this.$set(this.dumpExport, 'bin', {
+            href: URL.createObjectURL(new Blob([dump], { type: 'application/octet-stream' })),
+            download: `hf-mf-${uid}.bin`,
           })
 
           // eml
-          const eml = _.map(card.chunk(16), b => toHex(b)).join('\n')
-          this.$set(this.cardExport, 'eml', {
+          const eml = _.map(dump.chunk(16), toHex).join('\n')
+          this.$set(this.dumpExport, 'eml', {
             href: URL.createObjectURL(new Blob([eml], { type: 'application/octet-stream' })),
-            download: `hf-mf-${toHex(uid)}.eml`,
+            download: `hf-mf-${uid}.eml`,
           })
 
           // mct
-          const mct = _.map(card.chunk(64), (sector, sectorNo) => {
-            return `+Sector: ${sectorNo}\n${_.map(sector.chunk(16), b => toHex(b)).join('\n')}`
+          const mct = _.map(dump.chunk(64), (sector, sectorNo) => {
+            return `+Sector: ${sectorNo}\n${_.map(sector.chunk(16), toHex).join('\n')}`
           }).join('\n')
-          this.$set(this.cardExport, 'mct', {
+          this.$set(this.dumpExport, 'mct', {
             href: URL.createObjectURL(new Blob([mct], { type: 'application/octet-stream' })),
-            download: `hf-mf-${toHex(uid)}.mct`,
+            download: `hf-mf-${uid}.mct`,
           })
 
           await new Promise(resolve => this.$nextTick(resolve)) // wait for DOM update
-          const $ref = window.jQuery(this.$refs.cardExport)
+          const $ref = window.jQuery(this.$refs.dumpExport)
           $ref.modal('show')
         },
-        async btnCardReset () {
+        async btnResetDump () {
           const { ultra } = this
           try {
             const msg1 = 'Mifare dump will be RESET! Continue?'
@@ -601,7 +602,7 @@ block script
               atqa: '0004',
               sak: '08',
               ats: '',
-              body: getEmptyCardBody(),
+              dump: toSectorsHex(getEmptyDump()),
               toggle: _.times(16, () => true),
             }
             this.$set(this, 'ss', { ...this.ss, ...tmp })
@@ -635,14 +636,14 @@ block script
             this.$set(this.ss, k, buf.toString('hex'))
           }
         },
-        mfCardSetSector (sectorNo, sectorData) {
-          const sectorEml = _.map(sectorData.chunk(16), block => block.toString('hex')).join('\n')
-          this.$set(this.ss.body, sectorNo, sectorEml)
+        mfSetSectorDump (sectorNo, sectorData) {
+          const sectorEml = _.map(sectorData.chunk(16), toHex).join('\n')
+          this.$set(this.ss.dump, sectorNo, sectorEml)
         },
         mfCardGetKeys () {
           const keys = _.chain(Buffer.from(this.ss.keys, 'hex').chunk(6))
             .filter(key => Buffer.isBuffer(key) && key.length === 6)
-            .uniqBy(key => key.toString('hex'))
+            .uniqWith(Buffer.equals)
             .value()
           if (keys.length === 0) throw new Error('No keys found')
           return keys
