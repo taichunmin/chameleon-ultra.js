@@ -36,7 +36,7 @@ block content
     .card.shadow-sm.mb-2
       h6.card-header.bg-light ① Mifare Dump
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        p.text-sm Click "Import" button to import a mifare dump exported from #[a(target="_blank", href=`${baseurl}mifare1k.html`) mifare1k.html] or other tools like MCT, Proxmark3.
+        p.text-sm Click "Import" button to import a mifare dump exported from #[a(target="_blank", href=`${baseurl}mifare1k.html`) mifare1k.html] or other tools like MCT, Proxmark3. Keys in dump will be used to sync with Xiaomi Watch. Dump will be deleted after page closed.
         input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])")
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center UID
@@ -55,7 +55,7 @@ block content
           .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnExportDump") #[i.fa.fa-fw.fa-floppy-o] Export
         button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnResetDump") #[i.fa.mr-1.fa-repeat] Reset to empty dump
     .card.shadow-sm.mb-2
-      h6.card-header.bg-light ② Emulate Non-Encrypted Tag
+      h6.card-header.bg-light ② ChameleonUltra Emulate
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
         p.text-sm Choose a slot and click the "Emulate" button to emulate as non-encrypted tag. Then use Xiaomi Watch to clone the ChameleonUltra.
         .input-group.input-group-sm.mb-2
@@ -64,16 +64,19 @@ block content
             option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
         button.btn.btn-block.btn-outline-success.mb-2(@click="btnEmuWrite") #[i.fa.mr-1.fa-sign-in] Emulate
     .card.shadow-sm.mb-2
-      h6.card-header.bg-light ③ Sync Dump to Xiaomi Watch
+      h6.card-header.bg-light ③ Sync with Xiaomi Watch
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        p.text-sm.mb-2 After clone, click "Write" button to write original dump to watch.
+        p.text-sm.mb-2 After clone, click "Write" button to write original dump to Xiaomi Watch.
+        .custom-control.custom-checkbox.mb-2
+          input.custom-control-input#ss-checkUidBeforeWrite(type="checkbox", v-model="ss.checkUidBeforeWrite")
+          label.custom-control-label(for="ss-checkUidBeforeWrite") Verify UID before write
         button.btn.btn-block.btn-outline-primary.mb-2(@click="btnGen2Write") #[i.fa.mr-1.fa-download] Write
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
-        p.text-sm.mb-2 Click "Verify" button to compare between dump and watch (skip block 0).
-        button.btn.btn-block.btn-outline-info.mb-2(@click="btnGen2Verify") #[i.fa.mr-1.fa-exchange] Verify
+        p.text-sm.mb-2 Click "Verify" button to compare between dump and Xiaomi Watch (skip block 0).
+        button.btn.btn-block.btn-outline-success.mb-2(@click="btnGen2Verify") #[i.fa.mr-1.fa-exchange] Verify
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
-        p.text-sm.mb-2 Click "Read" button to read dump from watch (skip block 0). After read, click "Export" button above to save the dump.
-        button.btn.btn-block.btn-outline-warning.mb-2(@click="btnGen2Read") #[i.fa.mr-1.fa-upload] Read
+        p.text-sm.mb-2 Click "Read" button to read from Xiaomi Watch (skip block 0). After read, you can click "Export" or "Write" button.
+        button.btn.btn-block.btn-outline-info.mb-2(@click="btnGen2Read") #[i.fa.mr-1.fa-upload] Read
     .modal.fade(tabindex="-1", ref="dumpExport")
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
@@ -108,21 +111,21 @@ block content
 
 block script
   script.
-    const { Buffer, ChameleonDebug, ChameleonUltra, DeviceMode, FreqType, Mf1KeyType, TagType, WebbleAdapter, WebserialAdapter } = ChameleonUltraJS // eslint-disable-line
-    const ultraUsb = new ChameleonUltra(true)
+    const { Buffer, ChameleonDebug, ChameleonUltra, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+    const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new ChameleonDebug())
     ultraUsb.use(new WebserialAdapter())
-    const ultraBle = new ChameleonUltra(true)
+    const ultraBle = new ChameleonUltra()
     ultraBle.use(new ChameleonDebug())
     ultraBle.use(new WebbleAdapter())
 
     const toHex = buf => _.toUpper(buf.toString('hex'))
-    const WELL_KNOWN_KEYS = Buffer.from(['ffffffffffff'].join(''), 'hex').chunk(6)
+    const WELL_KNOWN_KEYS = Buffer.from(['FFFFFFFFFFFF'].join(''), 'hex').chunk(6)
 
     function getEmptyDump () {
       const buf = new Buffer(1024)
-      const blkFactory = Buffer.from('deadbeef220804000177a2cc35afa51d', 'hex')
-      const blkAcl = Buffer.from('ffffffffffffff078069ffffffffffff', 'hex')
+      const blkFactory = Buffer.from('DEADBEEF220804000177A2CC35AFA51D', 'hex')
+      const blkAcl = Buffer.from('FFFFFFFFFFFFFF078069FFFFFFFFFFFF', 'hex')
       buf.set(blkFactory, 0) // block 0
       for (let i = 0; i < 16; i++) buf.set(blkAcl, i * 64 + 48) // block 4n+3
       return buf
@@ -136,6 +139,7 @@ block script
         },
         ss: {
           atqa: '0004',
+          checkUidBeforeWrite: true,
           dumpB64: getEmptyDump().toString('base64url'),
           sak: '08',
           slot: 0,
@@ -257,9 +261,9 @@ block script
             if (/^[+]Sector: \d+$/.test(row)) {
               blockNo = _.parseInt(row.slice(9)) * 4
             } else if (/^[0-9a-fA-F-]{32}$/.test(row)) { // hex
-              if (blockNo >= 64) continue
+              if (blockNo >= 64) throw new Error(`Invalid block number: ${blockNo}`)
               const blockbuf = Buffer.from(row.replaceAll('-', '0'), 'hex')
-              if (blockbuf.length !== 16) continue
+              if (blockbuf.length !== 16) throw new Error(`Invalid block size: ${blockbuf.length} bytes`)
               blockbuf.copy(buf, blockNo * 16)
               blockNo++
             }
@@ -268,7 +272,9 @@ block script
         },
         async btnExportDump () {
           const { dump } = this
-          const { uid, atqa, sak } = this.ss
+          const uid = toHex(Buffer.from(this.ss.uid, 'hex'))
+          const atqa = toHex(Buffer.from(this.ss.atqa, 'hex').reverse())
+          const sak = toHex(Buffer.from(this.ss.sak, 'hex'))
 
           // json
           const json = {
@@ -324,21 +330,21 @@ block script
           }
         },
         async btnEmuWrite () {
-          const { atqa, sak, uid, ultra, dump } = this
+          const { ultra, dump } = this
+          const { slot } = this.ss
           try {
-            const { slot } = this.ss
-            console.log({ atqa, sak, slot, uid })
+            this.showLoading({ text: 'Emulating tag...' })
             const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
-            const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
+            const msg1 = `Slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating tag...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             // reset slot
             await ultra.cmdSlotChangeTagType(slot, TagType.MIFARE_1024)
             await ultra.cmdSlotResetTagType(slot, TagType.MIFARE_1024)
+            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
             await ultra.cmdMf1SetAntiCollMode(true)
             await ultra.cmdMf1EmuWriteBlock(0, dump.subarray(0, 16)) // set block0
-            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
             await ultra.cmdSlotSetActive(slot)
             await ultra.cmdSlotSaveSettings()
             await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
@@ -352,6 +358,7 @@ block script
           try {
             const msg1 = 'Mifare Data in Xiaomi Watch will be REPLACE! Continue?'
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            if (this.ss.checkUidBeforeWrite) await this.mfVerifyUid()
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Writing Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
             })
@@ -368,6 +375,7 @@ block script
                 const { success } = await ultra.mf1WriteSectorByKeys(i, keys, sectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
               } catch (err) {
+                if (!ultra.isConnected()) throw err
                 ultra.emitter.emit('error', err)
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
               }
@@ -381,6 +389,12 @@ block script
             ultra.emitter.emit('error', err)
             await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
           }
+        },
+        async mfVerifyUid () {
+          const { ultra } = this
+          this.showLoading({ text: 'Verify UID...' })
+          const scaned = _.first(await ultra.cmdHf14aScan())
+          if (!scaned.uid.equals(Buffer.from(this.ss.uid, 'hex'))) throw new Error(`UID mismatch, read = ${toHex(scaned.uid)}`)
         },
         async mfGen2Read () {
           const { dump, ultra } = this
@@ -402,8 +416,9 @@ block script
               newDump.set(sectorData, i * 64)
               for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
             } catch (err) {
-              for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
+              if (!ultra.isConnected()) throw err
               ultra.emitter.emit('error', err)
+              for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
             }
             this.showLoading(genSwalCfg(i + 1))
           }
@@ -415,12 +430,13 @@ block script
         async btnGen2Verify () {
           const { dump, ultra } = this
           try {
+            await this.mfVerifyUid()
             const other = await this.mfGen2Read()
             const diffs = []
             for (let i = 1; i < 64; i++) {
-              const sector1 = dump.subarray(i * 16).subarray(0, 16)
-              const sector2 = other.subarray(i * 16).subarray(0, 16)
-              if (!sector1.equals(sector2)) diffs.push(i)
+              const blk1 = dump.subarray(i * 16).subarray(0, 16)
+              const blk2 = other.subarray(i * 16).subarray(0, 16)
+              if (!blk1.equals(blk2)) diffs.push(i)
             }
             if (diffs.length !== 0) throw new Error(`${diffs.length} blocks are different: ${diffs.join(',')}`)
             await Swal.fire({ icon: 'success', title: 'All blocks is equal.' })
