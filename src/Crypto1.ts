@@ -80,9 +80,9 @@ export default class Crypto1 {
   odd: number = 0
 
   /**
-   * @param opts
-   * @param opts.even The even bits of lfsr.
-   * @param opts.odd The odd bits of lfsr.
+   * @param opts -
+   * @param opts.even - The even bits of lfsr.
+   * @param opts.odd - The odd bits of lfsr.
    * @see [mfkey source code from RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/tree/master/tools/mfkey)
    * @example
    * ```js
@@ -115,7 +115,7 @@ export default class Crypto1 {
 
   /**
    * Set the internal lfsr with the key.
-   * @param key The key to set the internal lfsr.
+   * @param key - The key to set the internal lfsr.
    * @example
    * ```js
    * const { Buffer, Crypto1 } = window
@@ -159,8 +159,8 @@ export default class Crypto1 {
 
   /**
    * Get the lfsr output bit and update lfsr by input bit.
-   * @param input The input bit.
-   * @param isEncrypted Indicates whether the input bit is encrypted or not.
+   * @param input - The input bit.
+   * @param isEncrypted - Indicates whether the input bit is encrypted or not.
    * @returns The lfsr output bit.
    */
   lfsrBit (input: number, isEncrypted: number): number {
@@ -182,8 +182,8 @@ export default class Crypto1 {
 
   /**
    * Get the lfsr output byte and update lfsr by input byte.
-   * @param input The input byte.
-   * @param isEncrypted Indicates whether the input byte is encrypted or not.
+   * @param input - The input byte.
+   * @param isEncrypted - Indicates whether the input byte is encrypted or not.
    * @returns The lfsr output byte.
    */
   lfsrByte (input: number, isEncrypted: number): number {
@@ -195,8 +195,8 @@ export default class Crypto1 {
 
   /**
    * Get the lfsr 32-bit output word and update lfsr by 32-bit input word.
-   * @param input The 32-bit input word.
-   * @param isEncrypted Indicates whether the 32-bit input word is encrypted or not.
+   * @param input - The 32-bit input word.
+   * @param isEncrypted - Indicates whether the 32-bit input word is encrypted or not.
    * @returns The lfsr 32-bit output word.
    */
   lfsrWord (input: number, isEncrypted: number): number {
@@ -208,8 +208,8 @@ export default class Crypto1 {
 
   /**
    * Rollback the lfsr in order to get previous states
-   * @param input The input bit.
-   * @param isEncrypted Indicates whether the input bit is encrypted or not.
+   * @param input - The input bit.
+   * @param isEncrypted - Indicates whether the input bit is encrypted or not.
    * @returns The lfsr output bit.
    */
   lfsrRollbackBit (input: number, isEncrypted: number): number {
@@ -228,8 +228,8 @@ export default class Crypto1 {
 
   /**
    * Rollback the lfsr in order to get previous states
-   * @param input The input byte.
-   * @param isEncrypted Indicates whether the input byte is encrypted or not.
+   * @param input - The input byte.
+   * @param isEncrypted - Indicates whether the input byte is encrypted or not.
    * @returns The lfsr output byte.
    */
   lfsrRollbackByte (input: number, isEncrypted: number): number {
@@ -241,8 +241,8 @@ export default class Crypto1 {
 
   /**
    * Rollback the lfsr in order to get previous states
-   * @param input The 32-bit input word.
-   * @param isEncrypted Indicates whether the 32-bit input word is encrypted or not.
+   * @param input - The 32-bit input word.
+   * @param isEncrypted - Indicates whether the 32-bit input word is encrypted or not.
    * @returns The lfsr 32-bit output word.
    */
   lfsrRollbackWord (input: number, isEncrypted: number): number {
@@ -254,8 +254,8 @@ export default class Crypto1 {
 
   /**
    * Get bit of the unsigned reversed endian 32-bit integer `x` at position `n`.
-   * @param x The reversed endian unsigned 32-bit integer.
-   * @param n The bit position.
+   * @param x - The reversed endian unsigned 32-bit integer.
+   * @param n - The bit position.
    * @returns The bit at position `n`.
    * @internal
    * @group Internal
@@ -270,8 +270,8 @@ export default class Crypto1 {
 
   /**
    * Get bit of the unsigned 32-bit integer `x` at position `n`.
-   * @param x The unsigned 32-bit integer.
-   * @param n The bit position.
+   * @param x - The unsigned 32-bit integer.
+   * @param n - The bit position.
    * @returns The bit at position `n`.
    * @internal
    * @group Internal
@@ -286,7 +286,7 @@ export default class Crypto1 {
 
   /**
    * Cast the number `x` to bit.
-   * @param x The number.
+   * @param x - The number.
    * @returns The casted bit.
    * @internal
    * @group Internal
@@ -302,7 +302,7 @@ export default class Crypto1 {
 
   /**
    * Indicates whether the number is truly or not.
-   * @param x The number.
+   * @param x - The number.
    * @returns Return `1` if the number is not falsey, otherwise return `0`.
    * @internal
    * @group Internal
@@ -318,7 +318,7 @@ export default class Crypto1 {
 
   /**
    * Cast the number `x` to unsigned 24-bit integer.
-   * @param x The number.
+   * @param x - The number.
    * @returns The casted unsigned 24-bit integer.
    * @internal
    * @group Internal
@@ -333,7 +333,7 @@ export default class Crypto1 {
 
   /**
    * Cast the number `x` to unsigned 32-bit integer.
-   * @param x The number.
+   * @param x - The number.
    * @returns The casted unsigned 32-bit integer.
    * @internal
    * @group Internal
@@ -348,7 +348,7 @@ export default class Crypto1 {
 
   /**
    * Cast Buffer, hex string or number to UInt32
-   * @param x Buffer, string or number
+   * @param x - Buffer, string or number
    * @returns UInt32
    * @internal
    * @group Internal
@@ -362,7 +362,7 @@ export default class Crypto1 {
 
   /**
    * Cast the number `x` to unsigned 8-bit integer.
-   * @param x The number.
+   * @param x - The number.
    * @returns The casted unsigned 8-bit integer.
    * @internal
    * @group Internal
@@ -377,7 +377,7 @@ export default class Crypto1 {
 
   /**
    * The filter function of Crypto1.
-   * @param x The unsigned 32-bit integer.
+   * @param x - The unsigned 32-bit integer.
    * @returns The filtered bit.
    * @internal
    * @group Internal
@@ -394,7 +394,7 @@ export default class Crypto1 {
 
   /**
    * Return the even parity of the unsigned 8-bit integer `x`.
-   * @param x The unsigned 8-bit integer.
+   * @param x - The unsigned 8-bit integer.
    * @returns The even parity of `x`.
    * @internal
    * @group Internal
@@ -414,7 +414,7 @@ export default class Crypto1 {
 
   /**
    * Return the odd parity of the unsigned 8-bit integer `x`.
-   * @param x The unsigned 8-bit integer.
+   * @param x - The unsigned 8-bit integer.
    * @returns The odd parity of `x`.
    * @internal
    * @group Internal
@@ -425,7 +425,7 @@ export default class Crypto1 {
 
   /**
    * Return the even parity of the unsigned 32-bit integer `x`.
-   * @param x The unsigned 32-bit integer.
+   * @param x - The unsigned 32-bit integer.
    * @returns The even parity of `x`.
    * @internal
    * @group Internal
@@ -437,7 +437,7 @@ export default class Crypto1 {
 
   /**
    * Swap endian of the unsigned 32-bit integer `x`.
-   * @param x The unsigned 32-bit integer.
+   * @param x - The unsigned 32-bit integer.
    * @returns The unsigned 32-bit integer after swap endian.
    * @internal
    * @group Internal
@@ -454,8 +454,8 @@ export default class Crypto1 {
 
   /**
    * Generate the new prng state from the current prng state `x` by `n` times.
-   * @param x The current prng state.
-   * @param n The number of times to generate the new prng state.
+   * @param x - The current prng state.
+   * @param n - The number of times to generate the new prng state.
    * @returns The new prng state.
    */
   static prngSuccessor (x: number, n: number): number {
@@ -467,9 +467,9 @@ export default class Crypto1 {
 
   /**
    * A helper function to calculates the partial linear feedback contributions and puts in MSB (Most Significant Bit).
-   * @param item The input number.
-   * @param mask1
-   * @param mask2
+   * @param item - The input number.
+   * @param mask1 -
+   * @param mask2 -
    * @internal
    * @group Internal
    */
@@ -482,12 +482,12 @@ export default class Crypto1 {
 
   /**
    * Using a bit of the keystream extend the table of possible lfsr states. (complex version)
-   * @param tbl An array of the even/odd bits of lfsr.
-   * @param size Size of array.
-   * @param bit The bit of the keystream.
-   * @param m1 mask1
-   * @param m2 mask2
-   * @param input The value that was fed into the lfsr at the time the keystream was generated.
+   * @param tbl - An array of the even/odd bits of lfsr.
+   * @param size - Size of array.
+   * @param bit - The bit of the keystream.
+   * @param m1 - mask1
+   * @param m2 - mask2
+   * @param input - The value that was fed into the lfsr at the time the keystream was generated.
    * @returns The new size of array.
    * @internal
    * @group Internal
@@ -510,9 +510,9 @@ export default class Crypto1 {
 
   /**
    * Using a bit of the keystream extend the table of possible lfsr states. (simple version)
-   * @param tbl An array of the even/odd bits of lfsr.
-   * @param size Size of array.
-   * @param bit The bit of the keystream.
+   * @param tbl - An array of the even/odd bits of lfsr.
+   * @param size - Size of array.
+   * @param bit - The bit of the keystream.
    * @returns The new size of array.
    * @internal
    * @group Internal
@@ -533,10 +533,10 @@ export default class Crypto1 {
 
   /**
    * Recursively narrow down the search space, 4 bits of keystream at a time.
-   * @param ctx
-   * @param ctx.evens The array of even bits of possible lfsr states.
-   * @param ctx.odds The array of odd bits of possible lfsr states.
-   * @param ctx.states The array of recovered lfsr states.
+   * @param ctx -
+   * @param ctx.evens - The array of even bits of possible lfsr states.
+   * @param ctx.odds - The array of odd bits of possible lfsr states.
+   * @param ctx.states - The array of recovered lfsr states.
    * @internal
    * @group Internal
    */
@@ -598,8 +598,8 @@ export default class Crypto1 {
   /**
    * Recover the state of the lfsr given 32 bits of the keystream.
    * Additionally you can use the in parameter to specify the value that was fed into the lfsr at the time the keystream was generated
-   * @param ks2
-   * @param input
+   * @param ks2 -
+   * @param input -
    * @returns The array of recovered lfsr states.
    * @internal
    * @group Internal
@@ -635,8 +635,8 @@ export default class Crypto1 {
   /**
    * Reverse 64 bits of keystream into possible lfsr states.
    * Variation mentioned in the paper. Somewhat optimized version
-   * @param ks2 keystream 2
-   * @param ks3 keystream 3
+   * @param ks2 - keystream 2
+   * @param ks3 - keystream 3
    * @returns The recovered lfsr state.
    * @internal
    * @group Internal
@@ -694,14 +694,14 @@ export default class Crypto1 {
 
   /**
    * Recover the key with the two authentication attempts from reader.
-   * @param opts
-   * @param opts.uid The 4-bytes uid in the authentication attempt.
-   * @param opts.nt0 The nonce from tag in the first authentication attempt.
-   * @param opts.nr0 The calculated nonce response from reader in the first authentication attempt.
-   * @param opts.ar0 The random challenge from reader in the first authentication attempt.
-   * @param opts.nt1 The nonce from tag in the second authentication attempt.
-   * @param opts.nr1 The calculated nonce response from reader in the second authentication attempt.
-   * @param opts.ar1 The random challenge from reader in the second authentication attempt.
+   * @param opts -
+   * @param opts.uid - The 4-bytes uid in the authentication attempt.
+   * @param opts.nt0 - The nonce from tag in the first authentication attempt.
+   * @param opts.nr0 - The calculated nonce response from reader in the first authentication attempt.
+   * @param opts.ar0 - The random challenge from reader in the first authentication attempt.
+   * @param opts.nt1 - The nonce from tag in the second authentication attempt.
+   * @param opts.nr1 - The calculated nonce response from reader in the second authentication attempt.
+   * @param opts.ar1 - The random challenge from reader in the second authentication attempt.
    * @returns The recovered key.
    * @example
    * ```js
@@ -765,12 +765,12 @@ export default class Crypto1 {
 
   /**
    * Recover the key with the successfully authentication between the reader and the tag.
-   * @param opts
-   * @param opts.uid The 4-bytes uid in the authentication.
-   * @param opts.nt The nonce from tag in the authentication.
-   * @param opts.nr The calculated response of `args.nt` from reader in the authentication.
-   * @param opts.ar The random challenge from reader in the authentication.
-   * @param opts.at The calculated response of `args.ar` from tag in the authentication.
+   * @param opts -
+   * @param opts.uid - The 4-bytes uid in the authentication.
+   * @param opts.nt - The nonce from tag in the authentication.
+   * @param opts.nr - The calculated response of `args.nt` from reader in the authentication.
+   * @param opts.ar - The random challenge from reader in the authentication.
+   * @param opts.at - The calculated response of `args.ar` from tag in the authentication.
    * @returns The recovered key.
    * @example
    * ```js
@@ -820,12 +820,12 @@ export default class Crypto1 {
 
   /**
    * Decrypt the data.
-   * @param opts
-   * @param opts.uid The 4-bytes uid in the authentication.
-   * @param opts.nt The nonce from tag in the authentication.
-   * @param opts.nr The calculated response of `args.nt` from reader in the authentication.
-   * @param opts.data The encrypted data.
-   * @param opts.key The 6-bytes key to decrypt the data.
+   * @param opts -
+   * @param opts.uid - The 4-bytes uid in the authentication.
+   * @param opts.nt - The nonce from tag in the authentication.
+   * @param opts.nr - The calculated response of `args.nt` from reader in the authentication.
+   * @param opts.data - The encrypted data.
+   * @param opts.key - The 6-bytes key to decrypt the data.
    * @returns The decrypted data.
    */
   static decrypt (opts: {
@@ -882,10 +882,10 @@ export default class Crypto1 {
 
   /**
    * Recover key from mifare tags with static nonce
-   * @param opts
-   * @param opts.uid The 4-bytes uid in the authentication.
-   * @param opts.keyType The key type of target block.
-   * @param opts.atks The nonce logs of the authentication.
+   * @param opts -
+   * @param opts.uid - The 4-bytes uid in the authentication.
+   * @param opts.keyType - The key type of target block.
+   * @param opts.atks - The nonce logs of the authentication.
    * @returns candidates keys
    * @example
    * ```js
@@ -935,10 +935,10 @@ export default class Crypto1 {
 
   /**
    * Recover key from mifare tags with weak prng
-   * @param opts
-   * @param opts.uid The 4-bytes uid in the authentication.
-   * @param opts.dist The nonce distance between two authentication.
-   * @param opts.atks The logs of the nested attack.
+   * @param opts -
+   * @param opts.uid - The 4-bytes uid in the authentication.
+   * @param opts.dist - The nonce distance between two authentication.
+   * @param opts.atks - The logs of the nested attack.
    * @returns candidates keys
    * @example
    * ```js
@@ -1061,9 +1061,9 @@ export default class Crypto1 {
 
   /**
    * Recover the key from the tag with the darkside attack.
-   * @param fnAcquire An async function to acquire the darkside attack data.
-   * @param fnCheckKey An async function to check the key.
-   * @param attempts The maximum number of attempts to try.
+   * @param fnAcquire - An async function to acquire the darkside attack data.
+   * @param fnCheckKey - An async function to check the key.
+   * @param attempts - The maximum number of attempts to try.
    * @returns The recovered key.
    * @example
    * ```js

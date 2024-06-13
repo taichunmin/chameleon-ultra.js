@@ -7,7 +7,7 @@ module.exports = {
   },
   extends: ['love'],
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint', 'eslint-plugin-tsdoc'],
+  plugins: ['@typescript-eslint', 'eslint-plugin-local-rules'],
   parserOptions: {
     project: true,
   },
@@ -17,10 +17,10 @@ module.exports = {
     '@typescript-eslint/return-await': 'off',
     '@typescript-eslint/strict-boolean-expressions': 'off',
     '@typescript-eslint/unbound-method': 'off',
+    'local-rules/tsdoc/syntax': 'warn',
     'multiline-ternary': 'off',
     'no-extra-boolean-cast': 'off',
     'no-return-await': 'off',
-    'tsdoc/syntax': 'warn',
     '@typescript-eslint/no-invalid-void-type': ['error', {
       allowAsThisParameter: true,
     }],
