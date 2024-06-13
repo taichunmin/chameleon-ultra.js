@@ -148,6 +148,7 @@ out
 /.gitattributes
 /.github
 /.rollup.cache
+/*.cjs
 /*.ts
 /dist/assets
 /jest.config.cjs
