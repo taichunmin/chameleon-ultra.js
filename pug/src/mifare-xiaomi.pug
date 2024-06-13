@@ -393,8 +393,8 @@ block script
         async mfVerifyUid () {
           const { ultra } = this
           this.showLoading({ text: 'Verify UID...' })
-          const scaned = _.first(await ultra.cmdHf14aScan())
-          if (!scaned.uid.equals(Buffer.from(this.ss.uid, 'hex'))) throw new Error(`UID mismatch, read = ${toHex(scaned.uid)}`)
+          const scanned = _.first(await ultra.cmdHf14aScan())
+          if (!scanned.uid.equals(Buffer.from(this.ss.uid, 'hex'))) throw new Error(`UID mismatch, read = ${toHex(scanned.uid)}`)
         },
         async mfGen2Read () {
           const { dump, ultra } = this

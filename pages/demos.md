@@ -8,10 +8,12 @@
     - [Related links](#related-links)
   - [mifare1k.html](#mifare1khtml)
     - [Features](#features-2)
-  - [mifare-xiaomi.html](#mifare-xiaomihtml)
+  - [hf14a-scanner.html](#hf14a-scannerhtml)
     - [Features](#features-3)
-  - [mifare-value.html](#mifare-valuehtml)
+  - [mifare-xiaomi.html](#mifare-xiaomihtml)
     - [Features](#features-4)
+  - [mifare-value.html](#mifare-valuehtml)
+    - [Features](#features-5)
 
 ## [device-settings.html](https://taichunmin.idv.tw/chameleon-ultra.js/device-settings.html)
 
@@ -63,6 +65,18 @@ A ChameleonUltra tool for mifare class 1k.
 - Read/Write for Mifare Gen1a Tag (UID).
 - Read/Write for Mifare Classic 1k, Gen2 Tag (CUID, FUID, UFUID).
 - Import/Export dump for `.json`, `.bin`, `.eml`, `.mct` files.
+
+- - -
+
+## [hf14a-scanner.html](https://taichunmin.idv.tw/chameleon-ultra.js/hf14a-scanner.html)
+
+A tool to scan uid of ISO/IEC 14443-A tags.
+
+![](https://i.imgur.com/8QfzaaZ.png)
+
+### Features
+
+- Continuous scan `UID`, `ATQA`, `SAK` for ISO/IEC 14443-A tags.
 
 - - -
 

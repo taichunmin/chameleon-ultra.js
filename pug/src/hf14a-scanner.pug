@@ -1,0 +1,174 @@
+extends /include/bootstrapV4
+
+block beforehtml
+  - const title = 'ISO/IEC 14443-A Scanner'
+
+block style
+  meta(property="og:description", content="A tool to scan uid of ISO/IEC 14443-A tags.")
+  meta(property="og:locale", content="zh_TW")
+  meta(property="og:title", content=title)
+  meta(property="og:type", content="website")
+  meta(property="og:url", content=`${baseurl}hf14a-scanner.html`)
+  style
+    :sass
+      [v-cloak]
+        display: none
+      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
+        font-family: 'Noto Sans TC', sans-serif
+      .input-group-prepend > .input-group-text
+        width: 80px
+      .letter-spacing-n1px
+        &, .btn, textarea, select, input
+          letter-spacing: -1px
+      .text-sm
+        font-size: 0.875rem
+
+block content
+  #app.my-3.container.text-monospace(v-cloak)
+    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
+    .form-group.letter-spacing-n1px
+      label Connect method:
+      .input-group.input-group-sm.mb-3
+        select.form-control(v-model="ls.adapter")
+          option(value="ble") BLE (PC &amp; Android)
+          option(value="usb") USB Serial (PC only)
+        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
+    .row.mx-n1.mb-3.letter-spacing-n1px
+      .col.px-1: button.btn.btn-block.btn-outline-danger(type="button", @click="btnClear") #[i.fa.mr-1.fa-repeat] Reset
+      .col.px-1
+        button.btn.btn-block.btn-outline-success(v-if="!scanning", type="button", @click="btnScanStart") #[i.fa.mr-1.fa-play] Start Scan
+        button.btn.btn-block.btn-outline-warning(v-else, type="button", @click="btnScanStop") #[i.fa.mr-1.fa-stop] Stop Scan
+    .table-responsive.letter-spacing-n1px(style="font-size: .85rem")
+      table.table.table-striped.table-bordered.table-sm.text-center
+        caption.text-right: small Click cell to copy value.
+        thead: tr
+          th Time
+          th UID
+          th ATQA
+          th SAK
+        tbody
+          tr(
+            v-for="tag in ss.tags",
+            :key="`${tag.uid}-${tag.atqa}-${tag.sak}`",
+            :class="tag.ts + 1000 > tsnow ? 'animate__animated animate__flash' : ''",
+          )
+            td {{ dayjs(tag.ts).format('YYYY-MM-DD HH:mm:ss') }}
+            td(@click="btnCopy(tag.uid)") {{ tag.uid }}
+            td(@click="btnCopy(tag.atqa)") {{ tag.atqa }}
+            td(@click="btnCopy(tag.sak)") {{ tag.sak }}
+
+block script
+  script.
+    const { ChameleonDebug, ChameleonUltra, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+    const ultraUsb = new ChameleonUltra()
+    ultraUsb.use(new ChameleonDebug())
+    ultraUsb.use(new WebserialAdapter())
+    const ultraBle = new ChameleonUltra()
+    ultraBle.use(new ChameleonDebug())
+    ultraBle.use(new WebbleAdapter())
+    const toHex = buf => _.toUpper(buf.toString('hex'))
+
+    window.vm = new Vue({
+      el: '#app',
+      data: {
+        ls: {
+          adapter: 'ble',
+        },
+        ss: {
+          tags: [],
+        },
+        scanning: false,
+        tsnow: Date.now(),
+      },
+      async mounted () {
+        // 自動儲存功能
+        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+          try {
+            const saved = JSON5.parse(storage.getItem(location.pathname))
+            if (saved) this.$set(this, key, _.merge(this[key], saved))
+          } catch (err) {}
+          this.$watch(key, () => {
+            storage.setItem(location.pathname, JSON5.stringify(this[key]))
+          }, { deep: true })
+        }
+      },
+      computed: {
+        ultra () {
+          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
+        },
+      },
+      methods: {
+        async btnAdapterTips () {
+          await Swal.fire({
+            title: 'Browser & OS',
+            html: '<strong class="text-success">BLE</strong> is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70), <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
+          })
+        },
+        async btnScanStart () {
+          const { ultra } = this
+          try {
+            this.showLoading({ text: 'Connecting...' })
+            const version = await ultra.cmdGetGitVersion()
+            ultra.emitter.emit('debug', `Git version: ${version}`)
+            this.scanning = true
+            Swal.close() // scanning started
+            while (this.scanning) {
+              try {
+                const scanned = await ultra.cmdHf14aScan()
+                const newTags = []
+                for (const tag of scanned) {
+                  newTags.push({
+                    atqa: toHex(tag.atqa.reverse()),
+                    sak: toHex(tag.sak),
+                    ts: Date.now(),
+                    uid: toHex(tag.uid),
+                  })
+                }
+                this.$set(this.ss, 'tags', _.uniqBy([
+                  ...newTags,
+                  ...this.ss.tags,
+                ], c => `${c.uid}-${c.atqa}-${c.sak}`))
+              } catch (err) {
+                if (!ultra.isConnected()) throw err
+              }
+              this.tsnow = Date.now()
+              await this.sleep(50)
+            }
+            Swal.close() // scanning stopped
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Scan failed', text: err.message })
+          }
+        },
+        async btnScanStop () {
+          this.showLoading({ text: 'Stopping...' })
+          this.scanning = false
+        },
+        async btnClear () {
+          this.$set(this.ss, 'tags', [])
+        },
+        async btnCopy (text, container = null) {
+          if (!container) container = document.body
+          const dom = document.createElement('textarea')
+          dom.value = text
+          container.appendChild(dom)
+          dom.select()
+          dom.setSelectionRange(0, 1e6) // For mobile devices
+          document.execCommand('copy')
+          container.removeChild(dom)
+          await Swal.fire({ icon: 'success', title: 'Copied' })
+        },
+        async sleep (t) {
+          await new Promise(resolve => setTimeout(resolve, t))
+        },
+        showLoading (opts = {}) {
+          opts = {
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            ...opts,
+          }
+          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
+          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
+        },
+      },
+    })
