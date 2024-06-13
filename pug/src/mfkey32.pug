@@ -309,7 +309,7 @@ block script
           dom.setSelectionRange(0, 1e6) // For mobile devices
           document.execCommand('copy')
           container.removeChild(dom)
-          await Swal.fire({ icon: 'success', title: '複製成功' })
+          await Swal.fire({ icon: 'success', title: 'Copied' })
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
           return await new Promise((resolve, reject) => {
