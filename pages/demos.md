@@ -3,17 +3,20 @@
 - [Demos](#demos)
   - [device-settings.html](#device-settingshtml)
     - [Features](#features)
-  - [mfkey32.html](#mfkey32html)
+  - [dfu.html](#dfuhtml)
     - [Features](#features-1)
     - [Related links](#related-links)
-  - [mifare1k.html](#mifare1khtml)
+  - [mfkey32.html](#mfkey32html)
     - [Features](#features-2)
-  - [hf14a-scanner.html](#hf14a-scannerhtml)
+    - [Related links](#related-links-1)
+  - [mifare1k.html](#mifare1khtml)
     - [Features](#features-3)
-  - [mifare-xiaomi.html](#mifare-xiaomihtml)
+  - [hf14a-scanner.html](#hf14a-scannerhtml)
     - [Features](#features-4)
-  - [mifare-value.html](#mifare-valuehtml)
+  - [mifare-xiaomi.html](#mifare-xiaomihtml)
     - [Features](#features-5)
+  - [mifare-value.html](#mifare-valuehtml)
+    - [Features](#features-6)
 
 ## [device-settings.html](https://taichunmin.idv.tw/chameleon-ultra.js/device-settings.html)
 
@@ -30,6 +33,23 @@ A ChameleonUltra tool to management the device info and settings.
 - Reset to default settings
 - Delete all BLE bonds
 - Factory reset
+
+- - -
+
+## [dfu.html](https://taichunmin.idv.tw/chameleon-ultra.js/dfu.html)
+
+A tool to upload firmware to ChameleonUltra.
+
+### Features
+
+- Select tag to upload firmware
+
+### Related links
+
+- [Uploading the code in DFU mode](https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/docs/development.md#uploading-the-code-in-dfu-mode)
+- [nRF5 SDK: DFU protocol](https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html)
+- [GitHub: GameTec-live/ChameleonUltraGUI](https://github.com/GameTec-live/ChameleonUltraGUI/blob/main/chameleonultragui/lib/bridge/dfu.dart)
+- [GitHub: thegecko/web-bluetooth-dfu](https://github.com/thegecko/web-bluetooth-dfu)
 
 - - -
 

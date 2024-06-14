@@ -1,20 +1,26 @@
 import _ from 'lodash'
 import { Buffer } from '@taichunmin/buffer'
-import { middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
+import { crc32, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { EventAsyncGenerator } from './EventAsyncGenerator'
 import { EventEmitter } from './EventEmitter'
+import { type DfuImage } from './plugin/DfuZip'
 import { type ReadableStream, type UnderlyingSink, type WritableStreamDefaultController, WritableStream } from 'node:stream/web'
 import * as Decoder from './ResponseDecoder'
 
 import {
   Cmd,
   DeviceMode,
+  DfuObjType,
+  DfuOp,
+  DfuResCode,
   Mf1KeyType,
   RespStatus,
   type AnimationMode,
   type ButtonAction,
   type ButtonType,
   type DeviceModel,
+  type DfuFwId,
+  type DfuFwType,
   type FreqType,
   type Mf1EmuWriteMode,
   type Mf1PrngType,
@@ -37,7 +43,6 @@ import {
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
 const VERSION_SUPPORTED = { gte: '2.0', lt: '3.0' } as const
-const WritableStream1: typeof WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
 
 function isMf1BlockNo (block: any): boolean {
   return _.isInteger(block) && block >= 0 && block <= 0xFF
@@ -114,10 +119,16 @@ function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string
 export class ChameleonUltra {
   #deviceMode: DeviceMode | null = null
   #isDisconnecting: boolean = false
-  #rxSink?: ChameleonRxSink
+  #rxSink?: UltraRxSink | DfuRxSink
   #supportedCmds: Set<Cmd> = new Set<Cmd>()
   readonly #hooks = new Map<string, ReturnType<typeof middlewareCompose>>()
   readonly #middlewares = new Map<string, MiddlewareComposeFn[]>()
+
+  /**
+   * @internal
+   * @group Internal
+   */
+  WritableStream: typeof WritableStream
 
   /**
    * The supported version of SDK.
@@ -146,6 +157,17 @@ export class ChameleonUltra {
    * @group Internal
    */
   port?: ChameleonSerialPort<Buffer, Buffer>
+
+  /**
+   * @internal
+   * @group Internal
+   */
+  catchErr: (err: Error) => void
+
+  constructor () {
+    this.WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
+    this.catchErr = (err: Error): void => { this.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+  }
 
   #debug (namespace: string, formatter: any, ...args: [] | any[]): void {
     this.emitter.emit('debug', namespace, formatter, ...args)
@@ -203,8 +225,8 @@ export class ChameleonUltra {
 
         // serial.readable pipeTo this.rxSink
         const promiseConnected = new Promise<Date>(resolve => this.emitter.once('connected', resolve))
-        this.#rxSink = new ChameleonRxSink(this)
-        void this.port.readable.pipeTo(new WritableStream1(this.#rxSink), this.#rxSink.abortController)
+        this.#rxSink = this.isDfu() ? new DfuRxSink(this) : new UltraRxSink(this)
+        void this.port.readable.pipeTo(new this.WritableStream(this.#rxSink), this.#rxSink.abortController)
           .catch(err => { this.#debug('rxSink', err) })
 
         const connectedAt = await promiseConnected
@@ -237,10 +259,11 @@ export class ChameleonUltra {
           const promiseDisconnected = new Promise<[Date, string | undefined]>(resolve => {
             this.emitter.once('disconnected', (disconnected: Date, reason?: string) => { resolve([disconnected, reason]) })
           })
-          this.#rxSink?.abortController.abort(err)
-          while (this.port?.readable?.locked === true) await sleep(10)
-          await this.port?.readable?.cancel(err)
-          await this.port?.writable?.close()
+          const isLocked = (): boolean => this.port?.readable?.locked ?? false
+          if (isLocked()) this.#rxSink?.abortController.abort(err)
+          while (isLocked()) await sleep(10)
+          await this.port?.readable?.cancel(err).catch(this.catchErr)
+          await this.port?.writable?.close().catch(this.catchErr)
           delete this.port
 
           const [disconnectedAt, reason] = await promiseDisconnected
@@ -263,6 +286,22 @@ export class ChameleonUltra {
   }
 
   /**
+   * Return true if ChameleonUltra is in DFU mode.
+   * @group DFU Related
+   */
+  isDfu (): boolean {
+    return this?.port?.isDfu?.() ?? false
+  }
+
+  /**
+   * Return true if DFU use slip encode/decode.
+   * @group DFU Related
+   */
+  isSlip (): boolean {
+    return this?.port?.isSlip?.() ?? false
+  }
+
+  /**
    * Send a buffer to device.
    * @param buf - The buffer to be sent to device.
    * @internal
@@ -271,7 +310,8 @@ export class ChameleonUltra {
   async #sendBuffer (buf: Buffer): Promise<void> {
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
     if (!this.isConnected()) await this.connect()
-    this.#debug('send', ChameleonUltraFrame.inspect(buf))
+    const frame = this.isDfu() ? new DfuFrame(buf) : new UltraFrame(buf)
+    if (!(frame instanceof DfuFrame) || frame.op !== DfuOp.OBJECT_WRITE) this.#debug('send', frame.inspect)
     const writer = (this.port?.writable as any)?.getWriter()
     if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
     await writer.write(buf)
@@ -304,16 +344,17 @@ export class ChameleonUltra {
    * @internal
    * @group Internal
    */
-  async #createReadRespFn (args: {
+  async #createReadRespFn <T extends UltraFrame | DfuFrame> (args: {
     cmd?: Cmd
-    filter?: (resp: ChameleonUltraFrame) => boolean
+    op?: DfuOp
+    filter?: (resp: T) => boolean
     timeout?: number
-  }): Promise<() => Promise<ChameleonUltraFrame>> {
+  }): Promise<() => Promise<T>> {
     try {
       if (!this.isConnected()) await this.connect()
       if (_.isNil(this.#rxSink)) throw new Error('rxSink is undefined')
       if (_.isNil(args.timeout)) args.timeout = this.readDefaultTimeout
-      const respGenerator = new EventAsyncGenerator<Buffer>()
+      const respGenerator = new EventAsyncGenerator<T>()
       this.emitter.on('resp', respGenerator.onData)
       this.emitter.once('disconnected', respGenerator.onClose)
       let timeout: NodeJS.Timeout | undefined
@@ -329,15 +370,17 @@ export class ChameleonUltra {
         timeout = setTimeout(() => {
           respGenerator.onError(new Error(`read resp timeout (${args.timeout}ms)`))
         }, args.timeout)
-        let resp: ChameleonUltraFrame | null = null
-        for await (const buf of respGenerator) {
-          const resp1 = new ChameleonUltraFrame(buf)
-          if (!_.isNil(args.cmd) && resp1.cmd !== args.cmd) continue
+        let resp: T | null = null
+        for await (const resp1 of respGenerator) {
+          if (!_.isNil(args.cmd) && (resp1 as UltraFrame).cmd !== args.cmd) continue
+          if (!_.isNil(args.op) && (resp1 as DfuFrame).op !== args.op) continue
           if (!(args.filter?.(resp1) ?? true)) continue
-          if (RespStatusFail.has(resp1.status)) {
+          if (resp1.errMsg) {
             this.#debug('respError', resp1.inspect)
-            const status = resp1.status
-            throw _.merge(new Error(RespStatusMsg.get(status)), { status, data: { resp } })
+            throw _.merge(new Error(resp1.errMsg), {
+              data: { resp1 },
+              ...(resp1 instanceof UltraFrame ? { status: resp1.status } : { status: resp1.result }),
+            })
           }
           this.#debug('resp', resp1.inspect)
           resp = resp1
@@ -367,7 +410,7 @@ export class ChameleonUltra {
    */
   async cmdGetAppVersion (): Promise<`${number}.${number}`> {
     const cmd = Cmd.GET_APP_VERSION // cmd = 1000
-    const readResp = await this.#createReadRespFn({ cmd })
+    const readResp = await this.#createReadRespFn<UltraFrame>({ cmd })
     await this.#sendCmd({ cmd })
     const { status, data } = await readResp()
     if (status === RespStatus.HF_TAG_OK && data.readUInt16BE(0) === 0x0001) throw new Error('Unsupported protocol. Firmware update is required.')
@@ -607,19 +650,25 @@ export class ChameleonUltra {
 
   /**
    * Enter bootloader mode.
-   * @group Device Related
+   * @group DFU Related
    * @example
    * ```js
    * async function run (ultra) {
-   *   await ultra.cmdEnterBootloader()
+   *   await ultra.cmdDfuEnter()
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdEnterBootloader (): Promise<void> {
+  async cmdDfuEnter (): Promise<void> {
     const cmd = Cmd.ENTER_BOOTLOADER // cmd = 1010
     await this.#sendCmd({ cmd })
+    for (let i = 500; i >= 0; i--) {
+      if (!this.isConnected()) break
+      if (i === 0) throw new Error('Failed to enter bootloader mode')
+      await sleep(10)
+    }
+    this.#debug('core', 'cmdDfuEnter: device disconnected')
   }
 
   /**
@@ -1105,7 +1154,6 @@ export class ChameleonUltra {
 
   /**
    * Get the device is ChameleonUltra or ChameleonLite.
-   * @returns `true` if device is ChameleonUltra, `false` if device is ChameleonLite.
    * @group Device Related
    * @example
    * ```js
@@ -2841,6 +2889,338 @@ export class ChameleonUltra {
     for (let i = 0; i < 3; i++) acl.push((data[i] & 0xF0) >>> 4, data[i] & 0x0F)
     return _.every([[1, 2], [0, 5], [3, 4]], ([a, b]: [number, number]) => (acl[a] ^ acl[b]) === 0xF)
   }
+
+  /**
+   * Retrieve DFU protocol version.
+   *
+   * Syntax and ID of this command is permanent. If protocol version changes other opcode may not be valid any more.
+   * @returns Protocol version.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdDfuEnter()
+   *   console.log(await ultra.cmdDfuGetProtocol())
+   * }
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdDfuGetProtocol (): Promise<number> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.PROTOCOL_VERSION
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<B', op))
+    return (await readResp()).data[0]
+  }
+
+  /**
+   * Create selected object.
+   * @param type - Object type.
+   * @param size - Object size in bytes.
+   * @returns
+   * - `crc32`: Current CRC.
+   * - `offset`: Current offset.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   */
+  async cmdDfuCreateObject (type: DfuObjType, size: number): Promise<void> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.OBJECT_CREATE
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<BBI', op, type, size))
+    await readResp()
+  }
+
+  /**
+   * Set receipt notification
+   *
+   * This request configures the frequency of sending CRC responses after Write request commands.
+   * @param prn - If set to `0`, then the CRC response is never sent after Write request. Otherwise, it is sent every `prn`'th Write request.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   */
+  async cmdDfuSetPrn (prn: number): Promise<void> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.RECEIPT_NOTIF_SET
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<BI', op, prn))
+    await readResp()
+  }
+
+  /**
+   * Request CRC of selected object.
+   * @returns
+   * - `crc32`: Current CRC.
+   * - `offset`: Current offset.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   */
+  async cmdDfuGetObjectCrc (): Promise<{ offset: number, crc32: number }> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.CRC_GET
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<B', op))
+    const [offset, crc32] = (await readResp()).data.unpack('<Ii')
+    return { offset, crc32 }
+  }
+
+  /**
+   * Execute selected object.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   */
+  async cmdDfuExecuteObject (): Promise<void> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.OBJECT_EXECUTE
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<B', op))
+    await readResp()
+  }
+
+  /**
+   * Select object.
+   * @param type - Object type.
+   * @returns
+   * - `crc32`: Current CRC.
+   * - `maxSize`: Maximum size of selected object.
+   * - `offset`: Current offset.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   */
+  async cmdDfuSelectObject (type: DfuObjType): Promise<{ offset: number, crc32: number, maxSize: number }> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.OBJECT_SELECT
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<BB', op, type))
+    const [maxSize, offset, crc32] = (await readResp()).data.unpack('<IIi')
+    return { crc32, maxSize, offset }
+  }
+
+  /**
+   * Retrieve MTU size.
+   * @returns The preferred MTU size on this request.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdDfuEnter()
+   *   console.log(await ultra.cmdDfuGetMtu())
+   * }
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdDfuGetMtu (): Promise<number> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.MTU_GET
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<B', op))
+    const respData = (await readResp()).data
+    const mtu = respData.length >= 2 ? respData.readUInt16LE(0) : 21
+    return this.isSlip() ? Math.trunc((mtu - 1) / 2) : mtu // slip encode/decode
+  }
+
+  /**
+   * Write selected object.
+   * @param buf - Data.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   */
+  async cmdDfuWriteObject (buf: Buffer): Promise<void> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.OBJECT_WRITE
+    await this.#sendBuffer(Buffer.pack(`<B${buf.length}s`, op, buf))
+  }
+
+  /**
+   * Ping.
+   * @param id - Ping ID that will be returned in response.
+   * @returns The received ID which is echoed back.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdDfuEnter()
+   *   console.log(await ultra.cmdDfuPing(1))
+   * }
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdDfuPing (id: number): Promise<number> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.PING
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<BB', op, id))
+    return (await readResp()).data[0]
+  }
+
+  /**
+   * Retrieve hardware version.
+   * @returns
+   * - `part`: Hardware part, from FICR register.
+   * - `ramSize`: RAM size, in bytes.
+   * - `romPageSize`: ROM flash page size, in bytes.
+   * - `romSize`: ROM size, in bytes.
+   * - `variant`: Hardware variant, from FICR register.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdDfuEnter()
+   *   console.log(await ultra.cmdDfuGetHardwareVersion())
+   * }
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdDfuGetHardwareVersion (): Promise<{
+    part: number
+    variant: number
+    romSize: number
+    ramSize: number
+    romPageSize: number
+  }> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.HARDWARE_VERSION
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<B', op))
+    const [part, variant, romSize, ramSize, romPageSize] = (await readResp()).data.unpack('<IIIII')
+    return { part, variant, romSize, ramSize, romPageSize }
+  }
+
+  /**
+   * Retrieve firmware version.
+   * @returns
+   * - `addr`: Firmware address in flash.
+   * - `len`: Firmware length in bytes.
+   * - `type`: Firmware type.
+   * - `version`: Firmware version.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { DfuFwId, DfuFwType } = window.ChameleonUltraJS
+   *   await ultra.cmdDfuEnter()
+   *   for (const fwId of [DfuFwId.BOOTLOADER, DfuFwId.APPLICATION, DfuFwId.SOFTDEVICE]) {
+   *     const resp = await ultra.cmdDfuGetFirmwareVersion(fwId)
+   *     console.log(`type = ${DfuFwType[resp.type]}, version = ${resp.version}, addr = 0x${resp.addr.toString(16)}, len = ${resp.len}`)
+   *   }
+   * }
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdDfuGetFirmwareVersion (id: DfuFwId): Promise<{
+    type: DfuFwType
+    version: number
+    addr: number
+    len: number
+  }> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.FIRMWARE_VERSION
+    const readResp = await this.#createReadRespFn({ op })
+    await this.#sendBuffer(Buffer.pack('<BB', op, id))
+    const [type, version, addr, len] = (await readResp()).data.unpack('<BIII')
+    return { type, version, addr, len }
+  }
+
+  /**
+   * Abort the DFU procedure.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdDfuEnter()
+   *   await ultra.cmdDfuAbort()
+   * }
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdDfuAbort (): Promise<void> {
+    if (!this.isConnected()) await this.connect()
+    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    const op = DfuOp.ABORT
+    await this.#sendBuffer(Buffer.pack('<B', op))
+  }
+
+  /**
+   * DFU: Upload object of image.
+   * @param type - Object type.
+   * @param buf - Data.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   */
+  async dfuUploadObject (type: DfuObjType, buf: Buffer): Promise<void> {
+    const emitProgress = (offset: number): void => {
+      this.emitter.emit('progress', {
+        func: 'dfuUploadObject',
+        offset,
+        size: buf.length,
+        type,
+      })
+    }
+    const uploaded = await this.cmdDfuSelectObject(type)
+    this.#debug('core', `uploaded = ${JSON.stringify(uploaded)}`)
+    let buf1 = buf.subarray(0, uploaded.offset)
+    let crc1 = { offset: buf1.length, crc32: crc32(buf1) }
+    let crcFailCnt = 0
+    if (!_.isMatch(uploaded, crc1)) { // abort
+      this.#debug('core', 'aborted')
+      await this.cmdDfuAbort()
+      Object.assign(uploaded, await this.cmdDfuSelectObject(type))
+    }
+    emitProgress(uploaded.offset)
+    const mtu = await this.cmdDfuGetMtu() - 1
+    while (uploaded.offset < buf.length) {
+      buf1 = buf.subarray(uploaded.offset).subarray(0, uploaded.maxSize)
+      await this.cmdDfuCreateObject(type, buf1.length)
+      // write object
+      for (const buf2 of buf1.chunk(mtu)) await this.cmdDfuWriteObject(buf2)
+      // check crc
+      const crc2 = { offset: uploaded.offset + buf1.length, crc32: crc32(buf1, uploaded.crc32) }
+      crc1 = await this.cmdDfuGetObjectCrc()
+      if (!_.isMatch(crc1, crc2)) {
+        crcFailCnt++
+        if (crcFailCnt > 10) throw new Error('crc32 check failed 10 times')
+        continue
+      }
+      await this.cmdDfuExecuteObject()
+      Object.assign(uploaded, crc1)
+      crcFailCnt = 0
+      emitProgress(uploaded.offset)
+    }
+  }
+
+  /**
+   * Upload DFU image.
+   * @param image - The DFU image.
+   * @group DFU Related
+   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   */
+  async dfuUploadImage (image: DfuImage): Promise<void> {
+    await this.dfuUploadObject(DfuObjType.COMMAND, image.header)
+    await this.dfuUploadObject(DfuObjType.DATA, image.body)
+    for (let i = 500; i >= 0; i--) {
+      if (!this.isConnected()) break
+      if (i === 0) throw new Error('Failed to reboot device')
+      await sleep(10)
+    }
+    this.#debug('core', 'rebooted')
+  }
 }
 
 const RespStatusMsg = new Map([
@@ -2886,13 +3266,37 @@ const RespStatusFail = new Set([
   RespStatus.FLASH_READ_FAIL,
 ])
 
-export interface ChameleonSerialPort<I, O> {
-  isOpen?: () => boolean
-  readable: ReadableStream<I>
-  writable: WritableStream<O>
-}
+const DfuErrMsg = new Map<number, string>([
+  // DFU operation result code.
+  [DfuResCode.INVALID, 'Invalid opcode'],
+  [DfuResCode.SUCCESS, 'Operation successful'],
+  [DfuResCode.OP_CODE_NOT_SUPPORTED, 'Opcode not supported'],
+  [DfuResCode.INVALID_PARAMETER, 'Missing or invalid parameter value'],
+  [DfuResCode.INSUFFICIENT_RESOURCES, 'Not enough memory for the data object'],
+  [DfuResCode.INVALID_OBJECT, 'Data object does not match the firmware and hardware requirements, the signature is wrong, or parsing the command failed'],
+  [DfuResCode.UNSUPPORTED_TYPE, 'Not a valid object type for a Create request'],
+  [DfuResCode.OPERATION_NOT_PERMITTED, 'The state of the DFU process does not allow this operation'],
+  [DfuResCode.OPERATION_FAILED, 'Operation failed'],
+  [DfuResCode.EXT_ERROR, 'Extended error'],
 
-class ChameleonRxSink implements UnderlyingSink<Buffer> {
+  // DFU extended error code.
+  [DfuResCode.NO_ERROR, 'No extended error code has been set. This error indicates an implementation problem'],
+  [DfuResCode.INVALID_ERROR_CODE, 'Invalid error code. This error code should never be used outside of development'],
+  [DfuResCode.WRONG_COMMAND_FORMAT, 'The format of the command was incorrect. This error code is not used in the current implementation, because NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED and NRF_DFU_RES_CODE_INVALID_PARAMETER cover all possible format errors'],
+  [DfuResCode.UNKNOWN_COMMAND, 'The command was successfully parsed, but it is not supported or unknown'],
+  [DfuResCode.INIT_COMMAND_INVALID, 'The init command is invalid. The init packet either has an invalid update type or it is missing required fields for the update type (for example, the init packet for a SoftDevice update is missing the SoftDevice size field)'],
+  [DfuResCode.FW_VERSION_FAILURE, 'The firmware version is too low. For an application or SoftDevice, the version must be greater than or equal to the current version. For a bootloader, it must be greater than the current version. to the current version. This requirement prevents downgrade attacks'],
+  [DfuResCode.HW_VERSION_FAILURE, 'The hardware version of the device does not match the required hardware version for the update'],
+  [DfuResCode.SD_VERSION_FAILURE, 'The array of supported SoftDevices for the update does not contain the FWID of the current SoftDevice or the first FWID is "0" on a bootloader which requires the SoftDevice to be present'],
+  [DfuResCode.SIGNATURE_MISSING, 'The init packet does not contain a signature. This error code is not used in the current implementation, because init packets without a signature are regarded as invalid'],
+  [DfuResCode.WRONG_HASH_TYPE, 'The hash type that is specified by the init packet is not supported by the DFU bootloader'],
+  [DfuResCode.HASH_FAILED, 'The hash of the firmware image cannot be calculated'],
+  [DfuResCode.WRONG_SIGNATURE_TYPE, 'The type of the signature is unknown or not supported by the DFU bootloader'],
+  [DfuResCode.VERIFICATION_FAILED, 'The hash of the received firmware image does not match the hash in the init packet'],
+  [DfuResCode.INSUFFICIENT_SPACE, 'The available space on the device is insufficient to hold the firmware'],
+])
+
+class UltraRxSink implements UnderlyingSink<Buffer> {
   #closed: boolean = false
   #started: boolean = false
   abortController: AbortController = new AbortController()
@@ -2904,8 +3308,8 @@ class ChameleonRxSink implements UnderlyingSink<Buffer> {
   }
 
   start (controller: WritableStreamDefaultController): void {
-    if (this.#closed) throw new Error('rxSink is closed')
-    if (this.#started) throw new Error('rxSink is already started')
+    if (this.#closed) throw new Error('UltraRxSink is closed')
+    if (this.#started) throw new Error('UltraRxSink is already started')
     this.#ultra.emitter.emit('connected', new Date())
     this.#started = true
   }
@@ -2932,7 +3336,7 @@ class ChameleonRxSink implements UnderlyingSink<Buffer> {
           buf = buf.subarray(1) // skip 1 byte, data lrc mismatch
           continue
         }
-        this.#ultra.emitter.emit('resp', buf.slice(0, lenFrame))
+        this.#ultra.emitter.emit('resp', new UltraFrame(buf.slice(0, lenFrame)))
         buf = buf.subarray(lenFrame)
       }
     } finally {
@@ -2955,6 +3359,54 @@ class ChameleonRxSink implements UnderlyingSink<Buffer> {
   }
 }
 
+class DfuRxSink implements UnderlyingSink<Buffer> {
+  #closed: boolean = false
+  #started: boolean = false
+  abortController: AbortController = new AbortController()
+  bufs: Buffer[] = []
+  readonly #ultra: ChameleonUltra
+
+  constructor (dfu: ChameleonUltra) {
+    this.#ultra = dfu
+  }
+
+  start (controller: WritableStreamDefaultController): void {
+    if (this.#closed) throw new Error('DfuRxSink is closed')
+    if (this.#started) throw new Error('DfuRxSink is already started')
+    this.#ultra.emitter.emit('connected', new Date())
+    this.#started = true
+  }
+
+  write (chunk: Buffer, controller: WritableStreamDefaultController): void {
+    if (!this.#started || this.#closed) return
+    if (!Buffer.isBuffer(chunk)) chunk = Buffer.fromView(chunk)
+    const resp = new DfuFrame(chunk)
+    this.#ultra.emitter.emit('resp', resp)
+  }
+
+  close (): void {
+    if (this.#closed) return
+    this.#closed = true
+    this.abortController.abort()
+    this.#ultra.emitter.emit('disconnected', new Date())
+  }
+
+  abort (reason: any): void {
+    if (this.#closed) return
+    this.#closed = true
+    this.abortController.abort()
+    this.#ultra.emitter.emit('disconnected', new Date(), reason)
+  }
+}
+
+export interface ChameleonSerialPort<I, O> {
+  isDfu?: () => boolean
+  isOpen?: () => boolean
+  isSlip?: () => boolean
+  readable: ReadableStream<I>
+  writable: WritableStream<O>
+}
+
 /**
  * @internal
  * @group Plugin Related
@@ -2973,16 +3425,16 @@ export interface ChameleonPlugin {
   install: <T extends PluginInstallContext>(context: T, pluginOption: any) => Promise<unknown>
 }
 
-class ChameleonUltraFrame {
+class UltraFrame {
   buf: Buffer
 
-  constructor (buf: Buffer) {
-    this.buf = buf
+  constructor (buf: Buffer | Uint8Array) {
+    this.buf = Buffer.isBuffer(buf) ? buf : Buffer.fromView(buf)
   }
 
-  static inspect (buf: any): string {
-    if (!Buffer.isBuffer(buf)) return 'Invalid frame'
+  static inspect (resp: UltraFrame): string {
     // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
+    const { buf } = resp
     return [
       buf.slice(0, 2).toString('hex'), // sof + sof lrc
       buf.slice(2, 4).toString('hex'), // cmd
@@ -2996,8 +3448,42 @@ class ChameleonUltraFrame {
 
   get cmd (): Cmd { return this.buf.readUInt16BE(2) }
   get data (): Buffer { return this.buf.subarray(9, -1) }
-  get inspect (): string { return ChameleonUltraFrame.inspect(this.buf) }
+  get inspect (): string { return UltraFrame.inspect(this) }
   get status (): number { return this.buf.readUInt16BE(4) }
+  get errMsg (): string | undefined {
+    const status = this.status
+    if (!RespStatusFail.has(status)) return
+    return RespStatusMsg.get(status) ?? `Unknown status code: ${status}`
+  }
+}
+
+export class DfuFrame {
+  buf: Buffer
+
+  constructor (buf: Buffer) {
+    this.buf = buf // 60000101
+  }
+
+  static inspect (frame: DfuFrame): string {
+    if (frame.isResp === 1) return `op = ${DfuOp[frame.op]}, resCode = ${DfuResCode[frame.result]}, data = ${frame.data.toString('hex')}`
+    if (frame.op === DfuOp.OBJECT_WRITE) return `op = ${DfuOp[frame.op]}, data.length = ${frame.data.length}`
+    return `op = ${DfuOp[frame.op]}, data = ${frame.data.toString('hex')}`
+  }
+
+  get isResp (): number { return +(this.buf[0] === DfuOp.RESPONSE) }
+  get data (): Buffer { return this.buf.subarray(this.isResp === 1 ? 3 : 1) }
+  get inspect (): string { return DfuFrame.inspect(this) }
+  get op (): number { return this.buf[this.isResp] }
+  get result (): number {
+    if (this.isResp === 0) return DfuResCode.SUCCESS
+    return this.buf[2] === DfuResCode.EXT_ERROR ? this.buf.readUInt16BE(2) : this.buf[2]
+  }
+
+  get errMsg (): string | undefined {
+    const result = this.result
+    if (result === DfuResCode.SUCCESS) return
+    return DfuErrMsg.get(result) ?? `Unknown DfuResCode: ${result}`
+  }
 }
 
 /**

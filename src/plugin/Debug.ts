@@ -1,13 +1,13 @@
 import _ from 'lodash'
-import { type ChameleonPlugin, type PluginInstallContext } from '../ChameleonUltra'
+import { type ChameleonPlugin, type PluginInstallContext as ChameleonCtx } from '../ChameleonUltra'
 import createDebugger, { type Debugger } from 'debug'
 
-export default class ChameleonDebug implements ChameleonPlugin {
-  filter?: ChameleonDebugFilter
+export default class Debug implements ChameleonPlugin {
+  filter?: DebugFilter
   debugers = new Map<string, Debugger>()
   name = 'debug'
 
-  async install (context: PluginInstallContext): Promise<this> {
+  async install (context: ChameleonCtx): Promise<this> {
     const { ultra } = context
     ultra.emitter.on('error', (err: Error) => {
       const errJson = errToJson(err)
@@ -24,9 +24,9 @@ export default class ChameleonDebug implements ChameleonPlugin {
   }
 }
 
-;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).ChameleonDebug = ChameleonDebug // eslint-disable-line @typescript-eslint/prefer-optional-chain
+;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).Debug = Debug // eslint-disable-line @typescript-eslint/prefer-optional-chain
 
-type ChameleonDebugFilter = (namespace: string, formatter: any, ...args: [] | any[]) => boolean
+type DebugFilter = (namespace: string, formatter: any, ...args: [] | any[]) => boolean
 
 const ERROR_KEYS = [
   'address',

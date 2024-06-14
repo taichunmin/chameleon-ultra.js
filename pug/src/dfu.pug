@@ -1,0 +1,193 @@
+extends /include/bootstrapV4
+
+block beforehtml
+  - const title = 'Upload Firmware'
+
+block style
+  meta(property="og:description", content="A tool to upload firmware to ChameleonUltra.")
+  meta(property="og:locale", content="zh_TW")
+  meta(property="og:title", content=title)
+  meta(property="og:type", content="website")
+  meta(property="og:url", content=`${baseurl}dfu.html`)
+  style
+    :sass
+      [v-cloak]
+        display: none
+      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
+        font-family: 'Noto Sans TC', sans-serif
+      .input-group-prepend > .input-group-text
+        width: 80px
+      .letter-spacing-n1px
+        &, .btn, textarea, select, input
+          letter-spacing: -1px
+      .text-sm
+        font-size: 0.875rem
+
+block content
+  #app.my-3.container.text-monospace(v-cloak)
+    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
+    .form-group.letter-spacing-n1px
+      label Connect method:
+      .input-group.input-group-sm.mb-3
+        select.form-control(v-model="ls.adapter")
+          option(value="ble") BLE (PC &amp; Android)
+          option(value="usb") USB Serial (PC only)
+        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
+    .form-group.letter-spacing-n1px.mb-3
+      label Tag Name:
+      select.form-control.form-control-sm(v-model="ss.tagName")
+        option(v-for="[k, v] of tagNames", :value="k") {{ v }}
+    button.btn.btn-block.btn-outline-primary.letter-spacing-n1px.mb-2(@click="btnUploadFirmware") #[i.fa.mr-1.fa-download] Upload Firmware
+
+block script
+  script.
+    const { Buffer, ChameleonUltra, Debug, DfuZip, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+    const ultraUsb = new ChameleonUltra()
+    ultraUsb.use(new Debug())
+    ultraUsb.use(new WebserialAdapter())
+    const ultraBle = new ChameleonUltra()
+    ultraBle.use(new Debug())
+    ultraBle.use(new WebbleAdapter())
+
+    window.vm = new Vue({
+      el: '#app',
+      data: {
+        ls: {
+          adapter: 'ble',
+        },
+        ss: {
+          tagName: '',
+        },
+        manifest: {},
+      },
+      async mounted () {
+        // 自動儲存功能
+        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+          try {
+            const saved = JSON5.parse(storage.getItem(location.pathname))
+            if (saved) this.$set(this, key, _.merge(this[key], saved))
+          } catch (err) {}
+          this.$watch(key, () => {
+            storage.setItem(location.pathname, JSON5.stringify(this[key]))
+          }, { deep: true })
+        }
+        await this.fetchManifest()
+      },
+      computed: {
+        ultra () {
+          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
+        },
+        tagNames () {
+          return _.map(_.orderBy(this?.manifest?.releases, ['createdAt'], ['desc']), release => {
+            if (_.isNil(release.gitVersion)) return [release.tagName, release.tagName]
+            return [release.tagName, `${release.tagName} (${release.gitVersion})`]
+          })
+        },
+        releases () {
+          const isAsset = model => asset => asset.name.indexOf(model) >= 0 && asset.name.indexOf('app') >= 0
+          const isUltraAsset = isAsset('ultra')
+          const isLiteAsset = isAsset('lite')
+          return _.fromPairs(_.map(this?.manifest?.releases, release => [release.tagName, {
+            ..._.pick(release, ['commit', 'gitVersion', 'prerelease', 'tagName']),
+            createdAt: new Date(release.createdAt),
+            lite: _.find(release.assets, isLiteAsset),
+            ultra: _.find(release.assets, isUltraAsset),
+          }]))
+        },
+      },
+      methods: {
+        async btnAdapterTips () {
+          await Swal.fire({
+            title: 'Browser & OS',
+            html: '<strong class="text-success">BLE</strong> is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70), <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
+          })
+        },
+        async fetchManifest () {
+          this.showLoading({ text: 'Loading firmwares...' })
+          const url = `https://taichunmin.idv.tw/ChameleonUltra-releases/manifest.json?t=${Math.trunc(Date.now() / 6e5)}`
+          this.$set(this, 'manifest', (await axios.get(url))?.data ?? {})
+          this.ss.tagName = _.first(this.tagNames)[0]
+          Swal.close()
+        },
+        async btnUploadFirmware () {
+          const { ultra } = this
+          const numFormater = new Intl.NumberFormat('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+          const showProgress = ({ func, offset, size, type }) => {
+            if (func !== 'dfuUploadObject' || type !== 2) return
+            const width = _.round(size > 0 ? offset / size * 100 : 0, 1)
+            const html = `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${width}%"></div></div><div class="d-flex justify-content-between"><span>Uploading:</span><span>${numFormater.format(width)} %</span></div></div>`
+            this.showLoading({ html })
+          }
+          try {
+            this.showLoading({ text: 'Download firmware...' })
+            const release = this.releases[this.ss.tagName]
+            if (_.isNil(release)) throw new Error('Invalid tagName')
+            const images = await Promise.all(_.map(['ultra', 'lite'], async model => {
+              const dfuZipUrl = `${release[model].url}?t=${release.createdAt.getTime()}` // 避免快取，加上時間戳
+              ultra.emitter.emit('debug', 'web', `model = ${model}, url = ${dfuZipUrl}`)
+              const dfuZip = new DfuZip(new Buffer((await axios.get(dfuZipUrl, { responseType: 'arraybuffer' }))?.data))
+              return await dfuZip.getAppImage()
+            }))
+            this.showLoading({ text: 'Connect device...' })
+            await ultra.connect()
+            if (!ultra.isDfu()) {
+              const gitVersion = await ultra.cmdGetGitVersion()
+              if (!_.isNil(release.gitVersion) && release.gitVersion === gitVersion) {
+                const msg1 = `gitVersion(${gitVersion}) is the same, do you want to upload again?`
+                if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+              }
+              await ultra.cmdDfuEnter()
+            }
+            this.showLoading({ text: 'Uploading Firmware...' })
+            ultra.emitter.on('progress', showProgress)
+            let isUploadSuccess = false
+            for (const image of images) {
+              try {
+                await ultra.dfuUploadImage(image)
+                isUploadSuccess = true
+                break
+              } catch (err) {
+                ultra.emitter.emit('error', _.set(new Error(err.message), 'originalError', err))
+              }
+            }
+            if (!isUploadSuccess) throw new Error('Upload failed')
+            await Swal.fire({ icon: 'success', title: 'Upload Success' })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Upload Failed', text: err.message })
+          }
+          ultra.emitter.removeListener('progress', showProgress)
+        },
+        async sleep (t) {
+          await new Promise(resolve => setTimeout(resolve, t))
+        },
+        async confirm (text, confirmButtonText, cancelButtonText) {
+          return await new Promise((resolve, reject) => {
+            let isConfirmed = false
+            const args = {
+              cancelButtonColor: '#3085d6',
+              cancelButtonText,
+              confirmButtonColor: '#d33',
+              confirmButtonText,
+              didDestroy: () => { resolve(isConfirmed) },
+              focusCancel: true,
+              icon: 'warning',
+              reverseButtons: true,
+              showCancelButton: true,
+              text,
+            }
+            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
+          })
+        },
+        showLoading (opts = {}) {
+          opts = {
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            ...opts,
+          }
+          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
+          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
+        },
+      },
+    })
+
