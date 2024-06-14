@@ -2008,6 +2008,19 @@ export class ChameleonUltra {
   }
 
   /**
+   * Read LF tag and return data
+   * @returns data of LF tag
+   * @group Reader Related
+   */
+  async cmdLfRead (): Promise<Buffer> {
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.LF_READ // cmd = 3010
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data
+  }
+
+  /**
    * Set the mifare block data of actived slot.
    * @param offset - The start block of actived slot.
    * @param data - The data to be set. the length of data should be multiples of 16.
@@ -2877,6 +2890,7 @@ const RespStatusFail = new Set([
   RespStatus.HF_ERR_ATS,
 
   RespStatus.EM410X_TAG_NOT_FOUND,
+  RespStatus.LF_TAG_NOT_FOUND,
 
   RespStatus.PAR_ERR,
   RespStatus.DEVICE_MODE_ERROR,

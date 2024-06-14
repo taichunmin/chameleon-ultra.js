@@ -89,6 +89,7 @@ export enum Cmd {
 
   EM410X_SCAN = 3000,
   EM410X_WRITE_TO_T55XX = 3001,
+  LF_READ = 3010,
 
   MF1_WRITE_EMU_BLOCK_DATA = 4000,
   HF14A_SET_ANTI_COLL_DATA = 4001,
@@ -209,6 +210,8 @@ export enum RespStatus {
   LF_TAG_OK = 0x40,
   /** EM410X tag not found error */
   EM410X_TAG_NOT_FOUND = 0x41,
+  /** LF tag not found error */
+  LF_TAG_NOT_FOUND = 0x42,
 
   /** Invalid param error */
   PAR_ERR = 0x60,
