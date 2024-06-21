@@ -261,6 +261,110 @@ export enum TagType {
   // 15xx: HF14A-4 series
 }
 
+export enum DfuObjType {
+  /** Invalid object type. */
+  INVALID = 0,
+  /** Command object. */
+  COMMAND = 1,
+  /** Data object. */
+  DATA = 2,
+}
+
+export enum DfuOp {
+  /** Retrieve protocol version. */
+  PROTOCOL_VERSION = 0x00,
+  /** Create selected object. */
+  OBJECT_CREATE = 0x01,
+  /** Set receipt notification. */
+  RECEIPT_NOTIF_SET = 0x02,
+  /** Request CRC of selected object. */
+  CRC_GET = 0x03,
+  /** Execute selected object. */
+  OBJECT_EXECUTE = 0x04,
+  /** Select object. */
+  OBJECT_SELECT = 0x06,
+  /** Retrieve MTU size. */
+  MTU_GET = 0x07,
+  /** Write selected object. */
+  OBJECT_WRITE = 0x08,
+  /** Ping. */
+  PING = 0x09,
+  /** Retrieve hardware version. */
+  HARDWARE_VERSION = 0x0A,
+  /** Retrieve firmware version. */
+  FIRMWARE_VERSION = 0x0B,
+  /** Abort the DFU procedure. */
+  ABORT = 0x0C,
+  /** Response. */
+  RESPONSE = 0x60,
+  /** Invalid opcode. */
+  INVALID = 0xFF,
+}
+
+export enum DfuResCode {
+  /** Invalid opcode. */
+  INVALID = 0x00,
+  /** Operation successful. */
+  SUCCESS = 0x01,
+  /** Opcode not supported. */
+  OP_CODE_NOT_SUPPORTED = 0x02,
+  /** Missing or invalid parameter value. */
+  INVALID_PARAMETER = 0x03,
+  /** Not enough memory for the data object. */
+  INSUFFICIENT_RESOURCES = 0x04,
+  /** Data object does not match the firmware and hardware requirements, the signature is wrong, or parsing the command failed. */
+  INVALID_OBJECT = 0x05,
+  /** Not a valid object type for a Create request. */
+  UNSUPPORTED_TYPE = 0x07,
+  /** The state of the DFU process does not allow this operation. */
+  OPERATION_NOT_PERMITTED = 0x08,
+  /** Operation failed. */
+  OPERATION_FAILED = 0x0A,
+  /** Extended error. The next byte of the response contains the error code of the extended error. */
+  EXT_ERROR = 0x0B,
+  /** No extended error code has been set. This error indicates an implementation problem. */
+  NO_ERROR = 0x0B00,
+  /** Invalid error code. This error code should never be used outside of development. */
+  INVALID_ERROR_CODE = 0x0B01,
+  /** The format of the command was incorrect. This error code is not used in the current implementation, because NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED and NRF_DFU_RES_CODE_INVALID_PARAMETER cover all possible format errors. */
+  WRONG_COMMAND_FORMAT = 0x0B02,
+  /** The command was successfully parsed, but it is not supported or unknown. */
+  UNKNOWN_COMMAND = 0x0B03,
+  /** The init command is invalid. The init packet either has an invalid update type or it is missing required fields for the update type (for example, the init packet for a SoftDevice update is missing the SoftDevice size field). */
+  INIT_COMMAND_INVALID = 0x0B04,
+  /** The firmware version is too low. For an application or SoftDevice, the version must be greater than or equal to the current version. For a bootloader, it must be greater than the current version. to the current version. This requirement prevents downgrade attacks. */
+  FW_VERSION_FAILURE = 0x0B05,
+  /** The hardware version of the device does not match the required hardware version for the update. */
+  HW_VERSION_FAILURE = 0x0B06,
+  /** The array of supported SoftDevices for the update does not contain the FWID of the current SoftDevice or the first FWID is '0' on a bootloader which requires the SoftDevice to be present. */
+  SD_VERSION_FAILURE = 0x0B07,
+  /** The init packet does not contain a signature. This error code is not used in the current implementation, because init packets without a signature are regarded as invalid. */
+  SIGNATURE_MISSING = 0x0B08,
+  /** The hash type that is specified by the init packet is not supported by the DFU bootloader. */
+  WRONG_HASH_TYPE = 0x0B09,
+  /** The hash of the firmware image cannot be calculated. */
+  HASH_FAILED = 0x0B0A,
+  /** The type of the signature is unknown or not supported by the DFU bootloader. */
+  WRONG_SIGNATURE_TYPE = 0x0B0B,
+  /** The hash of the received firmware image does not match the hash in the init packet. */
+  VERIFICATION_FAILED = 0x0B0C,
+  /** The available space on the device is insufficient to hold the firmware. */
+  INSUFFICIENT_SPACE = 0x0B0D,
+}
+
+export enum DfuFwType {
+  SOFTDEVICE = 0x00,
+  APPLICATION = 0x01,
+  BOOTLOADER = 0x02,
+  UNKNOWN = 0xFF,
+}
+
+export enum DfuFwId {
+  BOOTLOADER = 0x00,
+  APPLICATION = 0x01,
+  SOFTDEVICE = 0x02,
+}
+
 export const isAnimationMode = createIsEnum(AnimationMode)
 export const isButtonAction = createIsEnum(ButtonAction)
 export const isButtonType = createIsEnum(ButtonType)

@@ -22,6 +22,7 @@
   "dependencies": {
     "@taichunmin/buffer": "^0.13.6",
     "debug": "^4.3.4",
+    "jszip": "^3.10.1",
     "lodash": "^4.17.21",
     "serialport": "^12.0.0",
     "web-serial-polyfill": "^1.0.15",
@@ -98,6 +99,15 @@
       "import": "./dist/Crypto1.mjs",
       "require": "./dist/Crypto1.js",
       "script": "./dist/Crypto1.global.js"
+    },
+    "./plugin/DfuZip": {
+      "types": {
+        "import": "./dist/plugin/DfuZip.d.mts",
+        "require": "./dist/plugin/DfuZip.d.ts"
+      },
+      "import": "./dist/plugin/DfuZip.mjs",
+      "require": "./dist/plugin/DfuZip.js",
+      "script": "./dist/plugin/DfuZip.global.js"
     },
     "./plugin/SerialPortAdapter": {
       "types": {

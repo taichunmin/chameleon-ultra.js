@@ -25,15 +25,15 @@ export default class SerialPortAdapter implements ChameleonPlugin {
       await ultra.disconnect(new Error('adapter replaced'))
     }
 
-    const adapter: any = {}
-
-    adapter.isSupported = (): boolean => !_.isNil(SerialPort)
+    const adapter: AdapterInstallResp = {
+      isSupported: () => !_.isNil(SerialPort),
+    }
 
     ultra.addHook('connect', async (ctx: any, next: () => Promise<unknown>) => {
       if (ultra.$adapter !== adapter) return await next() // 代表已經被其他 adapter 接管
 
       try {
-        if (adapter.isSupported() !== true) throw new Error('SerialPort not supported')
+        if (!adapter.isSupported()) throw new Error('SerialPort not supported')
 
         const baudRate = pluginOption?.baudRate ?? 115200
         const path = pluginOption?.path ?? await findDevicePath()
@@ -45,6 +45,7 @@ export default class SerialPortAdapter implements ChameleonPlugin {
         this.#debug(`port connected, path = ${path}, baudRate = ${baudRate}`)
         ultra.port = _.merge(Duplex.toWeb(this.duplex), {
           isOpen: () => { return this.duplex?.isOpen ?? false },
+          isDfu: () => false, // TODO: dfu
         })
         return await next()
       } catch (err) {
@@ -61,7 +62,7 @@ export default class SerialPortAdapter implements ChameleonPlugin {
       delete this.duplex
     })
 
-    return adapter as AdapterInstallResp
+    return adapter
   }
 }
 
@@ -77,5 +78,5 @@ export interface SerialPortOption {
 }
 
 interface AdapterInstallResp {
-  isSuppored: () => boolean
+  isSupported: () => boolean
 }

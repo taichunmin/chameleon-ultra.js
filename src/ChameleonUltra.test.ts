@@ -109,9 +109,12 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     expect(adapter.recv).toEqual([Buffer.from('11ef 03e9 0000 0001 13 00 00', 'hex')])
   })
 
-  test('#cmdEnterBootloader()', async () => {
+  test('#cmdDfuEnter()', async () => {
+    // arrange
+    jest.spyOn(ultra, 'isConnected').mockReturnValue(false).mockReturnValueOnce(false).mockReturnValueOnce(true)
+
     // act
-    await ultra.cmdEnterBootloader()
+    await ultra.cmdDfuEnter()
 
     // assert
     expect(adapter.recv).toEqual([Buffer.from('11ef 03f2 0000 0000 0b 00', 'hex')])

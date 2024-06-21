@@ -4,8 +4,6 @@ const _ = require('lodash')
 const eslintPluginTsdoc = require('eslint-plugin-tsdoc')
 const fs = require('fs')
 
-fs.writeFileSync('./debug.txt', 'test\r\n', { flag: 'as' })
-
 function eslintPluginTsdocPatch () {
   const origRule = eslintPluginTsdoc.rules.syntax
   return {

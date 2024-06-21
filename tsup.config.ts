@@ -41,6 +41,7 @@ export default defineConfig((options): Options[] => [
       'src/Crypto1.ts',
       'src/plugin/BufferMockAdapter.ts',
       'src/plugin/Debug.ts',
+      'src/plugin/DfuZip.ts',
       'src/plugin/SerialPortAdapter.ts',
       'src/plugin/WebbleAdapter.ts',
       'src/plugin/WebserialAdapter.ts',

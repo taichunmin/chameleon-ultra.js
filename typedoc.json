@@ -15,6 +15,8 @@
   "entryPoints": [
     "src/index.ts",
     "src/Crypto1.ts",
+    "src/plugin/Debug.ts",
+    "src/plugin/DfuZip.ts",
     "src/plugin/SerialPortAdapter.ts",
     "src/plugin/WebbleAdapter.ts",
     "src/plugin/WebserialAdapter.ts"

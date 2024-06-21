@@ -11,6 +11,8 @@ export {
   DarksideStatus,
   DeviceMode,
   DeviceModel,
+  DfuFwId,
+  DfuFwType,
   FreqType,
   Mf1EmuWriteMode,
   Mf1KeyType,
