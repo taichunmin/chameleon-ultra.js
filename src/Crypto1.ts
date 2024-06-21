@@ -56,26 +56,26 @@ const fastfwd = [
  */
 export default class Crypto1 {
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   static evenParityCache: number[] = []
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   static lfsrBuf = new Buffer(6)
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   even: number = 0
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   odd: number = 0
 
@@ -852,8 +852,8 @@ export default class Crypto1 {
   }
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   static nestedRecoverState (opts: {
     uid: number
@@ -978,8 +978,8 @@ export default class Crypto1 {
   }
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   static nestedIsValidNonce (nt1: number, nt2: number, ks1: number, par: number): boolean {
     const { evenParity8, bit } = Crypto1
@@ -990,8 +990,8 @@ export default class Crypto1 {
   }
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   static lfsrPrefixKs (ks: Buffer, isOdd: boolean): number[] {
     const { bit, filter, toUint32 } = Crypto1
@@ -1037,8 +1037,8 @@ export default class Crypto1 {
   }
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   static lfsrCommonPrefix (pfx: number, ar: number, ks: Buffer, par: number[][], isZeroPar: boolean): Crypto1[] {
     const { lfsrPrefixKs, checkPfxParity } = Crypto1

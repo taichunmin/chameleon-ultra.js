@@ -54,11 +54,11 @@ export default class DfuZip {
 
 ;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).DfuZip = DfuZip // eslint-disable-line @typescript-eslint/prefer-optional-chain
 
-export type DfuManifest = Record<DfuImageType, { bin_file: string, dat_file: string }>
-export type DfuImageType = 'application' | 'softdevice' | 'bootloader' | 'softdevice_bootloader'
-
 export interface DfuImage {
   type: DfuImageType
   header: Buffer
   body: Buffer
 }
+
+type DfuManifest = Record<DfuImageType, { bin_file: string, dat_file: string }>
+type DfuImageType = 'application' | 'softdevice' | 'bootloader' | 'softdevice_bootloader'

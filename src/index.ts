@@ -13,6 +13,7 @@ export {
   DeviceModel,
   DfuFwId,
   DfuFwType,
+  DfuObjType,
   FreqType,
   Mf1EmuWriteMode,
   Mf1KeyType,
