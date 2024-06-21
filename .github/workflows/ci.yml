@@ -88,11 +88,15 @@ jobs:
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.global.js
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.global.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/DfuZip.global.js
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/SerialPortAdapter.global.js
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.global.js
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.global.js
 
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/DfuZip.mjs/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/SerialPortAdapter.mjs/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm
