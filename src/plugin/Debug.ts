@@ -1,14 +1,18 @@
 import _ from 'lodash'
+import { type Buffer } from '@taichunmin/buffer'
 import { type ChameleonPlugin, type PluginInstallContext as ChameleonCtx } from '../ChameleonUltra'
 import createDebugger, { type Debugger } from 'debug'
 
+let Buffer1: typeof Buffer
+
 export default class Debug implements ChameleonPlugin {
-  filter?: DebugFilter
   debugers = new Map<string, Debugger>()
+  filter?: DebugFilter
   name = 'debug'
 
   async install (context: ChameleonCtx): Promise<this> {
     const { ultra } = context
+    if (_.isNil(Buffer1)) Buffer1 = context.Buffer
     ultra.emitter.on('error', (err: Error) => {
       const errJson = errToJson(err)
       ultra.emitter.emit('debug', 'error', jsonStringify(errJson))
@@ -68,6 +72,7 @@ export function stringifyClone (obj: any): any {
       if (preventCircular.has(val1)) return '[Circular]'
       preventCircular.add(val1)
     }
+    if (Buffer1?.isBuffer(val1)) return { type: 'Buffer', hex: val1.toString('hex') }
     if (typeof val1 === 'bigint') return val1.toString()
     if (val1 instanceof Error) return errToJson(val1)
     if (val1 instanceof Map) return _.fromPairs([...val1.entries()])
@@ -89,4 +94,9 @@ export function stringifyReplacer (this: any, key: any, val: any): any {
 
 export function jsonStringify (obj: object, space?: number): string {
   return JSON.stringify(stringifyClone(obj), stringifyReplacer, space)
+}
+
+export function arrayBufferViewToHex (view: ArrayBufferView): string {
+  const u8 = new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
+  return _.map(u8, b => `0${b.toString(16)}`.slice(-2)).join('')
 }

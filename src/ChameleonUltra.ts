@@ -340,7 +340,7 @@ export class ChameleonUltra {
 
   /**
    * Read a response from device.
-   * @param timeout - The timeout in milliseconds.
+   * @param args.timeout - The timeout in milliseconds.
    * @internal
    * @group Internal
    */
@@ -1759,8 +1759,8 @@ export class ChameleonUltra {
    * @param opts.data - The data to be send. If `appendCrc` is `true`, the maximum length of data is `62`, otherwise is `64`.
    * @param opts.dataBitLength - Number of bits to send. Useful for send partial byte. `dataBitLength` is incompatible with `appendCrc`.
    * @param opts.keepRfField - Set `true` to keep the RF field active after sending.
-   * @param opts.readResponse - Default value is `true`. Set `false` to skip reading tag response.
-   * @param opts.timeout - Default value is `1000 ms`. Maximum timeout for reading tag response in ms while `readResponse` is `true`.
+   * @param opts.waitResponse - Default value is `true`. Set `false` to skip reading tag response.
+   * @param opts.timeout - Default value is `1000 ms`. Maximum timeout for reading tag response in ms while `waitResponse` is `true`.
    * @returns The response from tag.
    * @group Reader Related
    */

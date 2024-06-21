@@ -39,7 +39,6 @@ export default defineConfig((options): Options[] => [
     minify: !options.watch,
     entry: [
       'src/Crypto1.ts',
-      'src/plugin/BufferMockAdapter.ts',
       'src/plugin/Debug.ts',
       'src/plugin/DfuZip.ts',
       'src/plugin/SerialPortAdapter.ts',

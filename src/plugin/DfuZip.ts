@@ -43,6 +43,13 @@ export default class DfuZip {
   async getAppImage (): Promise<DfuImage | null> {
     return await this.getImage(['application'])
   }
+
+  async getGitVersion (): Promise<string | null> {
+    const image = await this.getAppImage()
+    if (_.isNil(image)) return null
+    // eslint-disable-next-line no-control-regex
+    return image.body.toString('utf8').match(/\x00(v\d+(?:\.\d+)*[\w-]*)\x00/)?.[1] ?? null
+  }
 }
 
 ;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).DfuZip = DfuZip // eslint-disable-line @typescript-eslint/prefer-optional-chain
