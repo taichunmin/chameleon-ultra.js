@@ -86,7 +86,7 @@ export default class Crypto1 {
    * @see [mfkey source code from RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/tree/master/tools/mfkey)
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * const state1 = new Crypto1()
    * const state2 = new Crypto1({ even: 0, odd: 0 })
@@ -102,7 +102,7 @@ export default class Crypto1 {
    * Reset the internal lfsr.
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * const state1 = new Crypto1({ even: 1, odd: 1 })
    * state1.reset()
@@ -118,7 +118,8 @@ export default class Crypto1 {
    * @param key - The key to set the internal lfsr.
    * @example
    * ```js
-   * const { Buffer, Crypto1 } = window
+   * const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * const state1 = new Crypto1()
    * state1.setLfsr(new Buffer('FFFFFFFFFFFF'))
@@ -142,7 +143,8 @@ export default class Crypto1 {
    * @returns lfsr.
    * @example
    * ```js
-   * const { Buffer, Crypto1 } = window
+   * const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * const state1 = new Crypto1()
    * console.log(state1.setLfsr(new Buffer('FFFFFFFFFFFF')).getLfsr().toString(16)) // 'FFFFFFFFFFFF'
@@ -261,7 +263,7 @@ export default class Crypto1 {
    * @group Internal
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.beBit(0x01000000, 0)) // 1
    * ```
@@ -277,7 +279,7 @@ export default class Crypto1 {
    * @group Internal
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.bit(0x1, 0)) // 1
    * ```
@@ -292,7 +294,7 @@ export default class Crypto1 {
    * @group Internal
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.toBit(1)) // 1
    * console.log(Crypto1.toBit(2)) // 0
@@ -308,7 +310,7 @@ export default class Crypto1 {
    * @group Internal
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.toBool(1)) // 1
    * console.log(Crypto1.toBool(2)) // 1
@@ -324,7 +326,7 @@ export default class Crypto1 {
    * @group Internal
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.toUint24(-1).toString(16)) // 'ffffff'
    * ```
@@ -339,7 +341,7 @@ export default class Crypto1 {
    * @group Internal
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.toUint32(-1).toString(16)) // 'ffffffff'
    * ```
@@ -368,7 +370,7 @@ export default class Crypto1 {
    * @group Internal
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.toUint8(-1).toString(16)) // 'ff'
    * ```
@@ -443,7 +445,7 @@ export default class Crypto1 {
    * @group Internal
    * @example
    * ```js
-   * const { Crypto1 } = window
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.swapEndian(0x12345678).toString(16)) // '78563412'
    * ```
@@ -705,7 +707,8 @@ export default class Crypto1 {
    * @returns The recovered key.
    * @example
    * ```js
-   * const { Buffer, Crypto1 } = window
+   * const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.mfkey32v2({
    *   uid: 0x65535D33,
@@ -774,7 +777,8 @@ export default class Crypto1 {
    * @returns The recovered key.
    * @example
    * ```js
-   * const { Buffer, Crypto1 } = window
+   * const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *
    * console.log(Crypto1.mfkey32v2({
    *   uid: 0x65535D33,
@@ -889,6 +893,7 @@ export default class Crypto1 {
    * @returns candidates keys
    * @example
    * ```js
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    * const { Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    * const args = {
    *   uid: 'b908a16d',
@@ -942,6 +947,7 @@ export default class Crypto1 {
    * @returns candidates keys
    * @example
    * ```js
+   * const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    * const args = {
    *   uid: '877209e1',
    *   dist: '00000080',
@@ -1069,6 +1075,7 @@ export default class Crypto1 {
    * ```js
    * async function run (ultra) {
    *   const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const { Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
    *   const block = 0
    *   const keyType = Mf1KeyType.KEY_A
