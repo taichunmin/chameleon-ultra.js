@@ -21,16 +21,18 @@ export default class WebserialAdapter implements ChameleonPlugin {
   #isOpen: boolean = false
   name = 'adapter'
   port?: SerialPort1
-  serial: typeof serial
-  TransformStream: typeof TransformStream
+  readonly #catchErr: (err: Error) => void
+  readonly #serial: typeof serial
+  readonly #TransformStream: typeof TransformStream
+  readonly #WritableStream: typeof WritableStream
   ultra?: ChameleonUltra
-  WritableStream: typeof WritableStream
 
   constructor () {
     const navigator = (globalThis as any)?.navigator ?? {}
-    this.TransformStream = (globalThis as any)?.TransformStream ?? TransformStream
-    this.WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
-    this.serial = navigator.serial ?? ('usb' in navigator ? serial : null)
+    this.#TransformStream = (globalThis as any)?.TransformStream ?? TransformStream
+    this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
+    this.#serial = navigator.serial ?? ('usb' in navigator ? serial : null)
+    this.#catchErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
   }
 
   #debug (formatter: any, ...args: [] | any[]): void {
@@ -43,7 +45,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
 
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))
     const adapter: AdapterInstallResp = {
-      isSupported: () => !_.isNil(this.serial),
+      isSupported: () => !_.isNil(this.#serial),
     }
 
     ultra.addHook('connect', async (ctx: any, next: () => Promise<unknown>) => {
@@ -51,7 +53,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
 
       try {
         if (!adapter.isSupported()) throw new Error('WebSerial not supported')
-        this.port = await this.serial.requestPort({ filters: WEBSERIAL_FILTERS }) as SerialPort1
+        this.port = await this.#serial.requestPort({ filters: WEBSERIAL_FILTERS }) as SerialPort1
         if (_.isNil(this.port)) throw new Error('user canceled')
 
         const info = await this.port.getInfo()
@@ -69,8 +71,8 @@ export default class WebserialAdapter implements ChameleonPlugin {
             isOpen: () => this.#isOpen,
             isDfu: () => this.#isDfu,
             isSlip: () => true,
-            readable: this.port.readable.pipeThrough(new this.TransformStream(new SlipDecodeTransformer(Buffer1))),
-            writable: new this.WritableStream({
+            readable: this.port.readable.pipeThrough(new this.#TransformStream(new SlipDecodeTransformer(Buffer1))),
+            writable: new this.#WritableStream({
               write: async (chunk: Buffer) => {
                 const writer = this.port?.writable.getWriter()
                 if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
@@ -95,8 +97,8 @@ export default class WebserialAdapter implements ChameleonPlugin {
     ultra.addHook('disconnect', async (ctx: any, next: () => Promise<unknown>) => {
       if (ultra.$adapter !== adapter || _.isNil(this.port)) return await next() // 代表已經被其他 adapter 接管
 
-      await next().catch(ultra.catchErr)
-      await this.port.close().catch(ultra.catchErr)
+      await next().catch(this.#catchErr)
+      await this.port.close().catch(this.#catchErr)
       this.#isOpen = false
       this.#isDfu = false
       delete this.port
@@ -141,6 +143,10 @@ class SlipDecodeTransformer implements Transformer<Buffer, Buffer> {
   }
 }
 
+/**
+ * @group Internal
+ * @internal
+ */
 export function slipEncode (buf: Buffer, Buffer1: typeof Buffer): Buffer {
   let len1 = buf.length
   for (const b of buf) if (b === SlipByte.END || b === SlipByte.ESC) len1++
@@ -161,6 +167,10 @@ export function slipEncode (buf: Buffer, Buffer1: typeof Buffer): Buffer {
   return encoded
 }
 
+/**
+ * @group Internal
+ * @internal
+ */
 export function slipDecode (buf: Buffer): Buffer {
   let len1 = 0
   for (let i = 0; i < buf.length; i++) {

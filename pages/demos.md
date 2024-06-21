@@ -38,11 +38,13 @@ A ChameleonUltra tool to management the device info and settings.
 
 ## [dfu.html](https://taichunmin.idv.tw/chameleon-ultra.js/dfu.html)
 
-A tool to upload firmware to ChameleonUltra.
+A tool to update ChameleonUltra firmware.
+
+![](https://i.imgur.com/yYsKXgx.png)
 
 ### Features
 
-- Select tag to upload firmware
+- Select tag to update firmware
 
 ### Related links
 

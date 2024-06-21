@@ -57,6 +57,10 @@ const ERROR_KEYS = [
   'syscall',
 ] as const
 
+/**
+ * @group Internal
+ * @internal
+ */
 export function errToJson<T extends Error & { originalError?: any, stack?: any }> (err: T): Partial<T> {
   const tmp: any = {
     ..._.pick(err, ERROR_KEYS),
@@ -65,6 +69,10 @@ export function errToJson<T extends Error & { originalError?: any, stack?: any }
   return tmp
 }
 
+/**
+ * @group Internal
+ * @internal
+ */
 export function stringifyClone (obj: any): any {
   const preventCircular = new Set()
   return _.cloneDeepWith(obj, val1 => {
@@ -81,6 +89,10 @@ export function stringifyClone (obj: any): any {
   })
 }
 
+/**
+ * @group Internal
+ * @internal
+ */
 export function stringifyReplacer (this: any, key: any, val: any): any {
   if (key.length > 1 && key[0] === '_') return undefined
   const censored = this?._censored ?? []
@@ -92,11 +104,10 @@ export function stringifyReplacer (this: any, key: any, val: any): any {
   return this[key]
 }
 
+/**
+ * @group Internal
+ * @internal
+ */
 export function jsonStringify (obj: object, space?: number): string {
   return JSON.stringify(stringifyClone(obj), stringifyReplacer, space)
-}
-
-export function arrayBufferViewToHex (view: ArrayBufferView): string {
-  const u8 = new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
-  return _.map(u8, b => `0${b.toString(16)}`.slice(-2)).join('')
 }

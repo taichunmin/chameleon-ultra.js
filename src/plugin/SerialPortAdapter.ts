@@ -72,7 +72,7 @@ type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }
 }
 
-export interface SerialPortOption {
+interface SerialPortOption {
   path?: string
   baudRate?: number
 }

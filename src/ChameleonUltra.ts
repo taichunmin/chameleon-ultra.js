@@ -32,11 +32,13 @@ import {
   isButtonAction,
   isButtonType,
   isDeviceMode,
+  isDfuFwId,
   isMf1EmuWriteMode,
   isMf1KeyType,
   isMf1VblockOperator,
   isSlot,
   isTagType,
+  isValidDfuObjType,
   isValidFreqType,
 } from './enums'
 
@@ -117,18 +119,14 @@ function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string
  * </details>
  */
 export class ChameleonUltra {
+  readonly #catchErr: (err: Error) => void
   #deviceMode: DeviceMode | null = null
   #isDisconnecting: boolean = false
   #rxSink?: UltraRxSink | DfuRxSink
   #supportedCmds: Set<Cmd> = new Set<Cmd>()
   readonly #hooks = new Map<string, ReturnType<typeof middlewareCompose>>()
   readonly #middlewares = new Map<string, MiddlewareComposeFn[]>()
-
-  /**
-   * @internal
-   * @group Internal
-   */
-  WritableStream: typeof WritableStream
+  readonly #WritableStream: typeof WritableStream
 
   /**
    * The supported version of SDK.
@@ -137,8 +135,8 @@ export class ChameleonUltra {
   static VERSION_SUPPORTED = VERSION_SUPPORTED
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   readDefaultTimeout: number = READ_DEFAULT_TIMEOUT
 
@@ -153,20 +151,14 @@ export class ChameleonUltra {
   readonly emitter = new EventEmitter()
 
   /**
-   * @internal
    * @group Internal
+   * @internal
    */
   port?: ChameleonSerialPort<Buffer, Buffer>
 
-  /**
-   * @internal
-   * @group Internal
-   */
-  catchErr: (err: Error) => void
-
   constructor () {
-    this.WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
-    this.catchErr = (err: Error): void => { this.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+    this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
+    this.#catchErr = (err: Error): void => { this.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
   }
 
   #debug (namespace: string, formatter: any, ...args: [] | any[]): void {
@@ -177,7 +169,8 @@ export class ChameleonUltra {
    * Register a plugin.
    * @param plugin - The plugin to register.
    * @param option - The option to pass to plugin.install().
-   * @group Plugin Related
+   * @internal
+   * @group Internal
    */
   async use (plugin: ChameleonPlugin, option?: any): Promise<this> {
     const pluginId = `$${plugin.name}`
@@ -190,7 +183,8 @@ export class ChameleonUltra {
    * Register a hook.
    * @param hookName - The hook name.
    * @param fn - The function to register.
-   * @group Plugin Related
+   * @internal
+   * @group Internal
    */
   addHook (hookName: string, fn: MiddlewareComposeFn): this {
     const middlewares = this.#middlewares.get(hookName) ?? []
@@ -206,7 +200,8 @@ export class ChameleonUltra {
    * @param ctx - The context will be passed to every middleware.
    * @param next - The next middleware function.
    * @returns The return value depent on the middlewares
-   * @group Plugin Related
+   * @internal
+   * @group Internal
    */
   async invokeHook (hookName: string, ctx: any = {}, next?: MiddlewareComposeFn): Promise<unknown> {
     const hook = this.#hooks.get(hookName) ?? middlewareCompose([])
@@ -226,7 +221,7 @@ export class ChameleonUltra {
         // serial.readable pipeTo this.rxSink
         const promiseConnected = new Promise<Date>(resolve => this.emitter.once('connected', resolve))
         this.#rxSink = this.isDfu() ? new DfuRxSink(this) : new UltraRxSink(this)
-        void this.port.readable.pipeTo(new this.WritableStream(this.#rxSink), this.#rxSink.abortController)
+        void this.port.readable.pipeTo(new this.#WritableStream(this.#rxSink), this.#rxSink.abortController)
           .catch(err => { this.#debug('rxSink', err) })
 
         const connectedAt = await promiseConnected
@@ -262,8 +257,8 @@ export class ChameleonUltra {
           const isLocked = (): boolean => this.port?.readable?.locked ?? false
           if (isLocked()) this.#rxSink?.abortController.abort(err)
           while (isLocked()) await sleep(10)
-          await this.port?.readable?.cancel(err).catch(this.catchErr)
-          await this.port?.writable?.close().catch(this.catchErr)
+          await this.port?.readable?.cancel(err).catch(this.#catchErr)
+          await this.port?.writable?.close().catch(this.#catchErr)
           delete this.port
 
           const [disconnectedAt, reason] = await promiseDisconnected
@@ -296,6 +291,7 @@ export class ChameleonUltra {
   /**
    * Return true if DFU use slip encode/decode.
    * @group DFU Related
+   * @see Please refer to [SLIP](https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol) and [nRF5 SDK: SLIP library](https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_slip.html) for more information.
    */
   isSlip (): boolean {
     return this?.port?.isSlip?.() ?? false
@@ -1235,6 +1231,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
+   *   const { Cmd } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(await ultra.isCmdSupported(Cmd.GET_APP_VERSION)) // true
    * }
    *
@@ -2896,12 +2893,13 @@ export class ChameleonUltra {
    * Syntax and ID of this command is permanent. If protocol version changes other opcode may not be valid any more.
    * @returns Protocol version.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
    * async function run (ultra) {
    *   await ultra.cmdDfuEnter()
-   *   console.log(await ultra.cmdDfuGetProtocol())
+   *   console.log(await ultra.cmdDfuGetProtocol()) // Print: 1
+   *   await ultra.cmdDfuAbort()
    * }
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
@@ -2923,11 +2921,12 @@ export class ChameleonUltra {
    * - `crc32`: Current CRC.
    * - `offset`: Current offset.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    */
   async cmdDfuCreateObject (type: DfuObjType, size: number): Promise<void> {
     if (!this.isConnected()) await this.connect()
     if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    if (!isValidDfuObjType(type)) throw new TypeError('Invalid type')
     const op = DfuOp.OBJECT_CREATE
     const readResp = await this.#createReadRespFn({ op })
     await this.#sendBuffer(Buffer.pack('<BBI', op, type, size))
@@ -2940,7 +2939,7 @@ export class ChameleonUltra {
    * This request configures the frequency of sending CRC responses after Write request commands.
    * @param prn - If set to `0`, then the CRC response is never sent after Write request. Otherwise, it is sent every `prn`'th Write request.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    */
   async cmdDfuSetPrn (prn: number): Promise<void> {
     if (!this.isConnected()) await this.connect()
@@ -2957,7 +2956,7 @@ export class ChameleonUltra {
    * - `crc32`: Current CRC.
    * - `offset`: Current offset.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    */
   async cmdDfuGetObjectCrc (): Promise<{ offset: number, crc32: number }> {
     if (!this.isConnected()) await this.connect()
@@ -2972,7 +2971,7 @@ export class ChameleonUltra {
   /**
    * Execute selected object.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    */
   async cmdDfuExecuteObject (): Promise<void> {
     if (!this.isConnected()) await this.connect()
@@ -2991,11 +2990,12 @@ export class ChameleonUltra {
    * - `maxSize`: Maximum size of selected object.
    * - `offset`: Current offset.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    */
   async cmdDfuSelectObject (type: DfuObjType): Promise<{ offset: number, crc32: number, maxSize: number }> {
     if (!this.isConnected()) await this.connect()
     if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    if (!isValidDfuObjType(type)) throw new TypeError('Invalid type')
     const op = DfuOp.OBJECT_SELECT
     const readResp = await this.#createReadRespFn({ op })
     await this.#sendBuffer(Buffer.pack('<BB', op, type))
@@ -3007,12 +3007,13 @@ export class ChameleonUltra {
    * Retrieve MTU size.
    * @returns The preferred MTU size on this request.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
    * async function run (ultra) {
    *   await ultra.cmdDfuEnter()
-   *   console.log(await ultra.cmdDfuGetMtu())
+   *   console.log(await ultra.cmdDfuGetMtu()) // Print: 1025
+   *   await ultra.cmdDfuAbort()
    * }
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
@@ -3032,7 +3033,7 @@ export class ChameleonUltra {
    * Write selected object.
    * @param buf - Data.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    */
   async cmdDfuWriteObject (buf: Buffer): Promise<void> {
     if (!this.isConnected()) await this.connect()
@@ -3046,12 +3047,13 @@ export class ChameleonUltra {
    * @param id - Ping ID that will be returned in response.
    * @returns The received ID which is echoed back.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
    * async function run (ultra) {
    *   await ultra.cmdDfuEnter()
-   *   console.log(await ultra.cmdDfuPing(1))
+   *   console.log(await ultra.cmdDfuPing(1)) // Print: 1
+   *   await ultra.cmdDfuAbort()
    * }
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
@@ -3074,19 +3076,27 @@ export class ChameleonUltra {
    * - `romSize`: ROM size, in bytes.
    * - `variant`: Hardware variant, from FICR register.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
    * async function run (ultra) {
    *   await ultra.cmdDfuEnter()
    *   console.log(await ultra.cmdDfuGetHardwareVersion())
+   *   await ultra.cmdDfuAbort()
+   *   // {
+   *   //   "part": "nRF52840",
+   *   //   "variant": "AAD0",
+   *   //   "romSize": 1048576,
+   *   //   "ramSize": 262144,
+   *   //   "romPageSize": 4096
+   *   // }
    * }
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdDfuGetHardwareVersion (): Promise<{
-    part: number
-    variant: number
+    part: string
+    variant: string
     romSize: number
     ramSize: number
     romPageSize: number
@@ -3096,8 +3106,8 @@ export class ChameleonUltra {
     const op = DfuOp.HARDWARE_VERSION
     const readResp = await this.#createReadRespFn({ op })
     await this.#sendBuffer(Buffer.pack('<B', op))
-    const [part, variant, romSize, ramSize, romPageSize] = (await readResp()).data.unpack('<IIIII')
-    return { part, variant, romSize, ramSize, romPageSize }
+    const [part, variant, romSize, ramSize, romPageSize] = (await readResp()).data.unpack('<I4sIII')
+    return { part: `nRF${part.toString(16)}`, variant: variant.reverse().toString(), romSize, ramSize, romPageSize }
   }
 
   /**
@@ -3108,16 +3118,20 @@ export class ChameleonUltra {
    * - `type`: Firmware type.
    * - `version`: Firmware version.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { DfuFwId, DfuFwType } = window.ChameleonUltraJS
+   *   const { DfuFwId, DfuFwType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdDfuEnter()
    *   for (const fwId of [DfuFwId.BOOTLOADER, DfuFwId.APPLICATION, DfuFwId.SOFTDEVICE]) {
-   *     const resp = await ultra.cmdDfuGetFirmwareVersion(fwId)
-   *     console.log(`type = ${DfuFwType[resp.type]}, version = ${resp.version}, addr = 0x${resp.addr.toString(16)}, len = ${resp.len}`)
+   *     const { type, version, addr, len } = await ultra.cmdDfuGetFirmwareVersion(fwId)
+   *     console.log(`type = ${DfuFwType[type]}, version = ${version}, addr = 0x${addr.toString(16)}, len = ${len}`)
    *   }
+   *   await ultra.cmdDfuAbort()
+   *   // type = BOOTLOADER, version = 1, addr = 0xf3000, len = 45056
+   *   // type = SOFTDEVICE, version = 7002000, addr = 0x1000, len = 159744
+   *   // type = APPLICATION, version = 1, addr = 0x27000, len = 222844
    * }
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
@@ -3130,6 +3144,7 @@ export class ChameleonUltra {
   }> {
     if (!this.isConnected()) await this.connect()
     if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
+    if (!isDfuFwId(id)) throw new TypeError('Invalid id')
     const op = DfuOp.FIRMWARE_VERSION
     const readResp = await this.#createReadRespFn({ op })
     await this.#sendBuffer(Buffer.pack('<BB', op, id))
@@ -3140,7 +3155,7 @@ export class ChameleonUltra {
   /**
    * Abort the DFU procedure.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
    * async function run (ultra) {
@@ -3162,12 +3177,13 @@ export class ChameleonUltra {
    * @param type - Object type.
    * @param buf - Data.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    */
-  async dfuUploadObject (type: DfuObjType, buf: Buffer): Promise<void> {
+  async dfuUpdateObject (type: DfuObjType, buf: Buffer): Promise<void> {
+    if (!isValidDfuObjType(type)) throw new TypeError('Invalid type')
     const emitProgress = (offset: number): void => {
       this.emitter.emit('progress', {
-        func: 'dfuUploadObject',
+        func: 'dfuUpdateObject',
         offset,
         size: buf.length,
         type,
@@ -3209,11 +3225,43 @@ export class ChameleonUltra {
    * Upload DFU image.
    * @param image - The DFU image.
    * @group DFU Related
-   * @see {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | DFU Protocol}
+   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { DeviceModel } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const { DfuZip } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/DfuZip.mjs/+esm')
+   *   const model = (await ultra.cmdGetDeviceModel()) === DeviceModel.ULTRA ? 'ultra' : 'lite'
+   *   const dfuZipUrl = `https://taichunmin.idv.tw/ChameleonUltra-releases/dev/${model}-dfu-app.zip`
+   *   const dfuZip = new DfuZip(new Buffer((await axios.get(dfuZipUrl, { responseType: 'arraybuffer' }))?.data))
+   *   const image = await dfuZip.getAppImage()
+   *   const imageGitVersion = await dfuZip.getGitVersion()
+   *   console.log({ type: image.type, headerSize: image.header.length, bodySize: image.body.length, gitVersion: imageGitVersion })
+   *   // {
+   *   //   "type": "application",
+   *   //   "headerSize": 141,
+   *   //   "bodySize": 222844,
+   *   //   "gitVersion": "v2.0.0-135-g3cadd47"
+   *   // }
+   *   const gitVersion = await ultra.cmdGetGitVersion()
+   *   console.log(`gitVersion = ${gitVersion}`) // Print: gitVersion = v2.0.0-135-g3cadd47
+   *   await ultra.cmdDfuEnter()
+   *   ultra.emitter.on('progress', console.log)
+   *   // {
+   *   //   "func": "dfuUpdateObject",
+   *   //   "offset": 0,
+   *   //   "size": 222844,
+   *   //   "type": 2
+   *   // }
+   *   await ultra.dfuUpdateImage(image)
+   *   ultra.emitter.removeListener('progress', console.log)
+   * }
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
    */
-  async dfuUploadImage (image: DfuImage): Promise<void> {
-    await this.dfuUploadObject(DfuObjType.COMMAND, image.header)
-    await this.dfuUploadObject(DfuObjType.DATA, image.body)
+  async dfuUpdateImage (image: DfuImage): Promise<void> {
+    await this.dfuUpdateObject(DfuObjType.COMMAND, image.header)
+    await this.dfuUpdateObject(DfuObjType.DATA, image.body)
     for (let i = 500; i >= 0; i--) {
       if (!this.isConnected()) break
       if (i === 0) throw new Error('Failed to reboot device')
@@ -3409,7 +3457,7 @@ export interface ChameleonSerialPort<I, O> {
 
 /**
  * @internal
- * @group Plugin Related
+ * @group Internal
  */
 export type PluginInstallContext = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   Buffer: typeof Buffer
@@ -3418,7 +3466,7 @@ export type PluginInstallContext = { // eslint-disable-line @typescript-eslint/c
 
 /**
  * @internal
- * @group Plugin Related
+ * @group Internal
  */
 export interface ChameleonPlugin {
   name: string
