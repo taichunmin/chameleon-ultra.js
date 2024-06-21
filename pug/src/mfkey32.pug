@@ -31,7 +31,7 @@ block content
           option(value="usb") USB Serial (PC only)
         .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
     .card.mb-3
-      .card-header.letter-spacing-n1px #[i.fa.fa-fw.fa-id-card] Scan UID / Emulate Tag
+      h6.card-header #[i.fa.fa-fw.fa-id-card] Scan UID / Emulate Tag
       .card-body
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center Slot
@@ -58,7 +58,7 @@ block content
           .col.px-1: button.btn.btn-block.btn-success.letter-spacing-n1px(@click="btnScanTag") #[i.fa.fa-fw.fa-sign-out] Scan UID
           .col.px-1: button.btn.btn-block.btn-primary.letter-spacing-n1px(@click="btnEmulateTag") #[i.fa.fa-fw.fa-sign-in] Emulate
     .card.mb-3
-      .card-header.letter-spacing-n1px #[i.fa.fa-fw.fa-lock] Key recover / Check key
+      h6.card-header #[i.fa.fa-fw.fa-lock] Key recover / Check key
       .card-body
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center Block
