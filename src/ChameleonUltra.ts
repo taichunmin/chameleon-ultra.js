@@ -3230,7 +3230,7 @@ export class ChameleonUltra {
    * ```js
    * async function run (ultra) {
    *   const { DeviceModel } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
-   *   const { DfuZip } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/DfuZip.mjs/+esm')
+   *   const { default: DfuZip } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/DfuZip.mjs/+esm')
    *   const model = (await ultra.cmdGetDeviceModel()) === DeviceModel.ULTRA ? 'ultra' : 'lite'
    *   const dfuZipUrl = `https://taichunmin.idv.tw/ChameleonUltra-releases/dev/${model}-dfu-app.zip`
    *   const dfuZip = new DfuZip(new Buffer((await axios.get(dfuZipUrl, { responseType: 'arraybuffer' }))?.data))
