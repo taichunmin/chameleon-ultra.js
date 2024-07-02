@@ -21,7 +21,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
   #isOpen: boolean = false
   name = 'adapter'
   port?: SerialPort1
-  readonly #catchErr: (err: Error) => void
+  readonly #emitErr: (err: Error) => void
   readonly #serial: typeof serial
   readonly #TransformStream: typeof TransformStream
   readonly #WritableStream: typeof WritableStream
@@ -32,7 +32,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
     this.#TransformStream = (globalThis as any)?.TransformStream ?? TransformStream
     this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
     this.#serial = navigator.serial ?? ('usb' in navigator ? serial : null)
-    this.#catchErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+    this.#emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
   }
 
   #debug (formatter: any, ...args: [] | any[]): void {
@@ -89,7 +89,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
         }
         return await next()
       } catch (err) {
-        this.#debug(err)
+        this.#emitErr(err)
         throw err
       }
     })
@@ -97,8 +97,8 @@ export default class WebserialAdapter implements ChameleonPlugin {
     ultra.addHook('disconnect', async (ctx: any, next: () => Promise<unknown>) => {
       if (ultra.$adapter !== adapter || _.isNil(this.port)) return await next() // 代表已經被其他 adapter 接管
 
-      await next().catch(this.#catchErr)
-      await this.port.close().catch(this.#catchErr)
+      await next().catch(this.#emitErr)
+      await this.port.close().catch(this.#emitErr)
       this.#isOpen = false
       this.#isDfu = false
       delete this.port

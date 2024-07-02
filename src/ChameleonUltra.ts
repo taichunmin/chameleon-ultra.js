@@ -119,7 +119,7 @@ function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string
  * </details>
  */
 export class ChameleonUltra {
-  readonly #catchErr: (err: Error) => void
+  readonly #emitErr: (err: Error) => void
   #deviceMode: DeviceMode | null = null
   #isDisconnecting: boolean = false
   #rxSink?: UltraRxSink | DfuRxSink
@@ -158,7 +158,7 @@ export class ChameleonUltra {
 
   constructor () {
     this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
-    this.#catchErr = (err: Error): void => { this.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+    this.#emitErr = (err: Error): void => { this.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
   }
 
   #debug (namespace: string, formatter: any, ...args: [] | any[]): void {
@@ -214,8 +214,8 @@ export class ChameleonUltra {
    * @group Connection Related
    */
   async connect (): Promise<void> {
-    await this.invokeHook('connect', {}, async (ctx, next) => {
-      try {
+    try {
+      await this.invokeHook('connect', {}, async (ctx, next) => {
         if (_.isNil(this.port)) throw new Error('this.port is undefined. Did you remember to use adapter plugin?')
 
         // serial.readable pipeTo this.rxSink
@@ -226,13 +226,13 @@ export class ChameleonUltra {
 
         const connectedAt = await promiseConnected
         this.#debug('core', `connected at ${connectedAt.toISOString()}`)
-      } catch (err) {
-        err.message = `Failed to connect: ${err.message}`
-        this.emitter.emit('error', err)
-        if (this.isConnected()) await this.disconnect(err)
-        throw err
-      }
-    })
+      })
+    } catch (err) {
+      const err1 = _.set(new Error(`Failed to connect: ${err.message}`), 'originalError', err)
+      this.#emitErr(err1)
+      await this.disconnect(err1)
+      throw err1
+    }
   }
 
   /**
@@ -251,14 +251,14 @@ export class ChameleonUltra {
           this.#deviceMode = null
           this.#supportedCmds.clear()
 
-          const promiseDisconnected = new Promise<[Date, string | undefined]>(resolve => {
+          const promiseDisconnected: Promise<[Date, string | undefined]> = this.isConnected() ? new Promise(resolve => {
             this.emitter.once('disconnected', (disconnected: Date, reason?: string) => { resolve([disconnected, reason]) })
-          })
+          }) : Promise.resolve([new Date(), err.message])
           const isLocked = (): boolean => this.port?.readable?.locked ?? false
           if (isLocked()) this.#rxSink?.abortController.abort(err)
           while (isLocked()) await sleep(10)
-          await this.port?.readable?.cancel(err).catch(this.#catchErr)
-          await this.port?.writable?.close().catch(this.#catchErr)
+          await this.port?.readable?.cancel(err).catch(this.#emitErr)
+          await this.port?.writable?.close().catch(this.#emitErr)
           delete this.port
 
           const [disconnectedAt, reason] = await promiseDisconnected
