@@ -22,14 +22,14 @@ export default class WebbleAdapter implements ChameleonPlugin {
   #isOpen: boolean = false
   bluetooth?: typeof bluetooth
   Buffer?: typeof Buffer
-  catchErr: (err: Error) => void
   ctrlChar?: BluetoothRemoteGATTCharacteristic
   device?: BluetoothDevice
+  emitErr: (err: Error) => void
   name = 'adapter'
   packtChar?: BluetoothRemoteGATTCharacteristic
   port?: ChameleonSerialPort<Buffer, Buffer>
-  TransformStream: typeof TransformStream
   rxChar?: BluetoothRemoteGATTCharacteristic
+  TransformStream: typeof TransformStream
   ultra?: ChameleonUltra
   WritableStream: typeof WritableStream
 
@@ -38,7 +38,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
     this.bluetooth = navigator?.bluetooth
     this.WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
     this.TransformStream = (globalThis as any)?.TransformStream ?? TransformStream
-    this.catchErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+    this.emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
   }
 
   #debug (formatter: any, ...args: [] | any[]): void {
@@ -66,14 +66,14 @@ export default class WebbleAdapter implements ChameleonPlugin {
         this.device = await this.bluetooth?.requestDevice({
           filters: BLE_SCAN_FILTERS,
           optionalServices: [DFU_SERV_UUID, ULTRA_SERV_UUID],
-        })
+        }).catch(err => { throw _.set(new Error(err.message), 'originalError', err) })
         if (_.isNil(this.device)) throw new Error('no device')
         this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect(new Error('Webble gattserverdisconnected')) })
         this.#debug(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)
 
         for (let i = 0; i < 100; i++) {
           if (gattIsConnected()) break
-          await this.device.gatt?.connect().catch(this.catchErr)
+          await this.device.gatt?.connect().catch(this.emitErr)
           await sleep(100)
         }
         if (!gattIsConnected()) throw new Error('Failed to connect gatt')
@@ -134,8 +134,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
         ultra.port = this.port
         return await next()
       } catch (err) {
-        this.catchErr(err)
-        await ultra.disconnect(err)
+        this.emitErr(err)
         throw err
       }
     })
@@ -195,7 +194,7 @@ class UltraRxSink implements UnderlyingSink<Buffer> {
         await this.#adapter.rxChar.writeValueWithoutResponse(buf2.buffer)
       }
     } catch (err) {
-      this.#adapter.catchErr(err)
+      this.#adapter.emitErr(err)
       throw err
     }
   }
@@ -231,7 +230,7 @@ class DfuRxSink implements UnderlyingSink<Buffer> {
         await this.#adapter.ctrlChar.writeValueWithResponse(chunk.buffer)
       }
     } catch (err) {
-      this.#adapter.catchErr(err)
+      this.#adapter.emitErr(err)
       throw err
     }
   }
