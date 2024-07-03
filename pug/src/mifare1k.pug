@@ -30,19 +30,19 @@ block content
       label Connect method:
       .input-group.input-group-sm.mb-3
         select.form-control(v-model="ls.adapter")
-          option(value="ble") BLE (PC &amp; Android)
+          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
           option(value="usb") USB Serial (PC only)
         .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
     .card.shadow-sm.mb-2
       h6.card-header.bg-light #[.bgicon.bgicon-chameleon-ultra.mr-1] Slot HF Emulator
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
         .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center Slot
+          .input-group-prepend: span.input-group-text.justify-content-center slot
           select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
             option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center name
-          input.form-control(placeholder="Slot HF name", v-model="ss.name")
+          input.form-control(placeholder="name of slot HF", v-model="ss.name")
           .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.name = ''") #[i.fa.fa-fw.fa-times]
         .input-group.input-group-sm.letter-spacing-n1px.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center detection
@@ -75,7 +75,7 @@ block content
         .row.mx-n1.mb-2
           .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnEmuRead") #[i.fa.fa-fw.fa-sign-out] Load
           .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnEmuWrite") #[i.fa.fa-fw.fa-sign-in] Emulate
-        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnEmuReset") #[i.fa.mr-1.fa-repeat] Reset slot to default
+        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnEmuReset") #[i.fa.mr-1.fa-repeat] Reset slot HF to default
     .card.shadow-sm.mb-2
       h6.card-header.bg-light #[.bgicon.bgicon-nfc.mr-1] Mifare Tag
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
@@ -105,15 +105,15 @@ block content
         h6.card-title Anit Collision
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center UID
-          input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", placeholder="Hex format of UID", required, v-model="ss.uid")
+          input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
           .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center ATQA
-          input.form-control(pattern="[\\dA-Fa-f]{4}", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
+          input.form-control(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
           .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.atqa = ''") #[i.fa.fa-fw.fa-times]
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center SAK
-          input.form-control(pattern="[\\dA-Fa-f]{2}", placeholder="Hex format of SAK", required, v-model="ss.sak")
+          input.form-control(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
           .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.sak = ''") #[i.fa.fa-fw.fa-times]
         .input-group.input-group-sm.mb-2.was-validated
           .input-group-prepend: span.input-group-text.justify-content-center ATS
@@ -236,7 +236,7 @@ block script
         async btnAdapterTips () {
           await Swal.fire({
             title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is available in ChromeOS, Chrome for Android 6.0, Mac (Chrome 56) and Windows 10 (Chrome 70), <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89.',
+            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
           })
         },
         async btnEmuRead () {

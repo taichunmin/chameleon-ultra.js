@@ -545,9 +545,12 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // arrange
     adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // DeviceMode.READER
     adapter.send.push(Buffer.from('11ef 0bb9 0040 0000 fc 00', 'hex'))
+    const id = Buffer.from('deadbeef88', 'hex')
+    const newKey = Buffer.from('20206666', 'hex')
+    const oldKeys = Buffer.from('5124364819920427', 'hex').chunk(4)
 
     // act
-    await ultra.cmdEm410xWriteToT55xx(Buffer.from('deadbeef88', 'hex'))
+    await ultra.cmdEm410xWriteToT55xx(id, newKey, oldKeys)
 
     // assert
     expect(adapter.recv).toEqual([
