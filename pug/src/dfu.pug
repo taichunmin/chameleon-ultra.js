@@ -154,8 +154,9 @@ block script
                 // 有可能是因為不支援 cmdGetGitVersion
                 ultra.emitter.emit('error', _.set(new Error(err.message), 'originalError', err))
               }
+              await Swal.fire({ icon: 'info', text: 'Click OK to enter DFU mode then reconnect device!' })
+              this.showLoading({ text: 'Connect device...' })
               await ultra.cmdDfuEnter()
-              await Swal.fire({ icon: 'info', text: 'Please reconnect your device!' })
               if (!ultra.isConnected()) await ultra.connect()
               if (!ultra.isDfu()) throw new Error('Device is not in DFU mode')
             }
@@ -208,8 +209,9 @@ block script
                 // 有可能是因為不支援 cmdGetGitVersion
                 ultra.emitter.emit('error', _.set(new Error(err.message), 'originalError', err))
               }
+              await Swal.fire({ icon: 'info', text: 'Click OK to enter DFU mode then reconnect device!' })
+              this.showLoading({ text: 'Connect device...' })
               await ultra.cmdDfuEnter()
-              await Swal.fire({ icon: 'info', text: 'Please reconnect your device!' })
               if (!ultra.isConnected()) await ultra.connect()
               if (!ultra.isDfu()) throw new Error('Device is not in DFU mode')
             }
