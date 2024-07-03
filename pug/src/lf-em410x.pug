@@ -1,0 +1,257 @@
+extends /include/bootstrapV4
+
+block beforehtml
+  - const title = 'LF EM410x Tag'
+
+block style
+  meta(property="og:description", content="A tool to emulate EM410x tag, scan from EM410x tag and write to T55xx tag.")
+  meta(property="og:locale", content="zh_TW")
+  meta(property="og:title", content=title)
+  meta(property="og:type", content="website")
+  meta(property="og:url", content=`${baseurl}lf-em410x.html`)
+  style
+    :sass
+      [v-cloak]
+        display: none
+      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
+        font-family: 'Noto Sans TC', sans-serif
+      .input-group-prepend > .input-group-text
+        width: 80px
+      .letter-spacing-n1px
+        &, .btn, textarea, select, input
+          letter-spacing: -1px
+      .text-sm
+        font-size: 0.875rem
+
+block content
+  #app.my-3.container.text-monospace(v-cloak)
+    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
+    .form-group.letter-spacing-n1px
+      label Connect method:
+      .input-group.input-group-sm.mb-3
+        select.form-control(v-model="ls.adapter")
+          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
+          option(value="usb") USB Serial (PC only)
+        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
+    .card.shadow-sm.mb-2
+      h6.card-header.bg-light #[.bgicon.bgicon-chameleon-ultra.mr-1] Slot LF Emulator
+      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
+        .input-group.input-group-sm.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center slot
+          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
+            option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
+        .input-group.input-group-sm.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center name
+          input.form-control(placeholder="name of slot LF", v-model="ss.name")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.name = ''") #[i.fa.fa-fw.fa-times]
+        .input-group.input-group-sm.mb-2.was-validated
+          .input-group-prepend: span.input-group-text.justify-content-center ID
+          input.form-control(pattern="[\\dA-Fa-f]{10}", maxlength="10", placeholder="Hex format of ID", required, v-model="ss.uid")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
+        .row.mx-n1.mb-2
+          .col.px-1: button.btn.btn-block.btn-outline-success.letter-spacing-n1px(@click="btnEmuRead") #[i.fa.fa-fw.fa-sign-out] Load
+          .col.px-1: button.btn.btn-block.btn-outline-primary.letter-spacing-n1px(@click="btnEmuWrite") #[i.fa.fa-fw.fa-sign-in] Emulate
+        button.btn.btn-sm.btn-block.btn-outline-danger.letter-spacing-n1px.mb-2(@click="btnEmuReset") #[i.fa.mr-1.fa-repeat] Reset slot LF to default
+    .card.shadow-sm.mb-2
+      h6.card-header.bg-light #[.fa.fa-tag.mr-1] EM410x/T55xx Tag
+      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
+        h6.card-title Keys used when writing to T55xx
+        .input-group.input-group-sm.mb-2
+          .input-group-prepend: label.input-group-text.justify-content-center keys
+          textarea.form-control(rows="4", v-model="ss.keys", :class="isValidKeys(ss.keys) ? 'is-valid' : 'is-invalid'")
+        .input-group.input-group-sm.mb-2.was-validated
+          .input-group-prepend: span.input-group-text.justify-content-center ID
+          input.form-control(pattern="[\\dA-Fa-f]{10}", maxlength="10", placeholder="Hex format of ID", required, v-model="ss.uid")
+          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
+        .row.mx-n1.mb-2
+          .col.px-1: button.btn.btn-block.btn-outline-success.letter-spacing-n1px(@click="btnScanTag") #[i.fa.fa-fw.fa-upload] Scan ID
+          .col.px-1: button.btn.btn-block.btn-outline-primary.letter-spacing-n1px(@click="btnT55xxWrite") #[i.fa.fa-fw.fa-download] Write
+        button.btn.btn-sm.btn-block.btn-outline-secondary.mb-2(@click="btnKeysReset") #[i.fa.mr-1.fa-fire] Reset to well-known keys
+        p.text-sm.mb-2 You need to put the LF tag on the back of ChameleonUltra.
+
+block script
+  script.
+    const { Buffer, ChameleonUltra, Debug, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+    const ultraUsb = new ChameleonUltra()
+    ultraUsb.use(new Debug())
+    ultraUsb.use(new WebserialAdapter())
+    const ultraBle = new ChameleonUltra()
+    ultraBle.use(new Debug())
+    ultraBle.use(new WebbleAdapter())
+
+    const toHex = buf => _.toUpper(buf.toString('hex'))
+    const WELL_KNOWN_KEYS = ['19920427', '51243648']
+
+    window.vm = new Vue({
+      el: '#app',
+      data: {
+        ls: {
+          adapter: 'ble',
+        },
+        ss: {
+          keys: WELL_KNOWN_KEYS.join('\n'),
+          name: '',
+          slot: 0,
+          uid: 'DEADBEEF88',
+        },
+      },
+      async mounted () {
+        // 自動儲存功能
+        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+          try {
+            const saved = JSON5.parse(storage.getItem(location.pathname))
+            if (saved) this.$set(this, key, _.merge(this[key], saved))
+          } catch (err) {}
+          this.$watch(key, () => {
+            storage.setItem(location.pathname, JSON5.stringify(this[key]))
+          }, { deep: true })
+        }
+      },
+      computed: {
+        ultra () {
+          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
+        },
+      },
+      methods: {
+        async btnAdapterTips () {
+          await Swal.fire({
+            title: 'Browser & OS',
+            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
+          })
+        },
+        async btnEmuRead () {
+          const { ultra } = this
+          const { slot } = this.ss
+          try {
+            this.showLoading({ text: 'Loading emulator' })
+            await ultra.cmdSlotSetActive(slot)
+            this.$set(this, 'ss', {
+              ...this.ss,
+              name: await ultra.cmdSlotGetFreqName(slot, FreqType.LF),
+              uid: toHex(await ultra.cmdEm410xGetEmuId()),
+            })
+            await Swal.fire({ icon: 'success', title: 'Load success' })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Load failed', text: err.message })
+          }
+        },
+        async btnEmuWrite () {
+          const { ultra } = this
+          const { name, slot } = this.ss
+          try {
+            this.showLoading({ text: 'Emulating tag...' })
+            const uid = Buffer.from(this.ss.uid, 'hex')
+            if (uid.length !== 5) throw new Error('Invalid ID')
+            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.LF) ?? '(no name)'
+            const msg1 = `Slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
+            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            this.showLoading({ text: 'Emulating tag...' })
+            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.cmdSlotChangeTagType(slot, TagType.EM410X)
+            await ultra.cmdSlotResetTagType(slot, TagType.EM410X)
+            await ultra.cmdSlotSetEnable(slot, FreqType.LF, true)
+            if (_.isString(name) && name.length > 0) await ultra.cmdSlotSetFreqName(slot, FreqType.LF, name)
+            await ultra.cmdEm410xSetEmuId(uid)
+            await ultra.cmdSlotSetActive(slot)
+            await Swal.fire({ icon: 'success', title: 'Emulate success' })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Emulate failed', text: err.message })
+          }
+        },
+        async btnEmuReset () {
+          const { ultra } = this
+          const { slot } = this.ss
+          try {
+            this.showLoading({ text: 'Resetting...' })
+            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.LF) ?? '(no name)'
+            const msg1 = `Slot ${slot + 1} "${slotName}" will be RESET! Continue?`
+            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            this.showLoading({ text: 'Resetting...' })
+            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+            // reset slot
+            await ultra.cmdSlotChangeTagType(slot, TagType.EM410X)
+            await ultra.cmdSlotResetTagType(slot, TagType.EM410X)
+            await ultra.cmdSlotSetEnable(slot, FreqType.LF, true)
+            await ultra.cmdSlotSetActive(slot)
+            await Swal.fire({ icon: 'success', title: 'Reset success' })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Reset failed', text: err.message })
+          }
+        },
+        async btnScanTag () {
+          const { ultra } = this
+          try {
+            this.showLoading({ text: 'Scanning tag...' })
+            this.ss.uid = toHex(await ultra.cmdEm410xScan())
+            Swal.close()
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Scan failed', text: err.message })
+          }
+        },
+        async btnT55xxWrite () {
+          const { ultra } = this
+          try {
+            const msg1 = 'T55xx Tag will be REPLACE! Continue?'
+            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            this.showLoading({ text: 'Writing tag...' })
+            const uid = Buffer.from(this.ss.uid, 'hex')
+            const newKey = Buffer.from('20206666', 'hex')
+            const oldKeys = this.t55xxGetKeys()
+            await ultra.cmdEm410xWriteToT55xx(uid, newKey, oldKeys)
+            const uid2 = await ultra.cmdEm410xScan()
+            if (!uid.equals(uid2)) throw new Error(`ID mismatch after write, scanned = ${toHex(uid2)}`)
+            await Swal.fire({ icon: 'success', title: 'Write success' })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
+          }
+        },
+        async btnKeysReset () {
+          const msg1 = 'Tool\'s keys will be REPLACE! Continue?'
+          if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+          this.$set(this.ss, 'keys', WELL_KNOWN_KEYS.join('\n'))
+        },
+        async confirm (text, confirmButtonText, cancelButtonText) {
+          return await new Promise((resolve, reject) => {
+            let isConfirmed = false
+            const args = {
+              cancelButtonColor: '#3085d6',
+              cancelButtonText,
+              confirmButtonColor: '#d33',
+              confirmButtonText,
+              didDestroy: () => { resolve(isConfirmed) },
+              focusCancel: true,
+              icon: 'warning',
+              reverseButtons: true,
+              showCancelButton: true,
+              text,
+            }
+            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
+          })
+        },
+        t55xxGetKeys () {
+          const keys = _.chain(Buffer.from(this.ss.keys, 'hex').chunk(4))
+            .filter(key => Buffer.isBuffer(key) && key.length === 4)
+            .uniqWith(Buffer.equals)
+            .value()
+          if (keys.length === 0) throw new Error('No keys found')
+          return keys
+        },
+        isValidKeys (str) {
+          return /^([\dA-Fa-f]{8}\s*)+$/.test(str)
+        },
+        showLoading (opts = {}) {
+          opts = {
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            ...opts,
+          }
+          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
+          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
+        },
+      },
+    })

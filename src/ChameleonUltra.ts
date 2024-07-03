@@ -53,7 +53,7 @@ function isMf1BlockNo (block: any): boolean {
 function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string = ''): void {
   if (!isMf1BlockNo(block)) throw new TypeError(`${prefix}block should be a integer`)
   if (!isMf1KeyType(keyType)) throw new TypeError(`${prefix}keyType should be a Mf1KeyType`)
-  if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError(`${prefix}key should be a Buffer(6)`)
+  bufIsLenOrFail(key, 6, `${prefix}key`)
 }
 
 /**
@@ -304,7 +304,7 @@ export class ChameleonUltra {
    * @group Internal
    */
   async #sendBuffer (buf: Buffer): Promise<void> {
-    if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer')
     if (!this.isConnected()) await this.connect()
     const frame = this.isDfu() ? new DfuFrame(buf) : new UltraFrame(buf)
     if (!(frame instanceof DfuFrame) || frame.op !== DfuOp.OBJECT_WRITE) this.#debug('send', frame.inspect)
@@ -1708,7 +1708,7 @@ export class ChameleonUltra {
   }): Promise<void> {
     const { block, keyType, key, data } = opts
     validateMf1BlockKey(block, keyType, key)
-    if (!Buffer.isBuffer(data) || data.length !== 16) throw new TypeError('data should be a Buffer with length 16')
+    bufIsLenOrFail(data, 16, 'data')
     await this.assureDeviceMode(DeviceMode.READER)
     const cmd = Cmd.MF1_WRITE_ONE_BLOCK // cmd = 2009
     const readResp = await this.#createReadRespFn({ cmd })
@@ -1784,7 +1784,7 @@ export class ChameleonUltra {
       data = new Buffer(),
     } = opts
 
-    if (!Buffer.isBuffer(data)) throw new TypeError('data should be a Buffer')
+    if (!Buffer.isBuffer(data)) throw new TypeError('data must be a Buffer')
     if (!_.isSafeInteger(timeout)) throw new TypeError('Invalid timeout')
     if (!_.isSafeInteger(dataBitLength)) throw new TypeError('Invalid dataBitLength')
 
@@ -1985,11 +1985,11 @@ export class ChameleonUltra {
     sectorKeys: Array<Buffer | null>
   }> {
     const { keys, mask } = opts
-    if (!Buffer.isBuffer(mask) || mask.length !== 10) throw new TypeError('mask should be a Buffer with length 10')
+    bufIsLenOrFail(mask, 10, 'mask')
     if (keys.length < 1 || keys.length > 83) throw new TypeError('Invalid keys.length')
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i]
-      if (!Buffer.isBuffer(key) || key.length !== 6) throw new TypeError(`keys[${i}] should be a Buffer with length 6`)
+      bufIsLenOrFail(key, 6, `keys[${i}]`)
     }
 
     let bitsCnt = 80
@@ -2030,23 +2030,31 @@ export class ChameleonUltra {
   /**
    * Write id of em410x tag to t55xx tag.
    * @param id - The id of em410x tag.
+   * @param newKey - The new key of t55xx tag.
+   * @param oldKeys - The keys to be checked. Maximum length is `125`.
    * @group Reader Related
    * @example
    * ```js
    * async function run (ultra) {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
-   *   await ultra.cmdEm410xWriteToT55xx(Buffer.from('deadbeef88', 'hex'))
+   *   const id = Buffer.from('deadbeef88', 'hex')
+   *   // https://github.com/RfidResearchGroup/proxmark3/blob/master/client/dictionaries/t55xx_default_pwds.dic
+   *   const newKey = Buffer.from('20206666', 'hex')
+   *   const oldKeys = Buffer.from('5124364819920427', 'hex').chunk(4)
+   *   await ultra.cmdEm410xWriteToT55xx(id, newKey, oldKeys)
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdEm410xWriteToT55xx (id: Buffer): Promise<void> {
-    if (!Buffer.isBuffer(id) || id.length !== 5) throw new TypeError('id should be a Buffer with length 5')
+  async cmdEm410xWriteToT55xx (id: Buffer, newKey: Buffer, oldKeys: Buffer[]): Promise<void> {
+    bufIsLenOrFail(id, 5, 'id')
+    bufIsLenOrFail(newKey, 4, 'newKey')
+    if (oldKeys.length < 1 || oldKeys.length > 125) throw new TypeError('Invalid oldKeys.length')
+    for (let i = 0; i < oldKeys.length; i++) bufIsLenOrFail(oldKeys[i], 4, `oldKeys[${i}]`)
     await this.assureDeviceMode(DeviceMode.READER)
     const cmd = Cmd.EM410X_WRITE_TO_T55XX // cmd = 3001
-    const oldKeys = [0x51243648, 0x19920427]
-    const data = Buffer.pack(`!5sI${oldKeys.length}I`, id, 0x20206666, ...oldKeys)
+    const data = Buffer.concat([id, newKey, ...oldKeys])
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data })
     await readResp()
@@ -2069,7 +2077,7 @@ export class ChameleonUltra {
    */
   async cmdMf1EmuWriteBlock (offset: number, data: Buffer): Promise<void> {
     if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
-    if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
+    if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data must be a Buffer with length be multiples of 16')
     const cmd = Cmd.MF1_WRITE_EMU_BLOCK_DATA // cmd = 4000
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data: Buffer.pack(`!B${data.length}s`, offset, data) })
@@ -2104,10 +2112,10 @@ export class ChameleonUltra {
     ats?: Buffer
   }): Promise<void> {
     const { uid, atqa, sak, ats = new Buffer() } = opts
-    if (!Buffer.isBuffer(uid) || !_.includes([4, 7, 10], uid.length)) throw new TypeError('uid should be a Buffer with length 4, 7 or 10')
-    if (!Buffer.isBuffer(atqa) || atqa.length !== 2) throw new TypeError('atqa should be a Buffer with length 2')
-    if (!Buffer.isBuffer(sak) || sak.length !== 1) throw new TypeError('sak should be a Buffer with length 1')
-    if (!Buffer.isBuffer(ats)) throw new TypeError('ats should be a Buffer')
+    if (!Buffer.isBuffer(uid) || !_.includes([4, 7, 10], uid.length)) throw new TypeError('uid must be a Buffer with length 4, 7 or 10')
+    bufIsLenOrFail(atqa, 2, 'atqa')
+    bufIsLenOrFail(sak, 1, 'sak')
+    if (!Buffer.isBuffer(ats)) throw new TypeError('ats must be a Buffer')
     const cmd = Cmd.HF14A_SET_ANTI_COLL_DATA // cmd = 4001
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data: Buffer.pack(`!${uid.length + 1}p2ss${ats.length + 1}p`, uid, atqa, sak, ats) })
@@ -2470,7 +2478,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
-    if (!Buffer.isBuffer(id) || id.length !== 5) throw new TypeError('id should be a Buffer with length 5')
+    bufIsLenOrFail(id, 5, 'id')
     const cmd = Cmd.EM410X_SET_EMU_ID // cmd = 5000
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data: id })
@@ -2562,7 +2570,7 @@ export class ChameleonUltra {
   async mfuWritePage (opts: { pageOffset: number, data: Buffer }): Promise<void> {
     const { pageOffset, data } = opts
     if (!_.isSafeInteger(pageOffset)) throw new TypeError('Invalid pageOffset')
-    if (!Buffer.isBuffer(data) || data.length !== 4) throw new TypeError('data should be a Buffer with length 4')
+    bufIsLenOrFail(data, 4, 'data')
     await this.cmdHf14aRaw({
       appendCrc: true,
       autoSelect: true,
@@ -2659,7 +2667,7 @@ export class ChameleonUltra {
    */
   async mf1Gen1aWriteBlocks (offset: number, data: Buffer): Promise<void> {
     if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
-    if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data should be a Buffer with length be multiples of 16')
+    if (!Buffer.isBuffer(data) || data.length % 16 !== 0) throw new TypeError('data must be a Buffer with length be multiples of 16')
     await this._mf1Gen1aAuth(async () => {
       const blocks = data.chunk(16)
       for (let i = 0; i < blocks.length; i++) {
@@ -2840,7 +2848,7 @@ export class ChameleonUltra {
    * ```
    */
   async mf1WriteSectorByKeys (sector: number, keys: Buffer[], data: Buffer): Promise<{ success: boolean[] }> {
-    if (!Buffer.isBuffer(data) || data.length !== 64) throw new TypeError('data should be a Buffer with length 64')
+    bufIsLenOrFail(data, 64, 'data')
     if (!this.mf1IsValidAcl(data)) throw new TypeError('Invalid ACL bytes of data')
     const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
     if (_.isEmpty(sectorKey)) throw new Error('No valid key')
@@ -2878,7 +2886,7 @@ export class ChameleonUltra {
    * ```
    */
   mf1IsValidAcl (data: Buffer): boolean {
-    if (!Buffer.isBuffer(data) || !_.includes([3, 4, 16, 64], data.length)) throw new TypeError('data should be a Buffer with length 3, 4, 16 or 64')
+    if (!Buffer.isBuffer(data) || !_.includes([3, 4, 16, 64], data.length)) throw new TypeError('data must be a Buffer with length 3, 4, 16 or 64')
     if (data.length === 16) data = data.subarray(6)
     else if (data.length === 64) data = data.subarray(54)
 
@@ -3554,6 +3562,11 @@ function bufLrc (buf: Buffer): number {
   let sum = 0
   for (const u8 of buf) sum += u8
   return 0x100 - sum & 0xFF
+}
+
+function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
+  if (Buffer.isBuffer(buf) && buf.length === len) return
+  throw new TypeError(`${name} must be a ${len} ${['byte', 'bytes'][+(len > 1)]} Buffer.`)
 }
 
 export { Decoder as ResponseDecoder }
