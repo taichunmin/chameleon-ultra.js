@@ -11,3 +11,26 @@ code {
     padding: 1px 4px;
   }
 }
+
+.col-content {
+  table {
+    border-collapse: collapse;
+    border: 1px solid gray;
+    margin-bottom: 1rem;
+    width: 100%;
+
+    th, td {
+      border: 1px solid gray;
+      padding: 0.2rem;
+      vertical-align: middle;
+    }
+
+    thead th {
+      border-bottom: 2px solid gray;
+    }
+
+    tbody + tbody {
+      border-top: 2px solid gray;
+    }
+  }
+}

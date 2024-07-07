@@ -6,6 +6,7 @@ import { middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } fr
 import { type DfuImage } from './plugin/DfuZip'
 import { type ReadableStream, type UnderlyingSink, type WritableStreamDefaultController, WritableStream } from 'node:stream/web'
 import * as Decoder from './ResponseDecoder'
+import crc16a from '@taichunmin/crc/crc16a'
 import crc32 from '@taichunmin/crc/crc32'
 
 import {
@@ -15,6 +16,7 @@ import {
   DfuOp,
   DfuResCode,
   Mf1KeyType,
+  MfuCmd,
   RespStatus,
   type AnimationMode,
   type ButtonAction,
@@ -2526,8 +2528,40 @@ export class ChameleonUltra {
   }
 
   /**
+   * A protected memory area can be accessed only after a successful password verification using the PWD_AUTH command. The AUTH0 configuration byte defines the protected area. It specifies the first page that the password mechanism protects. The level of protection can be configured using the PROT bit either for write protection or read/write protection. The PWD_AUTH command takes the password as parameter and, if successful, returns the password authentication acknowledge, PACK. By setting the AUTHLIM configuration bits to a value larger than 000b, the number of unsuccessful password verifications can be limited. Each unsuccessful authentication is then counted in a counter featuring anti-tearing support. After reaching the limit of unsuccessful attempts, the memory access specified in PROT, is no longer possible.
+   * @param opts.autoSelect - `true` to enable auto-select, `false` to disable auto-select.
+   * @param opts.keepRfField - `true` to keep RF field after auth, `false` to disable RF field.
+   * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
+   * @group Mifare Ultralight Related
+   * @returns
+   */
+  async mfuAuth (opts: {
+    autoSelect?: boolean
+    keepRfField?: boolean
+    key: Buffer
+  }): Promise<Buffer> {
+    try {
+      const { autoSelect = true, keepRfField = true, key } = opts
+      if (!Buffer.isBuffer(key)) throw new TypeError('key must be a Buffer')
+      if (key.length === 16) throw new Error('auth Ultralight-C is not implemented')
+      if (key.length !== 4) throw new Error('key must be a 4 bytes Buffer.')
+      const resp = await this.cmdHf14aRaw({
+        appendCrc: true,
+        autoSelect,
+        data: Buffer.pack(`!B${key.length}s`, MfuCmd.PWD_AUTH, key),
+        keepRfField,
+        waitResponse: true,
+      })
+      return mfuCheckRespNakCrc16a(resp)
+    } catch (err) {
+      throw _.set(new Error(`Auth failed: ${err.message}`), 'originalError', err)
+    }
+  }
+
+  /**
    * Read 4 pages (16 bytes) from Mifare Ultralight
    * @param opts.pageOffset - page number to read
+   * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
    * @returns 4 pages (16 bytes)
    * @group Mifare Ultralight Related
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=16)
@@ -2541,21 +2575,108 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async mfuReadPages (opts: { pageOffset: number }): Promise<Buffer> {
-    const { pageOffset } = opts
+  async mfuReadPages (opts: { key?: Buffer, pageOffset: number }): Promise<Buffer> {
+    const { key, pageOffset } = opts
     if (!_.isSafeInteger(pageOffset)) throw new TypeError('Invalid pageOffset')
+    if (!_.isNil(key)) await this.mfuAuth({ keepRfField: true, key })
     return await this.cmdHf14aRaw({
       appendCrc: true,
-      autoSelect: true,
+      autoSelect: _.isNil(key),
       checkResponseCrc: true,
-      data: Buffer.pack('!BB', 0x30, pageOffset),
+      data: Buffer.pack('!BB', MfuCmd.READ, pageOffset),
     })
+  }
+
+  /**
+   * The READ_CNT command is used to read out the current value of the NFC one-way counter of the Mifare Ultralight. The command has a single argument specifying the counter number and returns the 24-bit counter value of the corresponding counter. If the NFC_CNT_PWD_PROT bit is set to 1b the counter is password protected and can only be read with the READ_CNT command after a previous valid password authentication.
+   * @param opts.index - The counter index to read. The counter index must be 0, 1 or 2.
+   * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const cnt = await ultra.mfuReadCounter({ index: 0 })
+   *   console.log(cnt) // 0
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuReadCounter (opts: { key?: Buffer, index?: number }): Promise<number> {
+    const { key, index = 0 } = opts
+    if (!_.includes([0, 1, 2], index)) throw new TypeError('Invalid index of counter')
+    if (!_.isNil(key)) await this.mfuAuth({ keepRfField: true, key })
+    const resp = await this.cmdHf14aRaw({
+      appendCrc: true,
+      autoSelect: _.isNil(key),
+      waitResponse: true,
+      data: Buffer.pack('!BB', MfuCmd.READ_CNT, index),
+    })
+    return mfuCheckRespNakCrc16a(resp).readUintLE(0, 3)
+  }
+
+  /**
+   * The READ_SIG command returns an IC specific, 32-byte ECC signature, to verify NXP Semiconductors as the silicon vendor. The signature is programmed at chip production and cannot be changed afterwards.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const data = await ultra.mfuReadSignature()
+   *   console.log(data.toString('base64url')) // 'w9dq8MPprf1Ro-C1si32rg3y7cO8UChrtXlNyjLScS4'
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuReadSignature (): Promise<Buffer> {
+    const resp = await this.cmdHf14aRaw({
+      appendCrc: true,
+      autoSelect: true,
+      data: Buffer.pack('!BB', MfuCmd.READ_SIG, 0x00),
+    })
+    return mfuCheckRespNakCrc16a(resp)
+  }
+
+  /**
+   * The GET_VERSION command is used to retrieve information on the NTAG family, the product version, storage size and other product data required to identify the specific NTAG21x. This command is also available on other NTAG products to have a common way of identifying products across platforms and evolution steps. The GET_VERSION command has no arguments and replies the version information for the specific NTAG21x type.
+   * @group Mifare Ultralight Related
+   * @returns
+   * -  response for NTAG213, NTAG215 and NTAG216
+   *
+   * | Byte no. | Description | NTAG213 | NTAG215 | NTAG216 | Interpretation |
+   * | --- | --- | --- | --- | --- | --- |
+   * | 0 | fixed Header | 0x00 | 0x00 | 0x00 |  |
+   * | 1 | vendor ID | 0x04 | 0x04 | 0x04 | NXP Semiconductors |
+   * | 2 | product type | 0x04 | 0x04 | 0x04 | NTAG |
+   * | 3 | product subtype | 0x02 | 0x02 | 0x02 | 50 pF |
+   * | 4 | major product version | 0x01 | 0x01 | 0x01 | 1 |
+   * | 5 | minor product version | 0x00 | 0x00 | 0x00 | V0 |
+   * | 6 | storage size | 0x0F | 0x11 | 0x13 | [reference](https://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf#page=36) |
+   * | 7 | protocol | 0x03 | 0x03 | 0x03 | ISO/IEC 14443-3 compliant |
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const data = await ultra.mfuGetVersion()
+   *   console.log(data.toString('hex')) // '0004040201001103'
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuGetVersion (): Promise<Buffer> {
+    const resp = await this.cmdHf14aRaw({
+      appendCrc: true,
+      autoSelect: true,
+      data: Buffer.pack('!B', MfuCmd.GET_VERSION),
+    })
+    return mfuCheckRespNakCrc16a(resp)
   }
 
   /**
    * Write 1 page (4 bytes) to Mifare Ultralight
    * @param opts.pageOffset - page number to read
    * @param opts.data - `4 bytes`, the page data to be written.
+   * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
    * @group Mifare Ultralight Related
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=17)
    * @example
@@ -2568,15 +2689,16 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async mfuWritePage (opts: { pageOffset: number, data: Buffer }): Promise<void> {
-    const { pageOffset, data } = opts
+  async mfuWritePage (opts: { data: Buffer, key?: Buffer, pageOffset: number }): Promise<void> {
+    const { data, key, pageOffset } = opts
     if (!_.isSafeInteger(pageOffset)) throw new TypeError('Invalid pageOffset')
     bufIsLenOrFail(data, 4, 'data')
+    if (!_.isNil(key)) await this.mfuAuth({ keepRfField: true, key })
     await this.cmdHf14aRaw({
       appendCrc: true,
-      autoSelect: true,
+      autoSelect: _.isNil(key),
       checkResponseCrc: true,
-      data: Buffer.pack('!BB4s', 0xA2, pageOffset, data),
+      data: Buffer.pack('!BB4s', MfuCmd.WRITE, pageOffset, data),
     })
   }
 
@@ -3568,6 +3690,14 @@ function bufLrc (buf: Buffer): number {
 function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
   if (Buffer.isBuffer(buf) && buf.length === len) return
   throw new TypeError(`${name} must be a ${len} ${['byte', 'bytes'][+(len > 1)]} Buffer.`)
+}
+
+function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
+  if (resp.length === 1 && resp[0] !== 0x0A) throw new Error(`received NAK 0x${resp.toString('hex')}`)
+  if (resp.length < 3) throw new Error('unknown resp')
+  const data = resp.subarray(0, -2)
+  if (crc16a(data) !== resp.readUInt16LE(data.length)) throw new Error('invalid crc16a of resp')
+  return data
 }
 
 export { Decoder as ResponseDecoder }

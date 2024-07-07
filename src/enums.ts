@@ -255,6 +255,14 @@ export enum TagType {
   NTAG_213 = 1100,
   NTAG_215 = 1101,
   NTAG_216 = 1102,
+  /** Mifare Ultralight */
+  MF0_ICU1 = 1103,
+  /** Mifare Ultralight C */
+  MF0_ICU2 = 1104,
+  /** Mifare Ultralight EV1 (640 bit) */
+  MF0_UL11 = 1105,
+  /** Mifare Ultralight EV2 (1312 bit) */
+  MF0_UL21 = 1106,
   // 12xx: MIFARE Plus series
   // 13xx: DESFire series
   // 14xx: ST25TA series
@@ -363,6 +371,17 @@ export enum DfuFwId {
   BOOTLOADER = 0x00,
   APPLICATION = 0x01,
   SOFTDEVICE = 0x02,
+}
+
+export enum MfuCmd {
+  PWD_AUTH = 0x1B,
+  READ = 0x30,
+  READ_CNT = 0x39,
+  FAST_READ = 0x3A,
+  READ_SIG = 0x3C,
+  GET_VERSION = 0x60,
+  WRITE = 0xA2,
+  COMP_WRITE = 0xA0,
 }
 
 export const isAnimationMode = createIsEnum(AnimationMode)
