@@ -22,7 +22,7 @@ describe('is not buffer', () => {
       fn('not a buffer' as any)
     } catch (err) {
       expect(err).toBeInstanceOf(TypeError)
-      expect(err.message).toMatch(/should be a Buffer/)
+      expect(err.message).toMatch(/must be a.*Buffer/)
     }
   })
 
@@ -41,7 +41,7 @@ describe('is not buffer', () => {
       fn(new Buffer(0))
     } catch (err) {
       expect(err).toBeInstanceOf(TypeError)
-      expect(err.message).toMatch(/should be a Buffer/)
+      expect(err.message).toMatch(/must be a.*Buffer/)
     }
   })
 })

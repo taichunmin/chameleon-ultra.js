@@ -25,8 +25,8 @@ export class SlotInfo {
   }
 
   static fromCmd1019 (buf: Buffer): SlotInfo[] {
-    if (!Buffer.isBuffer(buf) || buf.length !== 32) throw new TypeError('buf should be a Buffer with length 32')
-    return _.times(8, i => bufUnpackToClass(buf.subarray(i * 4), '!HH', SlotInfo))
+    bufIsLenOrFail(buf, 32, 'buf')
+    return _.map(buf.chunk(4), chunk => bufUnpackToClass(chunk, '!HH', SlotInfo))
   }
 }
 
@@ -39,8 +39,8 @@ export class SlotFreqIsEnable {
   }
 
   static fromCmd1023 (buf: Buffer): SlotFreqIsEnable[] {
-    if (!Buffer.isBuffer(buf) || buf.length !== 16) throw new TypeError('buf should be a Buffer with length 16')
-    return _.times(8, i => bufUnpackToClass(buf.subarray(i * 2), '!??', SlotFreqIsEnable))
+    bufIsLenOrFail(buf, 16, 'buf')
+    return _.map(buf.chunk(2), chunk => bufUnpackToClass(chunk, '!??', SlotFreqIsEnable))
   }
 }
 
@@ -53,7 +53,7 @@ export class BatteryInfo {
   }
 
   static fromCmd1025 (buf: Buffer): BatteryInfo {
-    if (!Buffer.isBuffer(buf) || buf.length !== 3) throw new TypeError('buf should be a Buffer with length 3')
+    bufIsLenOrFail(buf, 3, 'buf')
     return bufUnpackToClass(buf, '!HB', BatteryInfo)
   }
 }
@@ -85,7 +85,7 @@ export class DeviceSettings {
   }
 
   static fromCmd1034 (buf: Buffer): DeviceSettings {
-    if (!Buffer.isBuffer(buf) || buf.length !== 13) throw new TypeError('buf should be a Buffer with length 13')
+    bufIsLenOrFail(buf, 13, 'buf')
     return bufUnpackToClass(buf, '!6B?6s', DeviceSettings)
   }
 }
@@ -113,7 +113,7 @@ export class Hf14aAntiColl {
   }
 
   static fromCmd2000 (buf: Buffer): Hf14aAntiColl[] {
-    if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer')
     const tags: Hf14aAntiColl[] = []
     while (buf.length > 0) {
       const tag = Hf14aAntiColl.fromBuffer(buf)
@@ -133,7 +133,7 @@ export class Mf1AcquireStaticNestedRes {
   }
 
   static fromCmd2003 (buf: Buffer): Mf1AcquireStaticNestedRes {
-    if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer')
     return new Mf1AcquireStaticNestedRes(
       buf.subarray(0, 4), // uid
       _.map(buf.subarray(4).chunk(8), chunk => ({
@@ -172,7 +172,7 @@ export class Mf1DarksideRes {
   }
 
   static fromCmd2004 (buf: Buffer): Mf1DarksideRes {
-    if (!Buffer.isBuffer(buf) || !_.includes([1, 33], buf.length)) throw new TypeError('buf should be a Buffer with length 1 or 33')
+    if (!Buffer.isBuffer(buf) || !_.includes([1, 33], buf.length)) throw new TypeError('buf must be a 1 or 33 bytes Buffer.')
     return bufUnpackToClass(buf, buf.length === 1 ? '!B' : '!B4s4s8s8s4s4s', Mf1DarksideRes)
   }
 }
@@ -186,7 +186,7 @@ export class Mf1NtDistanceRes {
   }
 
   static fromCmd2005 (buf: Buffer): Mf1NtDistanceRes {
-    if (!Buffer.isBuffer(buf) || buf.length !== 8) throw new TypeError('buf should be a Buffer with length 8')
+    bufIsLenOrFail(buf, 8, 'buf')
     return bufUnpackToClass(buf, '!4s4s', Mf1NtDistanceRes)
   }
 }
@@ -202,7 +202,7 @@ export class Mf1NestedRes {
   }
 
   static fromCmd2006 (buf: Buffer): Mf1NestedRes[] {
-    if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer.')
     return _.map(buf.chunk(9), chunk => bufUnpackToClass(chunk, '!4s4sB', Mf1NestedRes))
   }
 }
@@ -217,7 +217,7 @@ export class Mf1CheckKeysOfSectorsRes {
   }
 
   static fromCmd2012 (buf: Buffer): Mf1CheckKeysOfSectorsRes {
-    if (!Buffer.isBuffer(buf) || buf.length !== 490) throw new TypeError('buf should be a Buffer with length 490')
+    bufIsLenOrFail(buf, 490, 'buf')
     return new Mf1CheckKeysOfSectorsRes(
       buf.subarray(0, 10), // found
       buf.subarray(10).chunk(6), // sectorKeys
@@ -258,12 +258,12 @@ export class Mf1DetectionLog {
   }
 
   static fromBuffer (buf: Buffer): Mf1DetectionLog {
-    if (!Buffer.isBuffer(buf) || buf.length !== 18) throw new TypeError('buf should be a Buffer with length 18')
+    bufIsLenOrFail(buf, 18, 'buf')
     return bufUnpackToClass(buf, '!Bs4s4s4s4s', Mf1DetectionLog)
   }
 
   static fromCmd4006 (buf: Buffer): Mf1DetectionLog[] {
-    if (!Buffer.isBuffer(buf)) throw new TypeError('buf should be a Buffer')
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer.')
     return _.map(buf.chunk(18), Mf1DetectionLog.fromBuffer)
   }
 }
@@ -284,7 +284,7 @@ export class Mf1EmuSettings {
   }
 
   static fromCmd4009 (buf: Buffer): Mf1EmuSettings {
-    if (!Buffer.isBuffer(buf) || buf.length !== 5) throw new TypeError('buf should be a Buffer with length 5')
+    bufIsLenOrFail(buf, 5, 'buf')
     return bufUnpackToClass(buf, '!4?B', Mf1EmuSettings)
   }
 }
@@ -303,4 +303,9 @@ export interface SlotSettings {
     lfIsEnable: boolean
     lfTagType: TagType
   }>
+}
+
+function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
+  if (Buffer.isBuffer(buf) && buf.length === len) return
+  throw new TypeError(`${name} must be a ${len} ${['byte', 'bytes'][+(len > 1)]} Buffer.`)
 }
