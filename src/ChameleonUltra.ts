@@ -1,11 +1,12 @@
 import _ from 'lodash'
 import { Buffer } from '@taichunmin/buffer'
-import { crc32, middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { EventAsyncGenerator } from './EventAsyncGenerator'
 import { EventEmitter } from './EventEmitter'
+import { middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
 import { type DfuImage } from './plugin/DfuZip'
 import { type ReadableStream, type UnderlyingSink, type WritableStreamDefaultController, WritableStream } from 'node:stream/web'
 import * as Decoder from './ResponseDecoder'
+import crc32 from '@taichunmin/crc/crc32'
 
 import {
   Cmd,
@@ -2972,7 +2973,7 @@ export class ChameleonUltra {
     const op = DfuOp.CRC_GET
     const readResp = await this.#createReadRespFn({ op })
     await this.#sendBuffer(Buffer.pack('<B', op))
-    const [offset, crc32] = (await readResp()).data.unpack('<Ii')
+    const [offset, crc32] = (await readResp()).data.unpack('<II')
     return { offset, crc32 }
   }
 
@@ -3007,7 +3008,7 @@ export class ChameleonUltra {
     const op = DfuOp.OBJECT_SELECT
     const readResp = await this.#createReadRespFn({ op })
     await this.#sendBuffer(Buffer.pack('<BB', op, type))
-    const [maxSize, offset, crc32] = (await readResp()).data.unpack('<IIi')
+    const [maxSize, offset, crc32] = (await readResp()).data.unpack('<III')
     return { crc32, maxSize, offset }
   }
 

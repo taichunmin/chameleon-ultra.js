@@ -1,5 +1,3 @@
-import _ from 'lodash'
-import { Buffer } from '@taichunmin/buffer'
 import * as sut from './helper'
 
 test('sleep', async () => {
@@ -354,16 +352,5 @@ describe('versionCompare', () => {
       expect(err).toBeInstanceOf(Error)
       expect(err.message).toMatch(/invalid version/)
     }
-  })
-})
-
-describe('crc32()', () => {
-  test.each([
-    { crc: '00000000', hex: '' },
-    { crc: '83DCEFB7', hex: '31' },
-    { crc: '1C291CA3', hex: '48656C6C6F20576F726C6421' },
-    { crc: 'CBF43926', hex: '313233343536373839' },
-  ])('crc32(Buffer.from("$hex", "hex")) = 0x$crc', ({ hex, crc }) => {
-    expect(sut.crc32(Buffer.from(hex, 'hex'))).toBe(~~_.parseInt(crc, 16))
   })
 })
