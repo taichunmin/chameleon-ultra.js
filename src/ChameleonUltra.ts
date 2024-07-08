@@ -2589,28 +2589,28 @@ export class ChameleonUltra {
 
   /**
    * The READ_CNT command is used to read out the current value of the NFC one-way counter of the Mifare Ultralight. The command has a single argument specifying the counter number and returns the 24-bit counter value of the corresponding counter. If the NFC_CNT_PWD_PROT bit is set to 1b the counter is password protected and can only be read with the READ_CNT command after a previous valid password authentication.
-   * @param opts.index - The counter index to read. The counter index must be 0, 1 or 2.
+   * @param opts.addr - The counter addr to read. Must be `0`, `1` or `2`. Default is `2`.
    * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
    * @group Mifare Ultralight Related
    * @example
    * ```js
    * async function run (ultra) {
-   *   const cnt = await ultra.mfuReadCounter({ index: 0 })
+   *   const cnt = await ultra.mfuReadCounter({ addr: 2 })
    *   console.log(cnt) // 0
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async mfuReadCounter (opts: { key?: Buffer, index?: number }): Promise<number> {
-    const { key, index = 0 } = opts
-    if (!_.includes([0, 1, 2], index)) throw new TypeError('Invalid index of counter')
+  async mfuReadCounter (opts: { addr?: number, key?: Buffer }): Promise<number> {
+    const { addr = 2, key } = opts
+    if (!_.includes([0, 1, 2], addr)) throw new TypeError('Invalid addr of counter')
     if (!_.isNil(key)) await this.mfuAuth({ keepRfField: true, key })
     const resp = await this.cmdHf14aRaw({
       appendCrc: true,
       autoSelect: _.isNil(key),
       waitResponse: true,
-      data: Buffer.pack('!BB', MfuCmd.READ_CNT, index),
+      data: Buffer.pack('!BB', MfuCmd.READ_CNT, addr),
     })
     return mfuCheckRespNakCrc16a(resp).readUintLE(0, 3)
   }
