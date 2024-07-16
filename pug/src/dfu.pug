@@ -47,8 +47,8 @@ block content
         .form-group.letter-spacing-n1px.mb-3
           label Choose firmware:
           .custom-file.form-control-sm.letter-spacing-n1px
-            input.custom-file-input#imageSelected(type="file", v-model="imageSelected", ref="imageSelected", accept=".zip,application/zip,application/x-zip-compressed")
-            label.custom-file-label(for="imageSelected", :class="['','text-muted'][+_.isEmpty(imageSelected)]") {{ getFilename(imageSelected) || 'Choose firmware...' }}
+            input.custom-file-input#zipSelected(type="file", v-model="zipSelected", ref="zipSelected", @change="onZipSelected($event?.target?.files[0])", accept=".zip,application/zip,application/x-zip-compressed")
+            label.custom-file-label(for="zipSelected", :class="['','text-muted'][+_.isEmpty(zipSelected)]") {{ getZipInfo() || 'Choose firmware...' }}
         button.btn.btn-block.btn-outline-primary.letter-spacing-n1px.mb-2(@click="btnUpdateSelected") #[i.fa.mr-1.fa-puzzle-piece] Update selected
 
 block script
@@ -70,8 +70,10 @@ block script
         ss: {
           tagName: '',
         },
-        imageSelected: '',
+        image: null,
+        imageGitVersion: null,
         manifest: {},
+        zipSelected: '',
       },
       async mounted () {
         // 自動儲存功能
@@ -190,12 +192,8 @@ block script
             this.showLoading({ html })
           }
           try {
-            this.showLoading({ text: 'Unzip firmware...' })
-            const dfuFile = this.$refs.imageSelected.files[0]
-            if (_.isNil(dfuFile)) throw new Error('Please browse a firmware file.')
-            const dfuZip = new DfuZip(new Buffer(await dfuFile.arrayBuffer()))
-            const image = await dfuZip.getAppImage()
-            const imageGitVersion = await dfuZip.getGitVersion()
+            const { image, imageGitVersion } = this
+            if (_.isNil(image)) throw new Error('Please browse a firmware file.')
             this.showLoading({ text: 'Connect device...' })
             if (!ultra.isConnected()) await ultra.connect()
             if (!ultra.isDfu()) {
@@ -225,6 +223,19 @@ block script
           }
           ultra.emitter.removeListener('progress', showProgress)
         },
+        async onZipSelected (zip) {
+          const { ultra } = this
+          try {
+            this.image = null
+            this.imageGitVersion = null
+            if (_.isNil(zip)) throw new Error('zip is nil')
+            const dfuZip = new DfuZip(new Buffer(await zip.arrayBuffer()))
+            this.image = await dfuZip.getAppImage()
+            this.imageGitVersion = await dfuZip.getGitVersion()
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+          }
+        },
         async sleep (t) {
           await new Promise(resolve => setTimeout(resolve, t))
         },
@@ -246,8 +257,12 @@ block script
             Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
           })
         },
-        getFilename (str) {
-          return str.replaceAll(/.*[/\\]/g, '')
+        getZipInfo () {
+          let str = ''
+          const { imageGitVersion, zipSelected } = this
+          if (!_.isNil(zipSelected)) str += zipSelected.replaceAll(/.*[/\\]/g, '')
+          if (!_.isNil(imageGitVersion)) str += ` (${imageGitVersion})`
+          return str
         },
         showLoading (opts = {}) {
           opts = {
