@@ -1,10 +1,10 @@
-import _ from 'lodash'
-import { serial, type SerialPort } from 'web-serial-polyfill'
-import { sleep } from '../helper'
 import { type Buffer } from '@taichunmin/buffer'
+import _ from 'lodash'
+import { TransformStream, WritableStream, type Transformer, type TransformStreamDefaultController } from 'stream/web'
+import { serial, type SerialPort } from 'web-serial-polyfill'
 import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
 import { type EventEmitter } from '../EventEmitter'
-import { TransformStream, type Transformer, type TransformStreamDefaultController, WritableStream } from 'stream/web'
+import { sleep } from '../helper'
 
 // https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/resource/tools/enter_dfu.py
 const WEBSERIAL_FILTERS = [

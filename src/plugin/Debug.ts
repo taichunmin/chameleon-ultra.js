@@ -1,7 +1,7 @@
-import _ from 'lodash'
 import { type Buffer } from '@taichunmin/buffer'
-import { type ChameleonPlugin, type PluginInstallContext as ChameleonCtx } from '../ChameleonUltra'
 import createDebugger, { type Debugger } from 'debug'
+import _ from 'lodash'
+import { type PluginInstallContext as ChameleonCtx, type ChameleonPlugin } from '../ChameleonUltra'
 
 let Buffer1: typeof Buffer
 

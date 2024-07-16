@@ -1,26 +1,13 @@
-import _ from 'lodash'
 import { Buffer } from '@taichunmin/buffer'
-import { EventAsyncGenerator } from './EventAsyncGenerator'
-import { EventEmitter } from './EventEmitter'
-import { middlewareCompose, sleep, type MiddlewareComposeFn, versionCompare } from './helper'
-import { type DfuImage } from './plugin/DfuZip'
-import { type ReadableStream, type UnderlyingSink, type WritableStreamDefaultController, WritableStream } from 'node:stream/web'
-import * as Decoder from './ResponseDecoder'
 import crc16a from '@taichunmin/crc/crc16a'
 import crc32 from '@taichunmin/crc/crc32'
-
+import _ from 'lodash'
+import { type ReadableStream, type UnderlyingSink, type WritableStreamDefaultController, WritableStream } from 'node:stream/web'
 import {
-  Cmd,
-  DeviceMode,
-  DfuObjType,
-  DfuOp,
-  DfuResCode,
-  Mf1KeyType,
-  MfuCmd,
-  RespStatus,
   type AnimationMode,
   type ButtonAction,
   type ButtonType,
+  type DarksideStatus,
   type DeviceModel,
   type DfuFwId,
   type DfuFwType,
@@ -29,21 +16,37 @@ import {
   type Mf1PrngType,
   type Mf1VblockOperator,
   type Slot,
-  type TagType,
-
+  Cmd,
+  DeviceMode,
+  DfuObjType,
+  DfuOp,
+  DfuResCode,
   isAnimationMode,
   isButtonAction,
   isButtonType,
   isDeviceMode,
   isDfuFwId,
+  isFailedRespStatus,
   isMf1EmuWriteMode,
   isMf1KeyType,
   isMf1VblockOperator,
+  isMfuEmuTagType,
   isSlot,
   isTagType,
   isValidDfuObjType,
   isValidFreqType,
+  Mf1KeyType,
+  MfuCmd,
+  MfuVerToMfuTagType,
+  MfuTagType,
+  RespStatus,
+  TagType,
 } from './enums'
+import { EventAsyncGenerator } from './EventAsyncGenerator'
+import { EventEmitter } from './EventEmitter'
+import { type MiddlewareComposeFn, middlewareCompose, sleep, versionCompare } from './helper'
+import { type DfuImage } from './plugin/DfuZip'
+import * as Decoder from './ResponseDecoder'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
@@ -57,6 +60,10 @@ function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string
   if (!isMf1BlockNo(block)) throw new TypeError(`${prefix}block should be a integer`)
   if (!isMf1KeyType(keyType)) throw new TypeError(`${prefix}keyType should be a Mf1KeyType`)
   bufIsLenOrFail(key, 6, `${prefix}key`)
+}
+
+function toUpperHex (buf: Buffer): string {
+  return _.toUpper(buf.toString('hex'))
 }
 
 /**
@@ -138,8 +145,7 @@ export class ChameleonUltra {
   static VERSION_SUPPORTED = VERSION_SUPPORTED
 
   /**
-   * @group Internal
-   * @internal
+   * @hidden
    */
   readDefaultTimeout: number = READ_DEFAULT_TIMEOUT
 
@@ -148,14 +154,12 @@ export class ChameleonUltra {
    * - `disconnected`: Emitted when device is disconnected.
    * - `connected`: Emitted when device is connected.
    * - `debug`: Emitted when debug message is generated. `(logName: string, formatter: any, ...args: [] | any[]) => void`
-   * @internal
-   * @group Internal
+   * @hidden
    */
   readonly emitter = new EventEmitter()
 
   /**
-   * @group Internal
-   * @internal
+   * @hidden
    */
   port?: ChameleonSerialPort<Buffer, Buffer>
 
@@ -862,7 +866,10 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdSlotGetInfo (): Promise<Decoder.SlotInfo[]> {
+  async cmdSlotGetInfo (): Promise<Array<{
+    hfTagType: TagType
+    lfTagType: TagType
+  }>> {
     const cmd = Cmd.GET_SLOT_INFO // cmd = 1019
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
@@ -943,7 +950,10 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdSlotGetIsEnable (): Promise<Decoder.SlotFreqIsEnable[]> {
+  async cmdSlotGetIsEnable (): Promise<Array<{
+    hf: boolean
+    lf: boolean
+  }>> {
     const cmd = Cmd.GET_ENABLED_SLOTS // cmd = 1023
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
@@ -988,7 +998,10 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdGetBatteryInfo (): Promise<Decoder.BatteryInfo> {
+  async cmdGetBatteryInfo (): Promise<{
+    voltage: number
+    level: number
+  }> {
     const cmd = Cmd.GET_BATTERY_INFO // cmd = 1025
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
@@ -1196,7 +1209,14 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdGetDeviceSettings (): Promise<Decoder.DeviceSettings> {
+  async cmdGetDeviceSettings (): Promise<{
+    version: number
+    animation: AnimationMode
+    buttonPressAction: ButtonAction[]
+    buttonLongPressAction: ButtonAction[]
+    blePairingMode: boolean
+    blePairingKey: string
+  }> {
     const cmd = Cmd.GET_DEVICE_SETTINGS // cmd = 1034
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
@@ -1303,7 +1323,12 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdHf14aScan (): Promise<Decoder.Hf14aAntiColl[]> {
+  async cmdHf14aScan (): Promise<Array<{
+    uid: Buffer
+    atqa: Buffer
+    sak: Buffer
+    ats: Buffer
+  }>> {
     await this.assureDeviceMode(DeviceMode.READER)
     const cmd = Cmd.HF14A_SCAN // cmd = 2000
     const readResp = await this.#createReadRespFn({ cmd })
@@ -1404,7 +1429,7 @@ export class ChameleonUltra {
   async cmdMf1AcquireStaticNested (
     known: { block: number, key: Buffer, keyType: Mf1KeyType },
     target: { block: number, keyType: Mf1KeyType }
-  ): Promise<Decoder.Mf1AcquireStaticNestedRes> {
+  ): Promise<{ uid: Buffer, atks: Array<{ nt1: Buffer, nt2: Buffer }> }> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!isMf1BlockNo(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
@@ -1485,7 +1510,15 @@ export class ChameleonUltra {
     keyType: Mf1KeyType,
     isFirst: boolean | number,
     syncMax: number = 30
-  ): Promise<Decoder.Mf1DarksideRes> {
+  ): Promise<{
+      status: DarksideStatus
+      uid?: Buffer
+      nt?: Buffer
+      par?: Buffer
+      ks?: Buffer
+      nr?: Buffer
+      ar?: Buffer
+    }> {
     if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (_.isNil(isFirst)) throw new TypeError('Invalid isFirst')
@@ -1538,7 +1571,11 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdMf1TestNtDistance (known: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<Decoder.Mf1NtDistanceRes> {
+  async cmdMf1TestNtDistance (known: {
+    block: number
+    key: Buffer
+    keyType: Mf1KeyType
+  }): Promise<{ uid: Buffer, dist: Buffer }> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     await this.assureDeviceMode(DeviceMode.READER)
     const cmd = Cmd.MF1_DETECT_NT_DIST // cmd = 2005
@@ -1557,6 +1594,9 @@ export class ChameleonUltra {
    * @param target.block - The block of target key.
    * @param target.keyType - The key type of target key.
    * @returns The result of mifare nested attack.
+   * - nt1: Unblocked explicitly random number
+   * - nt2: Random number of nested verification encryption
+   * - par: The puppet test of the communication process of nested verification encryption, only the 'low 3 digits', that is, the right 3
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1594,7 +1634,7 @@ export class ChameleonUltra {
   async cmdMf1AcquireNested (
     known: { block: number, key: Buffer, keyType: Mf1KeyType },
     target: { block: number, keyType: Mf1KeyType }
-  ): Promise<Decoder.Mf1NestedRes[]> {
+  ): Promise<Array<{ nt1: Buffer, nt2: Buffer, par: number }>> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
@@ -1737,7 +1777,11 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async hf14aInfo (): Promise<Decoder.Hf14aTagInfo[]> {
+  async hf14aInfo (): Promise<Array<{
+    antiColl: { uid: Buffer, atqa: Buffer, sak: Buffer, ats: Buffer }
+    nxpTypeBySak?: string
+    prngType?: Mf1PrngType
+  }>> {
     const items = []
     const antiColls = await this.cmdHf14aScan()
     for (const antiColl of antiColls) {
@@ -1996,7 +2040,7 @@ export class ChameleonUltra {
     }
 
     let bitsCnt = 80
-    for (let b of mask as unknown as number[]) while (b > 0) [bitsCnt, b] = [bitsCnt - (b & 0b1), b >>> 1]
+    for (let b of mask) while (b > 0) [bitsCnt, b] = [bitsCnt - (b & 0b1), b >>> 1]
     if (bitsCnt < 1) return null
 
     await this.assureDeviceMode(DeviceMode.READER)
@@ -2192,7 +2236,15 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdMf1GetDetectionLogs (offset: number = 0): Promise<Decoder.Mf1DetectionLog[]> {
+  async cmdMf1GetDetectionLogs (offset: number = 0): Promise<Array<{
+    block: number
+    isKeyB: boolean
+    isNested: boolean
+    uid: Buffer
+    nt: Buffer
+    nr: Buffer
+    ar: Buffer
+  }>> {
     if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
     const cmd = Cmd.MF1_GET_DETECTION_LOG // cmd = 4006
     const readResp = await this.#createReadRespFn({ cmd })
@@ -2266,7 +2318,13 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdMf1GetEmuSettings (): Promise<Decoder.Mf1EmuSettings> {
+  async cmdMf1GetEmuSettings (): Promise<{
+    detection: boolean
+    gen1a: boolean
+    gen2: boolean
+    antiColl: boolean
+    write: Mf1EmuWriteMode
+  }> {
     const cmd = Cmd.MF1_GET_EMULATOR_CONFIG // cmd = 4009
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
@@ -2458,7 +2516,7 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdHf14aGetAntiCollData (): Promise<Decoder.Hf14aAntiColl | null> {
+  async cmdHf14aGetAntiCollData (): Promise<{ uid: Buffer, atqa: Buffer, sak: Buffer, ats: Buffer } | null> {
     const cmd = Cmd.HF14A_GET_ANTI_COLL_DATA // cmd = 4018
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
@@ -2467,64 +2525,308 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the em410x id of actived slot.
-   * @param id - The em410x id of actived slot.
-   * @group Emulator Related
+   * Get the magic mode of actived slot.
+   *
+   * If the actived slot is in magic mode, all read and write protection is bypassed.
+   *
+   * - The UID (page 0-1) can be write.
+   * - Static Lock Bytes (page 2) and Dynamic Lock Bytes can be write with any value.
+   * - The Capability Container CC of NTAG (page 3) can be write with any value.
+   * - PWD and PACK can be read.
+   * - All other pages can be read/write without authentication.
+   * - The counter of NTAG can be read without authentication.
+   * @group Mifare Ultralight Related
+   * @returns The magic mode of actived slot.
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
-   *   await ultra.cmdEm410xSetEmuId(Buffer.from('deadbeef88', 'hex'))
+   *   console.log(await ultra.cmdMfuGetMagicMode()) // false
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
-    bufIsLenOrFail(id, 5, 'id')
-    const cmd = Cmd.EM410X_SET_EMU_ID // cmd = 5000
+  async cmdMfuGetMagicMode (): Promise<boolean> {
+    const cmd = Cmd.MF0_NTAG_GET_UID_MAGIC_MODE // cmd = 4019
     const readResp = await this.#createReadRespFn({ cmd })
-    await this.#sendCmd({ cmd, data: id })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data[0] === 1
+  }
+
+  /**
+   * Set the magic mode of actived slot.
+   *
+   * If the actived slot is in magic mode, all read and write protection is bypassed.
+   *
+   * - The UID (page 0-1) can be write.
+   * - Static Lock Bytes (page 2) and Dynamic Lock Bytes can be write with any value.
+   * - The Capability Container CC of NTAG (page 3) can be write with any value.
+   * - PWD and PACK can be read.
+   * - All other pages can be read/write without authentication.
+   * - The counter of NTAG can be read without authentication.
+   * @param enable - The magic mode of actived slot.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMfuSetMagicMode(false)
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuSetMagicMode (enable: boolean | number): Promise<void> {
+    if (_.isNil(enable)) throw new TypeError('enable is required')
+    const cmd = Cmd.MF0_NTAG_SET_UID_MAGIC_MODE // cmd = 4020
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!?', enable) })
     await readResp()
   }
 
   /**
-   * Get the em410x id of actived slot.
-   * @returns The em410x id of actived slot.
-   * @group Emulator Related
+   * Get the page data of actived slot.
+   * @param offset - The start page of actived slot.
+   * @param length - The count of pages to be get. Must satisfy: `1 <= length <= 128`.
+   * @group Mifare Ultralight Related
+   * @returns The page data of actived slot.
    * @example
    * ```js
    * async function run (ultra) {
-   *   const id = await ultra.cmdEm410xGetEmuId()
-   *   console.log(id.toString('hex')) // 'deadbeef88'
+   *   const data = await ultra.cmdMfuReadEmuPage(1)
+   *   console.log(data.toString('hex')) // 'fa5c6480'
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdEm410xGetEmuId (): Promise<Buffer> {
-    const cmd = Cmd.EM410X_GET_EMU_ID // cmd = 5001
+  async cmdMfuReadEmuPage (offset: number = 0, length: number = 1): Promise<Buffer> {
+    if (!_.inRange(length, 1, 129)) throw new TypeError('length must be in range [1, 128]')
+    const cmd = Cmd.MF0_NTAG_READ_EMU_PAGE_DATA // cmd = 4021
     const readResp = await this.#createReadRespFn({ cmd })
-    await this.#sendCmd({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!BB', offset, length) })
     return (await readResp()).data
   }
 
   /**
-   * Check if the firmware version is supported by SDK.
-   * @returns `true` if the firmware version is supported, `false` otherwise.
-   * @group Device Related
+   * Set the page data of actived slot.
+   * @param offset - The start page of actived slot.
+   * @param data - The data to be write. Length of data must be multiples of 4 and satisfy: `4 <= data.length <= 508`.
+   * @group Mifare Ultralight Related
    * @example
    * ```js
    * async function run (ultra) {
-   *   if (await ultra.isSupportedAppVersion()) throw new Error('Firmware version is not supported. Please update the firmware.')
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.cmdMfuWriteEmuPage(1, Buffer.from('fa5c6480', 'hex'))
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async isSupportedAppVersion (): Promise<boolean> {
-    const version = await this.cmdGetAppVersion()
-    return versionCompare(version, VERSION_SUPPORTED.gte) >= 0 && versionCompare(version, VERSION_SUPPORTED.lt) < 0
+  async cmdMfuWriteEmuPage (offset: number, data: Buffer): Promise<void> {
+    if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
+    if (!Buffer.isBuffer(data)) throw new TypeError('data must be a Buffer')
+    if (!_.inRange(data.length, 4, 509)) throw new TypeError('data.length must be in range [4, 508]')
+    const pageSize = Math.trunc(data.length / 4)
+    if (data.length !== pageSize * 4) throw new TypeError('data.length must be multiples of 4')
+    const cmd = Cmd.MF0_NTAG_WRITE_EMU_PAGE_DATA // cmd = 4022
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack(`!BB${data.length}s`, offset, pageSize, data) })
+    await readResp()
+  }
+
+  /**
+   * Get the version of actived slot. The version is used to retrieve information on the NTAG family, the product version, storage size and other product data required to identify the specific NTAG21x.
+   * @group Mifare Ultralight Related
+   * @returns The version of actived slot.
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const data = await ultra.cmdMfuGetEmuVersion()
+   *   console.log(data.toString('hex')) // '0004040201001103'
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuGetEmuVersion (): Promise<Buffer | undefined> {
+    const cmd = Cmd.MF0_NTAG_GET_VERSION_DATA // cmd = 4023
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    const { data } = await readResp()
+    return data.length > 0 ? data : undefined
+  }
+
+  /**
+   * Set the version of actived slot. The version is used to retrieve information on the NTAG family, the product version, storage size and other product data required to identify the specific NTAG21x.
+   * @param version - The version of actived slot.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.cmdMfuSetEmuVersion(Buffer.from('0004040201001103', 'hex'))
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuSetEmuVersion (version: Buffer): Promise<void> {
+    bufIsLenOrFail(version, 8, 'version')
+    const cmd = Cmd.MF0_NTAG_SET_VERSION_DATA // cmd = 4024
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: version })
+    await readResp()
+  }
+
+  /**
+   * Get the signature of actived slot. NTAG21x features a cryptographically supported originality check. The signature is used to verify with a certain confidence that the tag is using an IC manufactured by NXP Semiconductors. The signature digital is based on standard Elliptic Curve Cryptography (curve name secp128r1), according to the ECDSA algorithm.
+   * @group Mifare Ultralight Related
+   * @returns The signature of actived slot.
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const data = await ultra.cmdMfuGetEmuSignature()
+   *   console.log(data.toString('hex')) // '0000000000000000000000000000000000000000000000000000000000000000'
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuGetEmuSignature (): Promise<Buffer | undefined> {
+    const cmd = Cmd.MF0_NTAG_GET_SIGNATURE_DATA // cmd = 4025
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    const { data } = await readResp()
+    return data.length > 0 ? data : undefined
+  }
+
+  /**
+   * Set the signature of actived slot. NTAG21x features a cryptographically supported originality check. The signature is used to verify with a certain confidence that the tag is using an IC manufactured by NXP Semiconductors. The signature digital is based on standard Elliptic Curve Cryptography (curve name secp128r1), according to the ECDSA algorithm.
+   * @param signature - The signature. The signature must be a 32 bytes Buffer.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const signature = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex')
+   *   await ultra.cmdMfuSetEmuSignature(signature)
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuSetEmuSignature (signature: Buffer): Promise<void> {
+    bufIsLenOrFail(signature, 32, 'signature')
+    const cmd = Cmd.MF0_NTAG_SET_SIGNATURE_DATA // cmd = 4026
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: signature })
+    await readResp()
+  }
+
+  /**
+   * Read the counter and tearing of actived slot.
+   *
+   * NTAG21x features a NFC counter function. The NFC counter is enabled or disabled with the NFC_CNT_EN bit. This function enables NTAG21x to automatically increase the 24 bit counter value, triggered by the first valid READ or FAST_READ command after the NTAG21x tag is powered by an RF field.
+   * @param addr - The address of the counter.
+   * @group Mifare Ultralight Related
+   * @returns
+   * - counter: The counter of the specified address.
+   * - tearing: The slot is in tearing mode or not.
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMfuGetEmuCounter(0))
+   *   // { "counter": 0, "tearing": false }
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuGetEmuCounter (addr: number): Promise<{ counter?: number, tearing?: boolean }> {
+    if (!_.includes([0, 1, 2], addr)) throw new TypeError('Invalid addr')
+    const cmd = Cmd.MF0_NTAG_GET_COUNTER_DATA // cmd = 4027
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!B', addr) })
+    const { data } = await readResp()
+    if (data.length !== 4) return { counter: undefined, tearing: undefined }
+    const [counter, tearing] = [data.readUIntBE(0, 3), data[3] === 0x00]
+    return { counter, tearing }
+  }
+
+  /**
+   * Set the counter and reset tearing of actived slot.
+   *
+   * NTAG21x features a NFC counter function. The NFC counter is enabled or disabled with the NFC_CNT_EN bit. This function enables NTAG21x to automatically increase the 24 bit counter value, triggered by the first valid READ or FAST_READ command after the NTAG21x tag is powered by an RF field.
+   * @param opts.addr - The address of the counter.
+   * @param opts.counter - The counter to be write. The counter must be a 24-bit unsigned integer.
+   * @param opts.resetTearing - `true` to reset tearing.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   await ultra.cmdMfuSetEmuCounter({ addr: 0, counter: 1 })
+   *   console.log(await ultra.cmdMfuGetEmuCounter(0))
+   *   // { "counter": 1, "tearing": false }
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuSetEmuCounter (opts: {
+    addr?: number
+    counter?: number
+    resetTearing?: boolean
+  }): Promise<void> {
+    const { addr = 2, counter = 0, resetTearing = false } = opts
+    if (!_.includes([0, 1, 2], addr)) throw new TypeError('Invalid addr')
+    if (!_.isSafeInteger(counter) || !_.inRange(counter, 0x1000000)) throw new TypeError('Invalid counter')
+    const data = new Buffer(4)
+    data[0] = (resetTearing ? 0x80 : 0x00) + addr
+    data.writeUIntBE(counter, 1, 3)
+    const cmd = Cmd.MF0_NTAG_SET_COUNTER_DATA // cmd = 4028
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data })
+    await readResp()
+  }
+
+  /**
+   * Reset the authentication failed counter of actived slot.
+   * @group Mifare Ultralight Related
+   * @returns The original value of the unsuccessful auth counter before reset.
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMfuResetEmuAuthFailedCounter()) // 0
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuResetEmuAuthFailedCounter (): Promise<number> {
+    const cmd = Cmd.MF0_NTAG_RESET_AUTH_CNT // cmd = 4029
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data[0]
+  }
+
+  /**
+   * Get the number of pages available in the actived slot.
+   * @group Mifare Ultralight Related
+   * @returns The number of pages available in the actived slot.
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   console.log(await ultra.cmdMfuGetEmuPageSize()) // 135
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdMfuGetEmuPageSize (): Promise<number> {
+    const cmd = Cmd.MF0_NTAG_GET_PAGE_COUNT // cmd = 4030
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data[0]
   }
 
   /**
@@ -2533,15 +2835,16 @@ export class ChameleonUltra {
    * @param opts.keepRfField - `true` to keep RF field after auth, `false` to disable RF field.
    * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
    * @group Mifare Ultralight Related
-   * @returns
+   * @returns The password authentication acknowledge, PACK
    */
   async mfuAuth (opts: {
     autoSelect?: boolean
     keepRfField?: boolean
     key: Buffer
+    timeout?: number
   }): Promise<Buffer> {
     try {
-      const { autoSelect = true, keepRfField = true, key } = opts
+      const { autoSelect = true, keepRfField = true, key, timeout } = opts
       if (!Buffer.isBuffer(key)) throw new TypeError('key must be a Buffer')
       if (key.length === 16) throw new Error('auth Ultralight-C is not implemented')
       if (key.length !== 4) throw new Error('key must be a 4 bytes Buffer.')
@@ -2551,8 +2854,15 @@ export class ChameleonUltra {
         data: Buffer.pack(`!B${key.length}s`, MfuCmd.PWD_AUTH, key),
         keepRfField,
         waitResponse: true,
+        timeout,
       })
-      return mfuCheckRespNakCrc16a(resp)
+      try {
+        return mfuCheckRespNakCrc16a(resp)
+      } catch (err) {
+        const resp = err?.data?.resp
+        if (resp.length === 1 && resp[0] === 0x04) err.status = RespStatus.MF_ERR_AUTH
+        throw err
+      }
     } catch (err) {
       throw _.set(new Error(`Auth failed: ${err.message}`), 'originalError', err)
     }
@@ -2560,7 +2870,7 @@ export class ChameleonUltra {
 
   /**
    * Read 4 pages (16 bytes) from Mifare Ultralight
-   * @param opts.pageOffset - page number to read
+   * @param opts.start - start page address
    * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
    * @returns 4 pages (16 bytes)
    * @group Mifare Ultralight Related
@@ -2568,23 +2878,244 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const data = await ultra.mfuReadPages({ pageOffset: 0 })
+   *   const data = await ultra.mfuReadPages({ start: 0 })
    *   console.log(data.toString('hex')) // '040dc445420d2981e7480000e1100600'
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async mfuReadPages (opts: { key?: Buffer, pageOffset: number }): Promise<Buffer> {
-    const { key, pageOffset } = opts
-    if (!_.isSafeInteger(pageOffset)) throw new TypeError('Invalid pageOffset')
+  async mfuReadPages (opts: { key?: Buffer, start: number, timeout?: number }): Promise<Buffer> {
+    const { key, start, timeout } = opts
+    if (!_.isSafeInteger(start)) throw new TypeError('Invalid start')
     if (!_.isNil(key)) await this.mfuAuth({ keepRfField: true, key })
     return await this.cmdHf14aRaw({
       appendCrc: true,
       autoSelect: _.isNil(key),
       checkResponseCrc: true,
-      data: Buffer.pack('!BB', MfuCmd.READ, pageOffset),
+      data: Buffer.pack('!BB', MfuCmd.READ, start),
+      timeout,
     })
+  }
+
+  /**
+   * Read multiple pages from start to end. For example if the start address is 0x03 and the end address is 0x07 then pages 0x03, 0x04, 0x05, 0x06 and 0x07 are returned. If the addressed page is outside of accessible area, NTAG21x replies a NAK.
+   * @param opts.start - start page address
+   * @param opts.end - end page address
+   * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
+   * @returns 4 pages (16 bytes)
+   * @group Mifare Ultralight Related
+   * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=16)
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const data = await ultra.mfuFastReadPages({ start: 0, end: 3 })
+   *   console.log(data.toString('hex')) // '047c79896cb62a8171480000e1103e00'
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuFastReadPages (opts: { key?: Buffer, start: number, end: number, timeout?: number }): Promise<Buffer> {
+    const { end, key, start, timeout } = opts
+    if (!_.isSafeInteger(start) || start < 0 || start > end) throw new TypeError('Invalid start')
+    if (!_.isSafeInteger(end) || end < start || end > 0xFF) throw new TypeError('Invalid end')
+    if (!_.isNil(key)) await this.mfuAuth({ keepRfField: true, key })
+    return await this.cmdHf14aRaw({
+      appendCrc: true,
+      autoSelect: _.isNil(key),
+      checkResponseCrc: true,
+      data: Buffer.pack('!BBB', MfuCmd.FAST_READ, start, end),
+      timeout,
+    })
+  }
+
+  /**
+   * Detect Mifare Ultralight tag and return the tag infomation.
+   * @returns The tag infomation of detected tag.
+   * @group Mifare Ultralight Related
+   * @see [Proxmark3 `hf mfu info`](https://github.com/RfidResearchGroup/proxmark3/blob/4e0d4d3ad454285e62fc1a22c2ef3adda508ed01/client/src/cmdhfmfu.c#L2089)
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { MfuTagTypeName } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const MfuTagType = await ultra.mfuDetectTagType()
+   *   console.log(`tagType = ${MfuTagTypeName.get(MfuTagType)}`)
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuDetectTagType (): Promise<MfuTagType> {
+    const timeout = 500
+    const tags = await this.cmdHf14aScan()
+    if (tags.length > 1) throw new Error('More than one tag detected.')
+    else if (tags.length === 0) throw new Error('Tag not found.')
+
+    const tag = tags[0]
+    if (!(tag.atqa.readUint16LE(0) === 0x0044 && tag.sak[0] === 0x00)) throw new Error(`Unknown tag: atqa = ${toUpperHex(tag.atqa.toReversed())}, sak = ${toUpperHex(tag.sak)}`)
+
+    if (tag.uid[0] === 0x05) { // Infinition MY-D tests, Exam high nibble
+      const nib = tag.uid[1] >>> 4
+      if (nib === 1) return MfuTagType.MY_D
+      else if (nib === 2) return MfuTagType.MY_D_NFC
+      else if (nib === 3) return MfuTagType.MY_D_MOVE
+      else if (nib === 7) return MfuTagType.MY_D_MOVE_LEAN
+      else return MfuTagType.UNKNOWN
+    }
+
+    // try GET_VERSION cmd
+    // const ver1 = await this.mfuGetVersion({ timeout }).catch(err => { this.#emitErr(err) })
+    const ver1 = await this.cmdHf14aRaw({
+      appendCrc: true,
+      autoSelect: true,
+      data: Buffer.pack('!B', MfuCmd.GET_VERSION),
+      timeout,
+    }).catch(err => { this.#emitErr(err) })
+    // console.log(`ver1 = ${ver1?.toString('hex')}`)
+
+    if (Buffer.isBuffer(ver1)) {
+      if (ver1.length === 10) {
+        let tagType: MfuTagType | undefined
+        tagType = MfuVerToMfuTagType.get(toUpperHex(ver1.subarray(0, 8)))
+        if (!_.isNil(tagType)) return tagType
+        tagType = MfuVerToMfuTagType.get(toUpperHex(ver1.subarray(0, 7)))
+        if (!_.isNil(tagType)) return tagType
+        if (ver1[2] === 0x04) return MfuTagType.NTAG
+        if (ver1[2] === 0x03) return MfuTagType.UL_EV1
+      } else if (ver1.length === 1) return MfuTagType.UL_C
+      else if (ver1.length === 0) return MfuTagType.UL
+      else return MfuTagType.UNKNOWN
+    }
+
+    // try TDES_AUTH cmd (should has resp if it is a Ultralight-C)
+    const auth1 = await this.cmdHf14aRaw({
+      appendCrc: true,
+      autoSelect: true,
+      data: Buffer.pack('!B', MfuCmd.TDES_AUTH),
+      timeout,
+    }).catch(err => { this.#emitErr(err) })
+    // console.log(`auth1 = ${auth1?.toString('hex')}`)
+    if (Buffer.isBuffer(auth1)) return MfuTagType.UL_C
+
+    // try read page 0x26 (should error if it is a Ultralight)
+    const read1 = await this.mfuReadPages({ start: 0x26, timeout }).catch(err => { this.#emitErr(err) })
+    // console.log(`read1 = ${read1?.toString('hex')}`)
+    if ((read1?.length ?? 0) === 0) return MfuTagType.UL
+
+    // try read page 0x30 (should error if it is a ntag203)
+    const read2 = await this.mfuReadPages({ start: 0x30, timeout }).catch(err => { this.#emitErr(err) })
+    // console.log(`read2 = ${read2?.toString('hex')}`)
+    if ((read2?.length ?? 0) === 0) return MfuTagType.NTAG_203
+
+    return MfuTagType.UNKNOWN
+  }
+
+  /**
+   * Read the dump of Mifare Ultralight tag.
+   * @param opts.key - The key to read pages if tag is read protected.
+   * @param opts.start - start page address
+   * @param opts.end - end page address
+   * @returns The dump of Mifare Ultralight tag.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const dump = await ultra.mfuReadDump()
+   *   console.log(`Read ${dump.length} bytes.`) // Read 160 bytes.
+   *   return dump
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuReadDump (opts: {
+    key?: Buffer
+    end?: number
+    start?: number
+  } = {}): Promise<Buffer> {
+    const { key, end = 0x100, start = 0 } = opts
+    const dump = new Buffer(4 * (end - start))
+    let dumpOffset = 0
+    try { // read until error
+      while (dumpOffset < dump.length) {
+        let buf1 = await this.mfuReadPages({ key, start: start + (dumpOffset / 4) })
+        if (buf1.length === 0) break
+        if (buf1.length > dump.length - dumpOffset) buf1 = buf1.subarray(0, dump.length - dumpOffset)
+        dump.set(buf1, dumpOffset)
+        dumpOffset += buf1.length
+      }
+    } catch (err) {
+      this.#emitErr(err)
+    }
+    return dump.subarray(0, dumpOffset)
+  }
+
+  /**
+   * Assert the tag type of actived slot is Mifare Ultralight like. Throw an error if the tag type is not Mifare Ultralight like.
+   * @returns The tag type of actived slot.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const tagType = await ultra.mfuAssertEmuTagType()
+   *   console.log(TagType[tagType]) // '040dc445420d2981e7480000e1100600'
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuAssertEmuTagType (): Promise<TagType> {
+    const slot = await this.cmdSlotGetActive()
+    const slotInfo = await this.cmdSlotGetInfo()
+    const { hfTagType } = slotInfo[slot]
+    if (!isMfuEmuTagType(hfTagType)) throw new Error(`Invalid tagType: ${TagType[hfTagType]}`)
+    return hfTagType
+  }
+
+  /**
+   * Get the mifare ultralight settings of actived emulator slot.
+   * @group Mifare Ultralight Related
+   * @returns
+   * - counters: The value of the NFC one-way counter.
+   * - magic: The magic mode.
+   * - pageSize: The page size.
+   * - signature: The IC specific, 32-byte ECC signature.
+   * - tearing: The slot is in tearing mode or not.
+   * - version: The version information for the specific NTAG21x type.
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const data = await ultra.mfuGetEmuSettings()
+   *   console.log(data)
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuGetEmuSettings (): Promise<{
+    counters: Array<number | undefined>
+    magic?: boolean
+    pageSize?: number
+    signature?: Buffer
+    tearing?: boolean
+    version?: Buffer
+  }> {
+    await this.mfuAssertEmuTagType()
+    const catchErr = (err: Error): undefined => { this.#emitErr(err) }
+    const magic = await this.cmdMfuGetMagicMode().catch(catchErr)
+    const pageSize = await this.cmdMfuGetEmuPageSize().catch(catchErr)
+    const signature = await this.cmdMfuGetEmuSignature().catch(catchErr)
+    const version = await this.cmdMfuGetEmuVersion().catch(catchErr)
+    let tearing: boolean | undefined
+    const counters: Array<number | undefined> = []
+    for (let i = 0; i < 3; i++) {
+      const counter = await this.cmdMfuGetEmuCounter(i).catch(catchErr)
+      counters.push(counter?.counter)
+      tearing ??= counter?.tearing
+    }
+    return { counters, magic, pageSize, signature, tearing, version }
   }
 
   /**
@@ -2663,18 +3194,19 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async mfuGetVersion (): Promise<Buffer> {
+  async mfuGetVersion (opts: { timeout?: number } = {}): Promise<Buffer> {
     const resp = await this.cmdHf14aRaw({
       appendCrc: true,
       autoSelect: true,
       data: Buffer.pack('!B', MfuCmd.GET_VERSION),
+      timeout: opts.timeout,
     })
     return mfuCheckRespNakCrc16a(resp)
   }
 
   /**
    * Write 1 page (4 bytes) to Mifare Ultralight
-   * @param opts.pageOffset - page number to read
+   * @param opts.start - start page address
    * @param opts.data - `4 bytes`, the page data to be written.
    * @param opts.key - The password to be verified. The password must be a 4 bytes Buffer.
    * @group Mifare Ultralight Related
@@ -2683,23 +3215,134 @@ export class ChameleonUltra {
    * ```js
    * async function run (ultra) {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
-   *   const data = await ultra.mfuWritePage({ pageOffset: 9, data: Buffer.from('00000000', 'hex') })
+   *   const data = await ultra.mfuWritePage({ start: 9, data: Buffer.from('00000000', 'hex') })
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async mfuWritePage (opts: { data: Buffer, key?: Buffer, pageOffset: number }): Promise<void> {
-    const { data, key, pageOffset } = opts
-    if (!_.isSafeInteger(pageOffset)) throw new TypeError('Invalid pageOffset')
+  async mfuWritePage (opts: { data: Buffer, key?: Buffer, start: number }): Promise<void> {
+    const { data, key, start } = opts
+    if (!_.isSafeInteger(start)) throw new TypeError('Invalid start')
     bufIsLenOrFail(data, 4, 'data')
     if (!_.isNil(key)) await this.mfuAuth({ keepRfField: true, key })
     await this.cmdHf14aRaw({
       appendCrc: true,
       autoSelect: _.isNil(key),
       checkResponseCrc: true,
-      data: Buffer.pack('!BB4s', MfuCmd.WRITE, pageOffset, data),
+      data: Buffer.pack('!BB4s', MfuCmd.WRITE, start, data),
     })
+  }
+
+  /**
+   * Get the mifare ultralight emulator data of actived slot.
+   * @returns The mifare ultralight emulator data of actived slot.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const dump = await ultra.mfuReadEmuDump()
+   *   console.log(`Read ${dump.length} bytes.`)
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuReadEmuDump (): Promise<Buffer> {
+    const pageSize = await this.cmdMfuGetEmuPageSize()
+    const dump = new Buffer(pageSize * 4)
+    for (let i = 0; i < pageSize; i += 128) { // max length of resp is 512 bytes
+      const buf1 = dump.subarray(i * 4)
+      buf1.set(await this.cmdMfuReadEmuPage(i, Math.min(128, pageSize - i)))
+    }
+    return dump
+  }
+
+  /**
+   * Write new dump to the actived slot.
+   * @param dump - New dump to be write to actived slot.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const dump = new Buffer(540) // Dump size of NTAG_213 is 540 bytes.
+   *   dump.set(Buffer.from('04689571fa5c648042480fe0', 'hex'))
+   *   dump.set(Buffer.from('040000ff00000000ffffffff', 'hex'), 524)
+   *   await ultra.mfuWriteEmuDump(dump)
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mfuWriteEmuDump (dump: Buffer): Promise<void> {
+    const pageSize = await this.cmdMfuGetEmuPageSize()
+    dump = dump.subarray(0, pageSize * 4) // truncate dump
+    bufIsLenOrFail(dump, pageSize * 4, 'dump')
+    for (let i = 0; i < pageSize; i += 127) { // max length of req is 512 bytes, (512 - 2) / 4 = 127
+      const buf1 = dump.subarray(i * 4).subarray(0, 508) // 127 * 4
+      await this.cmdMfuWriteEmuPage(i, buf1)
+    }
+  }
+
+  /**
+   * Set the em410x id of actived slot.
+   * @param id - The em410x id of actived slot.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.cmdEm410xSetEmuId(Buffer.from('deadbeef88', 'hex'))
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
+    bufIsLenOrFail(id, 5, 'id')
+    const cmd = Cmd.EM410X_SET_EMU_ID // cmd = 5000
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: id })
+    await readResp()
+  }
+
+  /**
+   * Get the em410x id of actived slot.
+   * @returns The em410x id of actived slot.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const id = await ultra.cmdEm410xGetEmuId()
+   *   console.log(id.toString('hex')) // 'deadbeef88'
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async cmdEm410xGetEmuId (): Promise<Buffer> {
+    const cmd = Cmd.EM410X_GET_EMU_ID // cmd = 5001
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data
+  }
+
+  /**
+   * Check if the firmware version is supported by SDK.
+   * @returns `true` if the firmware version is supported, `false` otherwise.
+   * @group Device Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   if (await ultra.isSupportedAppVersion()) throw new Error('Firmware version is not supported. Please update the firmware.')
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async isSupportedAppVersion (): Promise<boolean> {
+    const version = await this.cmdGetAppVersion()
+    return versionCompare(version, VERSION_SUPPORTED.gte) >= 0 && versionCompare(version, VERSION_SUPPORTED.lt) < 0
   }
 
   /**
@@ -3238,7 +3881,7 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ op })
     await this.#sendBuffer(Buffer.pack('<B', op))
     const [part, variant, romSize, ramSize, romPageSize] = (await readResp()).data.unpack('<I4sIII')
-    return { part: `nRF${part.toString(16)}`, variant: variant.reverse().toString(), romSize, ramSize, romPageSize }
+    return { part: `nRF${part.toString(16)}`, variant: variant.toReversed().toString(), romSize, ramSize, romPageSize }
   }
 
   /**
@@ -3423,26 +4066,7 @@ const RespStatusMsg = new Map([
   [RespStatus.NOT_IMPLEMENTED, 'Not implemented error'],
   [RespStatus.FLASH_WRITE_FAIL, 'Flash write failed'],
   [RespStatus.FLASH_READ_FAIL, 'Flash read failed'],
-])
-
-const RespStatusFail = new Set([
-  RespStatus.HF_TAG_NOT_FOUND,
-  RespStatus.HF_ERR_STAT,
-  RespStatus.HF_ERR_CRC,
-  RespStatus.HF_COLLISION,
-  RespStatus.HF_ERR_BCC,
-  RespStatus.MF_ERR_AUTH,
-  RespStatus.HF_ERR_PARITY,
-  RespStatus.HF_ERR_ATS,
-
-  RespStatus.EM410X_TAG_NOT_FOUND,
-
-  RespStatus.PAR_ERR,
-  RespStatus.DEVICE_MODE_ERROR,
-  RespStatus.INVALID_CMD,
-  RespStatus.NOT_IMPLEMENTED,
-  RespStatus.FLASH_WRITE_FAIL,
-  RespStatus.FLASH_READ_FAIL,
+  [RespStatus.INVALID_SLOT_TYPE, 'Invalid slot tagType'],
 ])
 
 const DfuErrMsg = new Map<number, string>([
@@ -3628,10 +4252,10 @@ class UltraFrame {
   get cmd (): Cmd { return this.buf.readUInt16BE(2) }
   get data (): Buffer { return this.buf.subarray(9, -1) }
   get inspect (): string { return UltraFrame.inspect(this) }
-  get status (): number { return this.buf.readUInt16BE(4) }
+  get status (): RespStatus { return this.buf.readUInt16BE(4) }
   get errMsg (): string | undefined {
     const status = this.status
-    if (!RespStatusFail.has(status)) return
+    if (!isFailedRespStatus(status)) return
     return RespStatusMsg.get(status) ?? `Unknown status code: ${status}`
   }
 }
@@ -3653,7 +4277,7 @@ export class DfuFrame {
   get data (): Buffer { return this.buf.subarray(this.isResp === 1 ? 3 : 1) }
   get inspect (): string { return DfuFrame.inspect(this) }
   get op (): number { return this.buf[this.isResp] }
-  get result (): number {
+  get result (): DfuResCode {
     if (this.isResp === 0) return DfuResCode.SUCCESS
     return this.buf[2] === DfuResCode.EXT_ERROR ? this.buf.readUInt16BE(2) : this.buf[2]
   }
@@ -3693,10 +4317,11 @@ function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
 }
 
 function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
-  if (resp.length === 1 && resp[0] !== 0x0A) throw new Error(`received NAK 0x${resp.toString('hex')}`)
-  if (resp.length < 3) throw new Error('unknown resp')
+  const createErr = (status: RespStatus, msg: string): Error => _.merge(new Error(msg), { status, data: { resp } })
+  if (resp.length === 1 && resp[0] !== 0x0A) throw createErr(RespStatus.HF_ERR_STAT, `received NAK 0x${resp.toString('hex')}`)
+  if (resp.length < 3) throw createErr(RespStatus.HF_ERR_CRC, 'unexpected resp')
   const data = resp.subarray(0, -2)
-  if (crc16a(data) !== resp.readUInt16LE(data.length)) throw new Error('invalid crc16a of resp')
+  if (crc16a(data) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
   return data
 }
 

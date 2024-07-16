@@ -118,7 +118,7 @@ block script
                 const newTags = []
                 for (const tag of scanned) {
                   newTags.push({
-                    atqa: toHex(tag.atqa.reverse()),
+                    atqa: toHex(tag.atqa.toReversed()),
                     sak: toHex(tag.sak),
                     ts: Date.now(),
                     uid: toHex(tag.uid),

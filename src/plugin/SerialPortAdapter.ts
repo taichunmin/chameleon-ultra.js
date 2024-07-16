@@ -1,7 +1,7 @@
 import _ from 'lodash'
-import { Duplex } from 'stream'
 import { SerialPort } from 'serialport'
-import { type ChameleonPlugin, type PluginInstallContext, type ChameleonUltra } from '../ChameleonUltra'
+import { Duplex } from 'stream'
+import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
 
 async function findDevicePath (): Promise<string> {
   const device = _.find(await SerialPort.list(), { vendorId: '6868', productId: '8686' }) // ChameleonUltra

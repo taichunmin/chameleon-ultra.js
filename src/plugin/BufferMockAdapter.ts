@@ -1,6 +1,6 @@
+import { type Buffer } from '@taichunmin/buffer'
 import _ from 'lodash'
 import { ReadableStream, WritableStream, type ReadableStreamController } from 'node:stream/web'
-import { type Buffer } from '@taichunmin/buffer'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
 
 const ReadableStream1: typeof ReadableStream = (globalThis as any)?.ReadableStream ?? ReadableStream

@@ -1,14 +1,10 @@
-# Demos
+---
+title: Demos
+group: Documents
+category: Guides
+---
 
-- [Demos](#demos)
-  - [device-settings.html](#device-settingshtml)
-  - [dfu.html](#dfuhtml)
-  - [mfkey32.html](#mfkey32html)
-  - [mifare1k.html](#mifare1khtml)
-  - [hf14a-scanner.html](#hf14a-scannerhtml)
-  - [mifare-xiaomi.html](#mifare-xiaomihtml)
-  - [mifare-value.html](#mifare-valuehtml)
-  - [lf-em410x.html](#lf-em410xhtml)
+# Demos
 
 ## [device-settings.html](https://taichunmin.idv.tw/chameleon-ultra.js/device-settings.html)
 
