@@ -632,7 +632,7 @@ block script
         mfCardSetAntiColl (hf14aAntiColl) {
           for (const k of ['uid', 'atqa', 'sak', 'ats']) {
             let buf = hf14aAntiColl?.[k] ?? new Buffer()
-            if (k === 'atqa') buf = buf.reverse()
+            if (k === 'atqa') buf = buf.toReversed()
             this.$set(this.ss, k, buf.toString('hex'))
           }
         },

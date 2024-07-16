@@ -10,6 +10,13 @@ export function createIsEnum <T extends EnumLike> (e: T): (val: any) => val is T
   return (val: any): val is T[keyof T] => ev.has(val)
 }
 
+export type ValueOf<T> = T[keyof T]
+
+export function createIsValueOfArr <T extends readonly any[]> (arr: T): (val: any) => val is ValueOf<T> {
+  const set = new Set(arr)
+  return (val: any): val is ValueOf<T> => set.has(val)
+}
+
 export enum AnimationMode {
   FULL = 0,
   SHORT = 1,
@@ -109,6 +116,18 @@ export enum Cmd {
   MF1_GET_WRITE_MODE = 4016,
   MF1_SET_WRITE_MODE = 4017,
   HF14A_GET_ANTI_COLL_DATA = 4018,
+  MF0_NTAG_GET_UID_MAGIC_MODE = 4019,
+  MF0_NTAG_SET_UID_MAGIC_MODE = 4020,
+  MF0_NTAG_READ_EMU_PAGE_DATA = 4021,
+  MF0_NTAG_WRITE_EMU_PAGE_DATA = 4022,
+  MF0_NTAG_GET_VERSION_DATA = 4023,
+  MF0_NTAG_SET_VERSION_DATA = 4024,
+  MF0_NTAG_GET_SIGNATURE_DATA = 4025,
+  MF0_NTAG_SET_SIGNATURE_DATA = 4026,
+  MF0_NTAG_GET_COUNTER_DATA = 4027,
+  MF0_NTAG_SET_COUNTER_DATA = 4028,
+  MF0_NTAG_RESET_AUTH_CNT = 4029,
+  MF0_NTAG_GET_PAGE_COUNT = 4030,
 
   EM410X_SET_EMU_ID = 5000,
   EM410X_GET_EMU_ID = 5001,
@@ -224,6 +243,8 @@ export enum RespStatus {
   FLASH_WRITE_FAIL = 0x70,
   /** Flash read failed */
   FLASH_READ_FAIL = 0x71,
+  /** Invalid slot type */
+  INVALID_SLOT_TYPE = 0x72,
 }
 
 export enum Slot {
@@ -252,17 +273,24 @@ export enum TagType {
   MIFARE_2048 = 1002,
   MIFARE_4096 = 1003,
   // 11xx: MFUL / NTAG series
+  /** NTAG213 (NT2H1511) */
   NTAG_213 = 1100,
+  /** NTAG215 (NT2H1511) */
   NTAG_215 = 1101,
+  /** NTAG216 (NT2H1611) */
   NTAG_216 = 1102,
-  /** Mifare Ultralight */
+  /** Mifare Ultralight (MF0ICU1) */
   MF0_ICU1 = 1103,
-  /** Mifare Ultralight C */
+  /** Mifare Ultralight C (MF0ICU2) */
   MF0_ICU2 = 1104,
-  /** Mifare Ultralight EV1 (640 bit) */
+  /** Mifare Ultralight EV1 (MF0UL11/MF0ULH11) */
   MF0_UL11 = 1105,
-  /** Mifare Ultralight EV2 (1312 bit) */
+  /** Mifare Ultralight EV2 (MF0UL21/MF0ULH21) */
   MF0_UL21 = 1106,
+  /** NTAG210 (NT2L1011) */
+  NTAG_210 = 1107,
+  /** NTAG212 (NT2L1211) */
+  NTAG_212 = 1108,
   // 12xx: MIFARE Plus series
   // 13xx: DESFire series
   // 14xx: ST25TA series
@@ -373,17 +401,6 @@ export enum DfuFwId {
   SOFTDEVICE = 0x02,
 }
 
-export enum MfuCmd {
-  PWD_AUTH = 0x1B,
-  READ = 0x30,
-  READ_CNT = 0x39,
-  FAST_READ = 0x3A,
-  READ_SIG = 0x3C,
-  GET_VERSION = 0x60,
-  WRITE = 0xA2,
-  COMP_WRITE = 0xA0,
-}
-
 export const isAnimationMode = createIsEnum(AnimationMode)
 export const isButtonAction = createIsEnum(ButtonAction)
 export const isButtonType = createIsEnum(ButtonType)
@@ -400,5 +417,198 @@ export const isMf1VblockOperator = createIsEnum(Mf1VblockOperator)
 export const isRespStatus = createIsEnum(RespStatus)
 export const isSlot = createIsEnum(Slot)
 export const isTagType = createIsEnum(TagType)
-export const isValidDfuObjType = createIsEnum(_.pick(DfuObjType, ['COMMAND', 'DATA']))
-export const isValidFreqType = createIsEnum(_.pick(FreqType, ['HF', 'LF']))
+
+export const isFailedRespStatus = createIsValueOfArr([
+  RespStatus.HF_TAG_NOT_FOUND,
+  RespStatus.HF_ERR_STAT,
+  RespStatus.HF_ERR_CRC,
+  RespStatus.HF_COLLISION,
+  RespStatus.HF_ERR_BCC,
+  RespStatus.MF_ERR_AUTH,
+  RespStatus.HF_ERR_PARITY,
+  RespStatus.HF_ERR_ATS,
+  RespStatus.EM410X_TAG_NOT_FOUND,
+  RespStatus.PAR_ERR,
+  RespStatus.DEVICE_MODE_ERROR,
+  RespStatus.INVALID_CMD,
+  RespStatus.NOT_IMPLEMENTED,
+  RespStatus.FLASH_WRITE_FAIL,
+  RespStatus.FLASH_READ_FAIL,
+  RespStatus.INVALID_SLOT_TYPE,
+] as const)
+export const isMfuEmuTagType = createIsValueOfArr([
+  TagType.MF0_ICU1,
+  TagType.MF0_ICU2,
+  TagType.MF0_UL11,
+  TagType.MF0_UL21,
+  TagType.NTAG_210,
+  TagType.NTAG_212,
+  TagType.NTAG_213,
+  TagType.NTAG_215,
+  TagType.NTAG_216,
+] as const)
+export const isValidDfuObjType = createIsValueOfArr([
+  DfuObjType.COMMAND,
+  DfuObjType.DATA,
+] as const)
+export const isValidFreqType = createIsValueOfArr([
+  FreqType.HF,
+  FreqType.LF,
+] as const)
+
+export enum MfuCmd {
+  CHECK_TEARING_EVENT = 0x3E,
+  COMP_WRITE = 0xA0,
+  FAST_READ = 0x3A,
+  GET_VERSION = 0x60,
+  INCR_CNT = 0xA5,
+  /** 3DES Authentication for MF0ICU2 */
+  TDES_AUTH = 0x1A,
+  PWD_AUTH = 0x1B,
+  READ = 0x30,
+  READ_CNT = 0x39,
+  READ_SIG = 0x3C,
+  VCSL = 0x4B,
+  WRITE = 0xA2,
+}
+
+export enum MfuTagType {
+  UNKNOWN = 0x0,
+  UL = 1,
+  UL_C = 2,
+  UL_EV1_48 = 3,
+  UL_EV1_128 = 4,
+  NTAG = 5,
+  NTAG_203 = 6,
+  NTAG_210 = 7,
+  NTAG_212 = 8,
+  NTAG_213 = 9,
+  NTAG_215 = 10,
+  NTAG_216 = 11,
+  MY_D = 12,
+  MY_D_NFC = 13,
+  /** my-d move / my-d move NFC */
+  MY_D_MOVE = 14,
+  MY_D_MOVE_LEAN = 15,
+  NTAG_I2C_1K = 16,
+  NTAG_I2C_2K = 17,
+  NTAG_I2C_1K_PLUS = 18,
+  NTAG_I2C_2K_PLUS = 19,
+  FUDAN_UL = 20,
+  NTAG_213_F = 21,
+  NTAG_216_F = 22,
+  UL_EV1 = 23,
+  UL_NANO_40 = 24,
+  NTAG_213_TT = 25,
+  NTAG_213_C = 26,
+  NTAG_210u = 27,
+  UL_AES = 28,
+}
+
+export const MfuVerToMfuTagType = new Map([
+  ['0004030101000B', MfuTagType.UL_EV1_48],
+  ['0004030101000E', MfuTagType.UL_EV1_128],
+  ['0004030102000B', MfuTagType.UL_NANO_40],
+  ['0004030104000F03', MfuTagType.UL_AES],
+  ['0004030201000B', MfuTagType.UL_EV1_48],
+  ['0004030201000E', MfuTagType.UL_EV1_128],
+  ['0004040101000B', MfuTagType.NTAG_210],
+  ['0004040101000E', MfuTagType.NTAG_212],
+  ['0004040102000B', MfuTagType.NTAG_210u],
+  ['0004040201000F', MfuTagType.NTAG_213],
+  ['00040402010011', MfuTagType.NTAG_215],
+  ['00040402010013', MfuTagType.NTAG_216],
+  ['0004040201010F', MfuTagType.NTAG_213_C],
+  ['0004040202000B', MfuTagType.NTAG_210u],
+  ['0004040203000F', MfuTagType.NTAG_213_TT],
+  ['0004040401000F', MfuTagType.NTAG_213_F],
+  ['00040404010013', MfuTagType.NTAG_216_F],
+  ['00040405020113', MfuTagType.NTAG_I2C_1K],
+  ['00040405020115', MfuTagType.NTAG_I2C_2K],
+  ['00040405020213', MfuTagType.NTAG_I2C_1K_PLUS],
+  ['00040405020215', MfuTagType.NTAG_I2C_2K_PLUS],
+  ['0034210101000E', MfuTagType.UL_EV1_128], // Mikron JSC Russia EV1 41 pages tag
+  ['0053040201000F', MfuTagType.NTAG_213], // Shanghai Feiju Microelectronics Co. Ltd. China (Xiaomi Air Purifier filter)
+])
+
+export const MfuTagTypeName = new Map<MfuTagType | TagType, string>([
+  [MfuTagType.FUDAN_UL, 'FUDAN Ultralight Compatible (or other compatible)'],
+  [MfuTagType.MY_D_MOVE_LEAN, 'INFINEON my-d™ move lean (SLE 66R01L)'],
+  [MfuTagType.MY_D_MOVE, 'INFINEON my-d™ move (SLE 66R01P) / INFINEON my-d™ move NFC (SLE 66R01P)'],
+  [MfuTagType.MY_D_NFC, 'INFINEON my-d™ NFC (SLE 66RxxP)'],
+  [MfuTagType.MY_D, 'INFINEON my-d™ (SLE 66RxxS)'],
+  [MfuTagType.NTAG_203, 'NTAG 203 144bytes (NT2H0301F0DT)'],
+  [MfuTagType.NTAG_210, 'NTAG 210 48bytes (NT2L1011G0DU)'],
+  [MfuTagType.NTAG_210u, 'NTAG 210u (micro) 48bytes (NT2L1001G0DU)'],
+  [MfuTagType.NTAG_212, 'NTAG 212 128bytes (NT2L1211G0DU)'],
+  [MfuTagType.NTAG_213_C, 'NTAG 213C 144bytes (NT2H1311C1DTL)'],
+  [MfuTagType.NTAG_213_F, 'NTAG 213F 144bytes (NT2H1311F0DTL)'],
+  [MfuTagType.NTAG_213_TT, 'NTAG 213TT 144bytes (NT2H1311TTDU)'],
+  [MfuTagType.NTAG_213, 'NTAG 213 144bytes (NT2H1311G0DU)'],
+  [MfuTagType.NTAG_215, 'NTAG 215 504bytes (NT2H1511G0DU)'],
+  [MfuTagType.NTAG_216_F, 'NTAG 216F 888bytes (NT2H1611F0DTL)'],
+  [MfuTagType.NTAG_216, 'NTAG 216 888bytes (NT2H1611G0DU)'],
+  [MfuTagType.NTAG_I2C_1K_PLUS, 'NTAG I2C plus 888bytes (NT3H2111FHK)'],
+  [MfuTagType.NTAG_I2C_1K, 'NTAG I2C 888bytes (NT3H1101FHK)'],
+  [MfuTagType.NTAG_I2C_2K_PLUS, 'NTAG I2C plus 1912bytes (NT3H2211FHK)'],
+  [MfuTagType.NTAG_I2C_2K, 'NTAG I2C 1904bytes (NT3H1201FHK)'],
+  [MfuTagType.NTAG, 'NTAG UNKNOWN'],
+  [MfuTagType.UL_AES, 'MIFARE Ultralight AES'],
+  [MfuTagType.UL_C, 'MIFARE Ultralight C (MF0ULC)'],
+  [MfuTagType.UL_EV1_128, 'MIFARE Ultralight EV1 128bytes (MF0UL2101)'],
+  [MfuTagType.UL_EV1_48, 'MIFARE Ultralight EV1 48bytes (MF0UL1101)'],
+  [MfuTagType.UL_EV1, 'MIFARE Ultralight EV1 UNKNOWN'],
+  [MfuTagType.UL_NANO_40, 'MIFARE Ultralight Nano 40bytes (MF0UNH00)'],
+  [MfuTagType.UL, 'MIFARE Ultralight (MF0ICU1)'],
+  [TagType.MF0_ICU1, 'MIFARE Ultralight (MF0ICU1)'],
+  [TagType.MF0_ICU2, 'MIFARE Ultralight C (MF0ULC)'],
+  [TagType.MF0_UL11, 'MIFARE Ultralight EV1 48bytes (MF0UL1101)'],
+  [TagType.MF0_UL21, 'MIFARE Ultralight EV1 128bytes (MF0UL2101)'],
+  [TagType.NTAG_210, 'NTAG 210 48bytes (NT2L1011G0DU)'],
+  [TagType.NTAG_212, 'NTAG 212 128bytes (NT2L1211G0DU)'],
+  [TagType.NTAG_213, 'NTAG 213 144bytes (NT2H1311G0DU)'],
+  [TagType.NTAG_215, 'NTAG 215 504bytes (NT2H1511G0DU)'],
+  [TagType.NTAG_216, 'NTAG 216 888bytes (NT2H1611G0DU)'],
+])
+
+/**
+ * Get the maximum page number of a specific mifare ultralight tag type.
+ */
+export const MfuMaxPage = new Map<MfuTagType | TagType, number>([
+  [MfuTagType.FUDAN_UL, 0x10],
+  [MfuTagType.MY_D_MOVE_LEAN, 0x10],
+  [MfuTagType.MY_D_MOVE, 0x26],
+  [MfuTagType.MY_D_NFC, 0x100],
+  [MfuTagType.MY_D, 0x10],
+  [MfuTagType.NTAG_203, 0x2A],
+  [MfuTagType.NTAG_210, 0x14],
+  [MfuTagType.NTAG_210u, 0x14],
+  [MfuTagType.NTAG_212, 0x29],
+  [MfuTagType.NTAG_213_C, 0x2D],
+  [MfuTagType.NTAG_213_F, 0x2D],
+  [MfuTagType.NTAG_213_TT, 0x2D],
+  [MfuTagType.NTAG_213, 0x2D],
+  [MfuTagType.NTAG_215, 0x87],
+  [MfuTagType.NTAG_216_F, 0xE7],
+  [MfuTagType.NTAG_216, 0xE7],
+  [MfuTagType.NTAG_I2C_1K_PLUS, 0xEA],
+  [MfuTagType.NTAG_I2C_1K, 0xEA],
+  [MfuTagType.NTAG_I2C_2K_PLUS, 0xEA],
+  [MfuTagType.NTAG_I2C_2K, 0xEA],
+  [MfuTagType.UL_AES, 0x38],
+  [MfuTagType.UL_C, 0x30],
+  [MfuTagType.UL_EV1_128, 0x29],
+  [MfuTagType.UL_EV1_48, 0x14],
+  [MfuTagType.UL_EV1, 0x14],
+  [MfuTagType.UL_NANO_40, 0x0B],
+  [MfuTagType.UL, 0x10],
+  [TagType.MF0_ICU1, 0x10],
+  [TagType.MF0_ICU2, 0x30],
+  [TagType.MF0_UL11, 0x14],
+  [TagType.MF0_UL21, 0x29],
+  [TagType.NTAG_210, 0x14],
+  [TagType.NTAG_212, 0x29],
+  [TagType.NTAG_213, 0x2D],
+  [TagType.NTAG_215, 0x87],
+  [TagType.NTAG_216, 0xE7],
+])

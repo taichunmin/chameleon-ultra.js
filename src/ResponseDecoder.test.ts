@@ -1,5 +1,5 @@
-import * as sut from './ResponseDecoder'
 import { Buffer } from '@taichunmin/buffer'
+import * as sut from './ResponseDecoder'
 
 describe('is not buffer', () => {
   test.each([

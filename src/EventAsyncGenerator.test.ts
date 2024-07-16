@@ -1,7 +1,6 @@
 import { EventEmitter } from 'events'
 import { EventAsyncGenerator } from './EventAsyncGenerator'
-
-const sleep = async (t: number): Promise<void> => new Promise(resolve => setTimeout(resolve, t))
+import { sleep } from './helper'
 
 describe('EventIterable', () => {
   test('should await immediate onData value', async () => {

@@ -115,6 +115,7 @@ block script
     const ultraBle = new ChameleonUltra()
     ultraBle.use(new Debug())
     ultraBle.use(new WebbleAdapter())
+    const toHex = buf => _.toUpper(buf.toString('hex'))
 
     window.vm = new Vue({
       el: '#app',
@@ -166,10 +167,10 @@ block script
             const tag1 = _.first(await ultra.cmdHf14aScan())
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             const tag2 = {
-              atqa: _.toUpper(tag1.atqa.reverse().toString('hex')),
-              sak: _.toUpper(tag1.sak.toString('hex')),
+              atqa: toHex(tag1.atqa.toReversed()),
+              sak: toHex(tag1.sak),
               slot,
-              uid: _.toUpper(tag1.uid.toString('hex')),
+              uid: toHex(tag1.uid),
             }
             tag2.tagType = (tag2.atqa === '0002' && tag2.sak === '18') ? 1 : 0
             console.log(tag2)
