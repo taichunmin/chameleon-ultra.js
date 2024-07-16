@@ -85,6 +85,7 @@ function createResolvable<T> (): Resolvable<T> {
   const resolvable = new Promise<T>((...args) => {
     ;[resolve, reject] = args
   }) as Resolvable<T>
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   Object.assign(resolvable, { resolve, reject })
   return resolvable
 }
