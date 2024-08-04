@@ -2,8 +2,8 @@
  * @example
  * import Crypto1 from 'chameleon-ultra.js/Crypto1'
  */
-import _ from 'lodash'
 import { Buffer } from '@taichunmin/buffer'
+import _ from 'lodash'
 import { Mf1KeyType } from './enums'
 
 const LF_POLY_ODD = 0x29CE5C

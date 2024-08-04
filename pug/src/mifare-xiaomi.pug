@@ -482,7 +482,7 @@ block script
             dumpB64: dump.toString('base64url'),
             uid: toHex(dump.subarray(0, 4)),
             sak: toHex(dump.subarray(5, 6)),
-            atqa: toHex(dump.subarray(6, 8).reverse()),
+            atqa: toHex(dump.subarray(6, 8).toReversed()),
           })
         },
         showLoading (opts = {}) {

@@ -41,7 +41,12 @@ export function middlewareCompose (middlewares: MiddlewareComposeFn[]): (ctx?: R
 }
 
 export async function sleep (ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  let timer: NodeJS.Timeout | undefined
+  await new Promise(resolve => { timer = setTimeout(resolve, ms) })
+  if (timer !== undefined) {
+    clearTimeout(timer)
+    timer = undefined
+  }
 }
 
 export function versionCompare (str1: string, str2: string): number {

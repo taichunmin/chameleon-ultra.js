@@ -1,7 +1,6 @@
-import _ from 'lodash'
 import { Buffer } from '@taichunmin/buffer'
+import _ from 'lodash'
 import { ChameleonUltra } from './ChameleonUltra'
-import BufferMockAdapter from './plugin/BufferMockAdapter'
 import {
   AnimationMode,
   ButtonAction,
@@ -17,6 +16,7 @@ import {
   Slot,
   TagType,
 } from './enums'
+import BufferMockAdapter from './plugin/BufferMockAdapter'
 
 describe('ChameleonUltra with BufferMockAdapter', () => {
   let ultra: ChameleonUltra
@@ -1133,7 +1133,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     adapter.send.push(Buffer.from('11ef 07da 0000 0010 0f 040dc445420d2981e7480000e1100600 c7', 'hex'))
 
     // act
-    const actual = await ultra.mfuReadPages({ pageOffset: 0 })
+    const actual = await ultra.mfuReadPages({ start: 0 })
 
     // assert
     expect(actual).toEqual(Buffer.from('040dc445420d2981e7480000e1100600', 'hex'))
@@ -1149,7 +1149,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     adapter.send.push(Buffer.from('11ef 07da 0000 0000 1f 00', 'hex'))
 
     // act
-    await ultra.mfuWritePage({ pageOffset: 9, data: Buffer.from('00000000', 'hex') })
+    await ultra.mfuWritePage({ start: 9, data: Buffer.from('00000000', 'hex') })
 
     // assert
     expect(adapter.recv).toEqual([

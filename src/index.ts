@@ -19,6 +19,9 @@ export {
   Mf1KeyType,
   Mf1PrngType,
   Mf1VblockOperator,
+  MfuMaxPage,
+  MfuTagType,
+  MfuTagTypeName,
   Slot,
   TagType,
 } from './enums'

@@ -1,6 +1,6 @@
-import _ from 'lodash'
 import { Buffer } from '@taichunmin/buffer'
 import JSZip from 'jszip'
+import _ from 'lodash'
 
 export default class DfuZip {
   readonly #buf: Buffer

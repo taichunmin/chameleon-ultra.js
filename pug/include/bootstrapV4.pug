@@ -61,4 +61,14 @@ html(lang="zh-Hant")
     script(crossorigin="anonymous", src=`${baseurl}plugin/DfuZip.global.js`)
     script(crossorigin="anonymous", src=`${baseurl}plugin/WebbleAdapter.global.js`)
     script(crossorigin="anonymous", src=`${baseurl}plugin/WebserialAdapter.global.js`)
+    script(type="importmap").
+      {
+        "imports": {
+          "@taichunmin/buffer": "https://cdn.jsdelivr.net/npm/@taichunmin/buffer@0/+esm",
+          "@taichunmin/crc/crc16a": "https://cdn.jsdelivr.net/npm/@taichunmin/crc@0/crc16a/+esm",
+          "@taichunmin/crc/crc32": "https://cdn.jsdelivr.net/npm/@taichunmin/crc@0/crc32/+esm",
+          "jszip": "https://cdn.jsdelivr.net/npm/jszip/+esm",
+          "lodash": "https://cdn.jsdelivr.net/npm/lodash/+esm"
+        }
+      }
     block script
