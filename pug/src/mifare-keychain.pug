@@ -1,0 +1,632 @@
+extends /include/bootstrapV4
+
+block beforehtml
+  - const title = 'Mifare Keychain'
+
+block style
+  meta(property="og:description", content="Keep a few mifare tags in browser with indexedDB.")
+  meta(property="og:locale", content="zh_TW")
+  meta(property="og:title", content=title)
+  meta(property="og:type", content="website")
+  meta(property="og:url", content=`${baseurl}mifare-keychain.html`)
+  style
+    :sass
+      [v-cloak]
+        display: none
+      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
+        font-family: 'Noto Sans TC', sans-serif
+      .input-group-prepend > .input-group-text
+        width: 80px
+      .letter-spacing-n1px
+        &, .btn, textarea, select, input
+          letter-spacing: -1px
+      .letter-spacing-n2px
+        &, .btn, textarea, select, input
+          letter-spacing: -2px
+      .text-sm
+        font-size: 0.875rem
+      .shield
+        display: -ms-inline-flexbox
+        display: inline-flex
+        font-size: 75%
+        letter-spacing: -.5px
+        line-height: 1
+        position: relative
+        vertical-align: middle
+        white-space: nowrap
+        .shield-name, .shield-value
+          padding: .25em .4em
+        .shield-name
+          align-items: center
+          border-bottom-left-radius: .25rem
+          border-top-left-radius: .25rem
+          display: -ms-inline-flexbox
+          display: inline-flex
+        .shield-value
+          border-bottom-right-radius: .25rem
+          border-top-right-radius: .25rem
+          border: 1px solid #ccc
+          border-left: 0
+      .bg-00A98F
+        background-color: #00A98F
+      .bg-B02CCE
+        background-color: #B02CCE
+      .bg-004680
+        background-color: #004680
+      .bg-5D6D7E
+        background-color: #5D6D7E
+
+block content
+  #app.my-3.container.text-monospace(v-cloak)
+    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
+    .form-group.letter-spacing-n1px
+      label Connect method:
+      .input-group.input-group-sm.mb-3
+        select.form-control(v-model="ls.adapter")
+          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
+          option(value="usb") USB Serial (PC only)
+        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
+    .card.shadow-sm.mb-3
+      h6.card-header #[i.fa.mr-1.fa-tags] Tag Anti Collision
+      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
+        .form-group.was-validated.mb-2
+          .input-group.input-group-sm.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center TYPE
+            select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.tagType")
+              option(v-for="v, k of tagTypeOptions", :value="k") {{ v }}
+          .input-group.input-group-sm.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center NAME
+            input.form-control(placeholder="Name of HF slot", v-model="ss.name")
+            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.name = ''") #[i.fa.fa-fw.fa-times]
+          .input-group.input-group-sm.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center UID
+            input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
+            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
+          .input-group.input-group-sm.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center ATQA
+            input.form-control(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
+            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.atqa = ''") #[i.fa.fa-fw.fa-times]
+          .input-group.input-group-sm.mb-2
+            .input-group-prepend: span.input-group-text.justify-content-center SAK
+            input.form-control(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
+            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.sak = ''") #[i.fa.fa-fw.fa-times]
+          .input-group.input-group-sm.mb-2.was-validated
+            .input-group-prepend: span.input-group-text.justify-content-center ATS
+            input.form-control(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
+            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.ats = ''") #[i.fa.fa-fw.fa-times]
+          small.form-text.text-muted(v-if="savedTagName") Tag is saved as "{{ savedTagName }}".
+          small.form-text.text-muted(v-else) Tag is not saved yet.
+        .row.mx-n1.mb-2
+          .col.px-1: button.btn.btn-block.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnLoadTag")
+            i.fa.fa-2x.fa-fw.fa-folder-open-o
+            .mt-1 Load
+          .col.px-1: button.btn.btn-block.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnSaveTag")
+            i.fa.fa-2x.fa-fw.fa-floppy-o
+            .mt-1 Save
+          .col.px-1: button.btn.btn-block.btn-outline-info.d-flex.flex-column.align-items-center(type="button", @click="btnTagCsv")
+            i.fa.fa-2x.fa-fw.fa-database
+            .mt-1 CSV
+    .card.shadow-sm.mb-3
+      h6.card-header.bg-light #[.bgicon.bgicon-chameleon-ultra.mr-1] HF Slot Emulator
+      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
+        .input-group.input-group-sm.mb-2
+          .input-group-prepend: span.input-group-text.justify-content-center SLOT
+          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
+            option(value="-1") use actived slot
+            option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
+        .row.mx-n1.mb-2
+          .col.px-1: button.btn.btn-block.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnReadSlot")
+            i.fa.fa-2x.fa-fw.fa-upload
+            .mt-1 Read
+          .col.px-1: button.btn.btn-block.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnEmulateSlot")
+            i.fa.fa-2x.fa-fw.fa-download
+            .mt-1 Emulate
+    .card.shadow-sm.mb-3
+      h6.card-header.bg-light #[.bgicon.bgicon-nfc.mr-1] Magic Tag (Gen1a, Gen2)
+      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
+        .row.mx-n1.mb-2
+          .col.px-1: button.btn.btn-block.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnScanTag")
+            span.fa-stack #[i.fa.fa-tag.fa-stack-2x] #[i.fa.fa-arrow-up.fa-inverse.fa-stack-1x]
+            .mt-1 Scan
+          .col.px-1: button.btn.btn-block.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnWriteTag")
+            span.fa-stack #[i.fa.fa-tag.fa-stack-2x] #[i.fa.fa-arrow-down.fa-inverse.fa-stack-1x]
+            .mt-1 Write
+          .col.px-1: button.btn.btn-block.btn-outline-info.d-flex.flex-column.align-items-center(type="button", @click="btnEditMfkeys")
+            i.fa.fa-2x.fa-fw.fa-key
+            .mt-1.letter-spacing-n2px Gen2 Keys
+    .modal.fade(data-keyboard="false", tabindex="-1", ref="tagPicker")
+      .modal-dialog.modal-dialog-centered.modal-xl
+        .modal-content
+          .modal-header.d-flex.align-items-center
+            .modal-title.flex-fill
+              .input-group
+                .input-group-prepend: span.input-group-text Search
+                input.form-control#h-keyword(placeholder="name or uid" v-model="tagPicker.keyword")
+                .input-group-append: button.btn.btn-outline-danger(type="button", @click="tagPicker.keyword = ''") Clear
+            button.close(type="button", data-dismiss="modal"): span &times;
+          .modal-body.p-0
+            ul.list-group.list-group-flush
+              button.list-group-item.list-group-item-action.d-flex.flex-column(
+                :class="[tagPicker?.cur === tag?.id ? 'list-group-item-secondary' : '']",
+                :key="tag?.id",
+                @click="tagPicker?.cb?.(tag)",
+                type="button",
+                v-for="tag of filteredTags",
+              )
+                h5.my-1 {{ tag.name }}
+                .d-flex.flex-wrap.mx-n1
+                  .shield.mx-1.mb-1
+                    .shield-name.text-white.bg-00A98F UID
+                    .shield-value.text-dark.bg-white {{ tag.uid }}
+                  .shield.mx-1.mb-1
+                    .shield-name.text-white.bg-004680 ATQA
+                    .shield-value.text-dark.bg-white {{ tag.atqa }}
+                  .shield.mx-1.mb-1
+                    .shield-name.text-white.bg-B02CCE SAK
+                    .shield-value.text-dark.bg-white {{ tag.sak }}
+                  .shield.mx-1.mb-1(v-if="tag.ats")
+                    .shield-name.text-white.bg-5D6D7E ATS
+                    .shield-value.text-dark.bg-white {{ tag.ats }}
+    .modal.fade(data-backdrop="static", data-keyboard="false", tabindex="-1", ref="exportimport")
+      .modal-dialog.modal-dialog-centered.modal-xl.align-items-stretch
+        .modal-content
+          .modal-body.d-flex.flex-column
+            textarea.form-control.form-control-sm.flex-fill(v-model="exportimport.text")
+            small.text-muted.form-text Click "Copy" button to copy text, or modify data then click "Apply" button.
+          .modal-footer
+            button.btn.btn-outline-success(type="button", @click="btnCopy(exportimport.text, $refs.exportimport)") Copy
+            button.btn.btn-secondary(type="button", @click="exportimport?.cb?.()") Cancel
+            button.btn.btn-primary(type="button", @click="exportimport?.cb?.(exportimport.text)") Apply
+
+block script
+  script.
+    const { Dexie, FlexSearch } = window
+    const { Buffer, ChameleonUltra, Debug, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+    const ultraUsb = new ChameleonUltra()
+    ultraUsb.use(new Debug())
+    ultraUsb.use(new WebserialAdapter())
+    const ultraBle = new ChameleonUltra()
+    ultraBle.use(new Debug())
+    ultraBle.use(new WebbleAdapter())
+
+    const toHex = buf => _.toUpper(buf.toString('hex'))
+    const WELL_KNOWN_KEYS = ['FFFFFFFFFFFF', 'A0A1A2A3A4A5', 'D3F7D3F7D3F7']
+    const tagTypeOptions = {
+      [TagType.MIFARE_1024]: 'MIFARE_1024',
+      [TagType.MIFARE_Mini]: 'MIFARE_Mini',
+      [TagType.MIFARE_2048]: 'MIFARE_2048',
+      [TagType.MIFARE_4096]: 'MIFARE_4096',
+    }
+    const getNxpMifareClassType = sak => {
+      // https://www.nxp.com/docs/en/application-note/AN10833.pdf
+      sak &= 0b11001 // bit 1, 4, 5
+      if (sak === 0x09) return TagType.MIFARE_Mini
+      if (sak === 0x08) return TagType.MIFARE_1024
+      if (sak === 0x19) return TagType.MIFARE_2048
+      if (sak === 0x18) return TagType.MIFARE_4096
+    }
+    const validateTagOrFail = c => {
+      for (const k of ['uid', 'sak', 'atqa', 'ats']) c[k] = _.toUpper(c[k])
+      if (!/^[\dA-F]{4}$/.test(c.atqa)) throw new Error(`invalid atqa: ${c.atqa}`)
+      if (!/^[\dA-F]{2}$/.test(c.sak)) throw new Error(`invalid sak: ${c.sak}`)
+      if (!/^(?:[\dA-F]{8}|[\dA-F]{14}|[\dA-F]{20})$/.test(c.uid)) throw new Error(`invalid uid: ${c.uid}`)
+      if (!/^([\dA-F]{2})*$/.test(c.ats)) throw new Error(`invalid ats: ${c.ats}`)
+      if (!_.has(tagTypeOptions, c.tagType)) throw new Error(`invalid tagType: ${c.tagType}`)
+      c.tagType = _.toInteger(c.tagType)
+      return _.pick(c, ['atqa', 'ats', 'name', 'sak', 'tagType', 'uid'])
+    }
+    const validateTag = c => {
+      try {
+        return validateTagOrFail(c)
+      } catch (err) {
+        return null
+      }
+    }
+
+    window.vm = new Vue({
+      el: '#app',
+      data: {
+        ls: {
+          adapter: 'ble',
+        },
+        ss: {
+          atqa: '0004',
+          ats: '',
+          name: '',
+          sak: '08',
+          slot: -1,
+          tagType: TagType.MIFARE_1024,
+          uid: 'DEADBEEF',
+        },
+        idbKeyVal: {
+          mfkeys: WELL_KNOWN_KEYS.join('\n'),
+        },
+        exportimport: { text: '', cb: null },
+        idb: null,
+        savedTagName: null,
+        tagPicker: { cb: null, cur: null, flexsearch: null, keyword: '', mTags: null, tags: [] },
+        tagTypeOptions,
+      },
+      async mounted () {
+        const { ultra } = this
+        // 自動儲存功能
+        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+          try {
+            const saved = JSON5.parse(storage.getItem(location.pathname))
+            if (saved) this.$set(this, key, _.merge(this[key], saved))
+          } catch (err) {}
+          this.$watch(key, () => {
+            storage.setItem(location.pathname, JSON5.stringify(this[key]))
+          }, { deep: true })
+        }
+        // indexedDB
+        const persist = await this.idbPersist()
+        ultra.emitter.emit('debug', 'web', `persist = ${persist}`)
+        const idb = this.idb = new Dexie(location.pathname)
+        idb.version(1).stores({
+          tags: '++id, name, &[atqa+ats+sak+tagType+uid]',
+          keyval: 'key',
+        })
+        try {
+          const saved = await this.idbLoadKeyVal('keyval')
+          this.$set(this, 'idbKeyVal', _.merge(this.idbKeyVal, saved))
+        } catch (err) {}
+        this.$watch('idbKeyVal', () => {
+          void this.idbSaveKeyVal('keyval', this.idbKeyVal)
+        }, { deep: true })
+        // savedTagName
+        await this.calcSavedTagName()
+        this.$watch('ssTag', () => { void this.calcSavedTagName() })
+      },
+      computed: {
+        ultra () {
+          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
+        },
+        ssTag () {
+          return validateTag(this.ss)
+        },
+        filteredTags () {
+          const { flexsearch, keyword, mTags, tags } = this.tagPicker
+          const limit = 100
+          if (_.isNil(flexsearch) || _.isNil(mTags) || keyword?.length === 0) return _.take(tags, limit)
+          return flexsearch.search(keyword, limit).map(id => mTags.get(id))
+        },
+        mfkeys () {
+          return Buffer.from(this.idbKeyVal.mfkeys, 'hex').chunk(6)
+        },
+      },
+      methods: {
+        async calcSavedTagName () {
+          const { idb } = this
+          try {
+            this.savedTagName = null
+            const ssTag = _.omit(this.ssTag, ['name'])
+            this.savedTagName = (await idb.tags.get(ssTag))?.name
+          } catch (err) {}
+        },
+        async btnLoadTag () {
+          const { idb, ultra } = this
+          try {
+            this.showLoading({ text: 'Loading tags...' })
+            // load tags from indexedDB
+            const tags = await idb.tags.orderBy('name').toArray()
+            const cur = _.isNil(this.ssTag) ? null : (await idb.tags.get(_.omit(this.ssTag, ['name'])))?.id
+            const flexsearch = FlexSearch.Index({ preset: 'default', tokenize: 'full' })
+            const mTags = new Map()
+            for (const tag of tags) {
+              flexsearch.add(tag.id, `${tag.uid} ${tag.name}`)
+              mTags.set(tag.id, tag)
+            }
+
+            // show tag picker
+            const $ref = window.jQuery(this.$refs.tagPicker)
+            const newVal = validateTag(await new Promise(resolve => {
+              this.$set(this, 'tagPicker', { cb: resolve, cur, flexsearch, keyword: '', mTags, tags })
+              Swal.close()
+              $ref.one('hide.bs.modal', () => resolve()).modal('show')
+            }))
+            $ref.modal('hide')
+            await new Promise(resolve => { this.$nextTick(resolve) }) // wait for next tick
+            if (!_.isNil(newVal)) _.merge(this.ss, newVal)
+            this.$set(this, 'tagPicker', { cb: null, cur: null, flexsearch: null, keyword: '', mTags: null, tags: [] })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Load failed', text: err.message })
+          }
+        },
+        async btnSaveTag () {
+          const { ultra } = this
+          try {
+            this.showLoading({ text: 'Saving tag...' })
+            const { idb } = this
+            const tag = validateTagOrFail(this.ss)
+            if (!_.isString(tag.name) || tag.name.length < 1) tag.name = `UID_${tag.uid}`
+            const oldTag = await idb.tags.get(_.omit(tag, ['name']))
+            await idb.tags.put({ ...tag, id: oldTag?.id })
+            await this.calcSavedTagName()
+            await Swal.fire({ icon: 'success', title: 'Save successfully' })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Save failed', text: err.message })
+          }
+        },
+        async btnTagCsv () {
+          const { idb, ultra } = this
+          try {
+            this.showLoading({ text: 'Loading tags...' })
+            const mTagType = new Map(_.flatMap(tagTypeOptions, (v, k) => [[v, _.toInteger(k)], [_.toInteger(k), v]]))
+            // load tags from indexedDB
+            const oldTags = await idb.tags.orderBy('name').toArray()
+            for (let i = 0; i < oldTags.length; i++) {
+              const tag = oldTags[i] = validateTag(oldTags[i])
+              if (mTagType.has(tag.tagType)) tag.tagType = mTagType.get(tag.tagType)
+            }
+            const oldCsv = Papa.unparse(oldTags, {
+              columns: ['tagType', 'uid', 'atqa', 'sak', 'ats', 'name'],
+              header: true,
+            })
+            // show export import
+            const $ref = window.jQuery(this.$refs.exportimport)
+            let newVal = await new Promise(resolve => {
+              this.$set(this, 'exportimport', { cb: resolve, text: oldCsv })
+              Swal.close()
+              $ref.one('hide.bs.modal', () => resolve()).modal('show')
+            })
+
+            // import newCsv
+            while (!_.isNil(newVal)) {
+              try {
+                const newTags = Papa.parse(_.trim(newVal), { header: true, skipEmptyLines: true })?.data ?? []
+                for (let i = 0; i < newTags.length; i++) {
+                  let tag = newTags[i]
+                  try {
+                    if (mTagType.has(tag.tagType)) tag.tagType = mTagType.get(tag.tagType)
+                    tag = newTags[i] = validateTagOrFail(tag)
+                    if (!_.isString(tag.name) || tag.name.length < 1) tag.name = `UID_${tag.uid}`
+                  } catch (err) {
+                    throw _.update(err, 'message', msg => `${msg}, ${JSON5.stringify(tag)}`)
+                  }
+                }
+                await idb.transaction('rw', idb.tags, async () => {
+                  await idb.tags.clear()
+                  await idb.tags.bulkPut(newTags)
+                })
+                await Swal.fire({ icon: 'success', title: `${newTags.length} records imported` })
+                break
+              } catch (err) {
+                ultra.emitter.emit('error', err)
+                await Swal.fire({ icon: 'error', title: 'Import failed', text: err.message })
+                newVal = await new Promise(resolve => {
+                  this.$set(this.exportimport, 'cb', resolve)
+                })
+              }
+            }
+
+            $ref.modal('hide')
+            this.$set(this.exportimport, 'cb', null)
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Failed', text: err.message })
+          }
+        },
+        async btnReadSlot () {
+          const { ultra } = this
+          try {
+            this.showLoading({ text: 'Reading slot...' })
+            let { slot } = this.ss
+            if (slot < 0) slot = await ultra.cmdSlotGetActive()
+            await ultra.cmdSlotSetActive(slot)
+            const slotInfo = await ultra.cmdSlotGetInfo()
+            const tagType = slotInfo[slot].hfTagType
+            if (!_.has(tagTypeOptions, tagType)) throw new Error(`slot tagType ${TagType[tagType]} is not supported.`)
+            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF)
+            const anticoll = await ultra.cmdHf14aGetAntiCollData()
+            const tag = validateTag({
+              atqa: toHex(anticoll.atqa.toReversed()),
+              ats: toHex(anticoll.ats),
+              name: slotName ?? toHex(anticoll.uid),
+              sak: toHex(anticoll.sak),
+              tagType,
+              uid: toHex(anticoll.uid),
+            })
+            ultra.emitter.emit('debug', 'web', `tag = ${JSON.stringify(tag)}`)
+            _.merge(this.ss, tag)
+            Swal.close()
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Read failed', text: err.message })
+          }
+        },
+        async btnEmulateSlot () {
+          const { ultra } = this
+          try {
+            let { slot } = this.ss
+            const tag = validateTagOrFail(this.ss)
+            this.showLoading({ text: 'Emulating slot...' })
+            if (slot < 0) slot = await ultra.cmdSlotGetActive()
+            ultra.emitter.emit('debug', 'web', JSON5.stringify(tag))
+            const oldName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
+            const msg1 = `The hf data of slot ${slot + 1} "${oldName}" will be REPLACE! Continue?`
+            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            this.showLoading({ text: 'Emulating slot...' })
+            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+            // tag anti-coll
+            const anticoll = {
+              atqa: Buffer.from(tag.atqa, 'hex').reverse(),
+              ats: Buffer.from(tag.ats, 'hex'),
+              sak: Buffer.from(tag.sak, 'hex'),
+              uid: Buffer.from(tag.uid, 'hex').slice(-4),
+            }
+            // reset slot
+            await ultra.cmdSlotChangeTagType(slot, tag.tagType)
+            await ultra.cmdSlotResetTagType(slot, tag.tagType)
+            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
+            await ultra.cmdSlotSetActive(slot)
+            // set emulated tag
+            await ultra.cmdMf1SetAntiCollMode(false)
+            await ultra.cmdHf14aSetAntiCollData(anticoll)
+            await ultra.cmdMf1EmuWriteBlock(0, this.mf1GenerateBlock0()) // set block0
+            await ultra.cmdSlotSetFreqName(slot, FreqType.HF, tag.name)
+            await ultra.cmdSlotSaveSettings()
+            await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Emulate Failed', text: err.message })
+          }
+        },
+        async btnScanTag () {
+          const { idb, ultra } = this
+          try {
+            this.showLoading({ text: 'Scanning tag...' })
+            const anticoll = _.first(await ultra.cmdHf14aScan())
+            const tag = validateTagOrFail({
+              atqa: toHex(anticoll.atqa.toReversed()),
+              ats: toHex(anticoll.ats),
+              name: `UID_${toHex(anticoll.uid)}`,
+              sak: toHex(anticoll.sak),
+              tagType: getNxpMifareClassType(anticoll.sak[0]) ?? TagType.MIFARE_1024,
+              uid: toHex(anticoll.uid),
+            })
+            const savedTagName = (await idb.tags.get(_.omit(tag, ['name'])))?.name
+            if (!_.isNil(savedTagName)) tag.name = savedTagName
+            ultra.emitter.emit('debug', 'web', `tag = ${JSON5.stringify(tag)}`)
+            _.merge(this.ss, tag)
+            Swal.close()
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
+          }
+        },
+        async btnWriteTag () {
+          const { mfkeys, ultra } = this
+          try {
+            const uid = _.toUpper(this.ss.uid)
+            if (!/^[\dA-F]{8}$/.test(uid)) throw new Error('Only support 4 bytes UID')
+            this.showLoading({ text: 'Writing tag...' })
+            const errs = [null, null]
+            const block0 = this.mf1GenerateBlock0()
+            // try Gen1a
+            await ultra.mf1Gen1aWriteBlocks(0, block0).catch(err => {
+              ultra.emitter.emit('error', err)
+              errs[0] = err
+            })
+            if (!_.isNil(errs[0])) { // try Gen2
+              await ultra.mf1WriteBlockByKeys(0, mfkeys, block0).catch(err => {
+                ultra.emitter.emit('error', err)
+                errs[1] = err
+              })
+            }
+            if (!_.some(errs, _.isNil)) {
+              throw new Error(JSON5.stringify({
+                Gen1a: errs[0].message,
+                Gen2: errs[1].message,
+              }))
+            }
+            // double check
+            const scanned = toHex(_.first(await ultra.cmdHf14aScan()).uid)
+            if (scanned !== uid) throw new Error(`UID mismatch after write, scanned = ${scanned}`)
+            await Swal.fire({ icon: 'success', title: 'Write successfully' })
+          } catch (err) {
+            ultra.emitter.emit('error', err)
+            await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
+          }
+        },
+        async btnEditMfkeys () {
+          const $ref = window.jQuery(this.$refs.exportimport)
+          const newVal = await new Promise(resolve => {
+            this.$set(this, 'exportimport', {
+              cb: resolve,
+              text: this.idbKeyVal.mfkeys,
+            })
+            $ref.one('hide.bs.modal', () => resolve()).modal('show')
+          })
+          if (!_.isNil(newVal)) this.$set(this.idbKeyVal, 'mfkeys', newVal || WELL_KNOWN_KEYS.join('\n'))
+          $ref.modal('hide')
+          this.$set(this.exportimport, 'cb', null)
+        },
+        mf1GenerateBlock0 () {
+          const { ultra } = this
+          const { atqa, sak, uid } = this.ss
+          const tag = {
+            atqa: Buffer.from(atqa, 'hex').reverse(),
+            sak: Buffer.from(sak, 'hex'),
+            uid: Buffer.from(uid, 'hex').slice(-4),
+          }
+          const uidLen = tag.uid.length
+          const block0 = Buffer.pack(`!${uidLen}sBs2s${12 - uidLen}x`, tag.uid, tag.uid.xor(), tag.sak, tag.atqa)
+          ultra.emitter.emit('debug', 'web', `block0 = ${toHex(block0)}`)
+          return block0
+        },
+        async idbLoadKeyVal (collkey) {
+          try {
+            const { idb } = this
+            const saved = {}
+            const records = await idb[collkey].toArray()
+            for (const { key, val } of records) saved[key] = val
+            return saved
+          } catch (err) {
+            throw _.update(err, 'data.idbLoadKeyVal', old => old ?? { collkey })
+          }
+        },
+        async idbSaveKeyVal (collkey, newVal) {
+          try {
+            const { idb } = this
+            await idb[collkey].bulkPut(_.map(newVal, (val, key) => ({ key, val })))
+          } catch (err) {
+            throw _.update(err, 'data.idbSaveKeyVal', old => old ?? { collkey, newVal })
+          }
+        },
+        async idbPersist () {
+          // https://dexie.org/docs/StorageManager
+          if (await navigator?.storage?.persisted?.()) return true // already persisted
+          const permState = (await navigator?.permissions?.query?.({ name: 'persistent-storage' }))?.state ?? 'prompt'
+          if (!_.includes(['granted', 'prompt'], permState)) throw new Error(`no persistent-storage permission, state = ${permState}`)
+          if (_.isNil(navigator?.storage?.persist)) throw new Error('indexedDB persist not supported.')
+          return await navigator.storage.persist()
+        },
+        async btnCopy (text, container = null) {
+          if (!container) container = document.body
+          const dom = document.createElement('textarea')
+          dom.value = text
+          container.appendChild(dom)
+          dom.select()
+          dom.setSelectionRange(0, 1e6) // For mobile devices
+          document.execCommand('copy')
+          container.removeChild(dom)
+          await Swal.fire({ icon: 'success', title: `${text.length} bytes copied.` })
+        },
+        async btnAdapterTips () {
+          await Swal.fire({
+            title: 'Browser & OS',
+            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
+          })
+        },
+        async confirm (text, confirmButtonText, cancelButtonText) {
+          return await new Promise((resolve, reject) => {
+            let isConfirmed = false
+            const args = {
+              cancelButtonColor: '#3085d6',
+              cancelButtonText,
+              confirmButtonColor: '#d33',
+              confirmButtonText,
+              didDestroy: () => { resolve(isConfirmed) },
+              focusCancel: true,
+              icon: 'warning',
+              reverseButtons: true,
+              showCancelButton: true,
+              text,
+            }
+            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
+          })
+        },
+        showLoading (opts = {}) {
+          opts = {
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            ...opts,
+          }
+          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
+          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
+        },
+      },
+    })

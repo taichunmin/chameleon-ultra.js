@@ -18,6 +18,12 @@ function u16ToHex (num: number): string {
   return _.toUpper(`000${num.toString(16)}`.slice(-4))
 }
 
+/**
+ * @see
+ * - [Web Serial API | MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API)
+ * - [Getting started with the Web Serial API | codelabs](https://codelabs.developers.google.com/codelabs/web-serial#0)
+ * - [Read from and write to a serial port | Chrome for Developers](https://developer.chrome.com/docs/capabilities/serial)
+ */
 export default class WebserialAdapter implements ChameleonPlugin {
   #isDfu: boolean = false
   #isOpen: boolean = false
@@ -72,12 +78,12 @@ export default class WebserialAdapter implements ChameleonPlugin {
           ultra.port = {
             isOpen: () => this.#isOpen,
             isDfu: () => this.#isDfu,
-            readable: this.port.readable.pipeThrough(new this.#TransformStream(new SlipDecodeTransformer(Buffer1))),
+            readable: this.port.readable.pipeThrough(new this.#TransformStream(new SlipDecodeTransformer(Buffer1)) as any),
             writable: new this.#WritableStream({
               write: async (chunk: Buffer) => {
                 const writer = this.port?.writable?.getWriter()
                 if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
-                await writer.write(slipEncode(chunk, Buffer1))
+                await writer.write(slipEncode(chunk, Buffer1) as any)
                 writer.releaseLock()
               },
             }),
@@ -93,7 +99,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
                   chunk[0] = DfuOp.OBJECT_WRITE
                 }
                 chunk.set(buf1, 1)
-                await writer.write(slipEncode(chunk, Buffer1))
+                await writer.write(slipEncode(chunk, Buffer1) as any)
               }
               writer.releaseLock()
             },
@@ -102,7 +108,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
           ultra.port = _.merge(this.port, {
             isOpen: () => this.#isOpen,
             isDfu: () => this.#isDfu,
-          })
+          }) as any
         }
         return await next()
       } catch (err) {
