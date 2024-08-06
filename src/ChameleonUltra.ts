@@ -37,8 +37,8 @@ import {
   isValidFreqType,
   Mf1KeyType,
   MfuCmd,
-  MfuTagType,
-  MfuVerToMfuTagType,
+  NxpMfuType,
+  MfuVerToNxpMfuType,
   RespStatus,
   TagType,
 } from './enums'
@@ -294,15 +294,6 @@ export class ChameleonUltra {
    */
   isDfu (): boolean {
     return this?.port?.isDfu?.() ?? false
-  }
-
-  /**
-   * Return true if DFU use slip encode/decode.
-   * @group DFU Related
-   * @see Please refer to [SLIP](https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol) and [nRF5 SDK: SLIP library](https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_slip.html) for more information.
-   */
-  isSlip (): boolean {
-    return this?.port?.isSlip?.() ?? false
   }
 
   /**
@@ -2939,15 +2930,15 @@ export class ChameleonUltra {
    * @example
    * ```js
    * async function run (ultra) {
-   *   const { MfuTagTypeName } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
-   *   const MfuTagType = await ultra.mfuDetectTagType()
-   *   console.log(`tagType = ${MfuTagTypeName.get(MfuTagType)}`)
+   *   const { NxpMfuTypeName } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const NxpMfuType = await ultra.mfuDetectTagType()
+   *   console.log(`tagType = ${NxpMfuTypeName.get(NxpMfuType)}`)
    * }
    *
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async mfuDetectTagType (): Promise<MfuTagType> {
+  async mfuDetectTagType (): Promise<NxpMfuType> {
     const timeout = 500
     const tags = await this.cmdHf14aScan()
     if (tags.length > 1) throw new Error('More than one tag detected.')
@@ -2958,11 +2949,11 @@ export class ChameleonUltra {
 
     if (tag.uid[0] === 0x05) { // Infinition MY-D tests, Exam high nibble
       const nib = tag.uid[1] >>> 4
-      if (nib === 1) return MfuTagType.MY_D
-      else if (nib === 2) return MfuTagType.MY_D_NFC
-      else if (nib === 3) return MfuTagType.MY_D_MOVE
-      else if (nib === 7) return MfuTagType.MY_D_MOVE_LEAN
-      else return MfuTagType.UNKNOWN
+      if (nib === 1) return NxpMfuType.MY_D
+      else if (nib === 2) return NxpMfuType.MY_D_NFC
+      else if (nib === 3) return NxpMfuType.MY_D_MOVE
+      else if (nib === 7) return NxpMfuType.MY_D_MOVE_LEAN
+      else return NxpMfuType.UNKNOWN
     }
 
     // try GET_VERSION cmd
@@ -2977,16 +2968,16 @@ export class ChameleonUltra {
 
     if (Buffer.isBuffer(ver1)) {
       if (ver1.length === 10) {
-        let tagType: MfuTagType | undefined
-        tagType = MfuVerToMfuTagType.get(toUpperHex(ver1.subarray(0, 8)))
+        let tagType: NxpMfuType | undefined
+        tagType = MfuVerToNxpMfuType.get(toUpperHex(ver1.subarray(0, 8)))
         if (!_.isNil(tagType)) return tagType
-        tagType = MfuVerToMfuTagType.get(toUpperHex(ver1.subarray(0, 7)))
+        tagType = MfuVerToNxpMfuType.get(toUpperHex(ver1.subarray(0, 7)))
         if (!_.isNil(tagType)) return tagType
-        if (ver1[2] === 0x04) return MfuTagType.NTAG
-        if (ver1[2] === 0x03) return MfuTagType.UL_EV1
-      } else if (ver1.length === 1) return MfuTagType.UL_C
-      else if (ver1.length === 0) return MfuTagType.UL
-      else return MfuTagType.UNKNOWN
+        if (ver1[2] === 0x04) return NxpMfuType.NTAG
+        if (ver1[2] === 0x03) return NxpMfuType.UL_EV1
+      } else if (ver1.length === 1) return NxpMfuType.UL_C
+      else if (ver1.length === 0) return NxpMfuType.UL
+      else return NxpMfuType.UNKNOWN
     }
 
     // try TDES_AUTH cmd (should has resp if it is a Ultralight-C)
@@ -2997,19 +2988,19 @@ export class ChameleonUltra {
       timeout,
     }).catch(err => { this.#emitErr(err) })
     // console.log(`auth1 = ${auth1?.toString('hex')}`)
-    if (Buffer.isBuffer(auth1)) return MfuTagType.UL_C
+    if (Buffer.isBuffer(auth1)) return NxpMfuType.UL_C
 
     // try read page 0x26 (should error if it is a Ultralight)
     const read1 = await this.mfuReadPages({ start: 0x26, timeout }).catch(err => { this.#emitErr(err) })
     // console.log(`read1 = ${read1?.toString('hex')}`)
-    if ((read1?.length ?? 0) === 0) return MfuTagType.UL
+    if ((read1?.length ?? 0) === 0) return NxpMfuType.UL
 
     // try read page 0x30 (should error if it is a ntag203)
     const read2 = await this.mfuReadPages({ start: 0x30, timeout }).catch(err => { this.#emitErr(err) })
     // console.log(`read2 = ${read2?.toString('hex')}`)
-    if ((read2?.length ?? 0) === 0) return MfuTagType.NTAG_203
+    if ((read2?.length ?? 0) === 0) return NxpMfuType.NTAG_203
 
-    return MfuTagType.UNKNOWN
+    return NxpMfuType.UNKNOWN
   }
 
   /**
@@ -3793,28 +3784,14 @@ export class ChameleonUltra {
    * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
-  async cmdDfuGetMtu (): Promise<number> {
+  async cmdDfuGetMtu (): Promise<number | undefined> {
     if (!this.isConnected()) await this.connect()
     if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
     const op = DfuOp.MTU_GET
     const readResp = await this.#createReadRespFn({ op })
     await this.#sendBuffer(Buffer.pack('<B', op))
     const respData = (await readResp()).data
-    const mtu = respData.length >= 2 ? respData.readUInt16LE(0) : 21
-    return this.isSlip() ? Math.trunc((mtu - 1) / 2) : mtu // slip encode/decode
-  }
-
-  /**
-   * Write selected object.
-   * @param buf - Data.
-   * @group DFU Related
-   * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
-   */
-  async cmdDfuWriteObject (buf: Buffer): Promise<void> {
-    if (!this.isConnected()) await this.connect()
-    if (!this.isDfu()) throw new Error('Please enter DFU mode first.')
-    const op = DfuOp.OBJECT_WRITE
-    await this.#sendBuffer(Buffer.pack(`<B${buf.length}s`, op, buf))
+    return respData.length < 2 ? undefined : respData.readUInt16LE(0)
   }
 
   /**
@@ -3956,6 +3933,7 @@ export class ChameleonUltra {
    */
   async dfuUpdateObject (type: DfuObjType, buf: Buffer): Promise<void> {
     if (!isValidDfuObjType(type)) throw new TypeError('Invalid type')
+    if (_.isNil(this.port?.dfuWriteObject)) throw new Error('this.port.dfuWriteObject is not implemented')
     const emitProgress = (offset: number): void => {
       this.emitter.emit('progress', {
         func: 'dfuUpdateObject',
@@ -3975,12 +3953,12 @@ export class ChameleonUltra {
       Object.assign(uploaded, await this.cmdDfuSelectObject(type))
     }
     emitProgress(uploaded.offset)
-    const mtu = await this.cmdDfuGetMtu() - 1
+    const mtu = await this.cmdDfuGetMtu()
     while (uploaded.offset < buf.length) {
       buf1 = buf.subarray(uploaded.offset).subarray(0, uploaded.maxSize)
       await this.cmdDfuCreateObject(type, buf1.length)
       // write object
-      for (const buf2 of buf1.chunk(mtu)) await this.cmdDfuWriteObject(buf2)
+      await this.port.dfuWriteObject(buf1, mtu)
       // check crc
       const crc2 = { offset: uploaded.offset + buf1.length, crc32: crc32(buf1, uploaded.crc32) }
       crc1 = await this.cmdDfuGetObjectCrc()
@@ -4204,9 +4182,9 @@ class DfuRxSink implements UnderlyingSink<Buffer> {
 }
 
 export interface ChameleonSerialPort<I extends Uint8Array = Uint8Array, O extends Uint8Array = Uint8Array> {
+  dfuWriteObject?: (buf: Buffer, mtu?: number) => Promise<void>
   isDfu?: () => boolean
   isOpen?: () => boolean
-  isSlip?: () => boolean
   readable: ReadableStream<I> | null
   writable: WritableStream<O> | null
 }

@@ -173,7 +173,7 @@ block script
               uid: toHex(tag1.uid),
             }
             tag2.tagType = (tag2.atqa === '0002' && tag2.sak === '18') ? 1 : 0
-            console.log(tag2)
+            ultra.emitter.emit('debug', 'web', `tag2 = ${JSON.stringify(tag2)}`)
             _.merge(this.ss, tag2)
             Swal.close()
           } catch (err) {
@@ -185,7 +185,7 @@ block script
           const { ultra } = this
           try {
             const { atqa, sak, slot, tagType, uid } = this.ss
-            console.log({ atqa, sak, slot, tagType, uid })
+            ultra.emitter.emit('debug', 'web', JSON.stringify({ atqa, sak, slot, tagType, uid }))
             const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
@@ -210,7 +210,7 @@ block script
             block0[tag.uid.length] = tag.uid.xor() // bcc for magic card
             block0[tag.uid.length + 1] = tag.sak[0] // sak
             tag.atqa.copy(block0, tag.uid.length + 2) // atqa
-            console.log(`block0 = ${block0.toString('hex')}`)
+            ultra.emitter.emit('debug', 'web', `block0 = ${block0.toString('hex')}`)
             await ultra.cmdMf1EmuWriteBlock(0, block0) // set block0
             await ultra.cmdSlotSaveSettings()
             await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
@@ -246,7 +246,7 @@ block script
               text: `Retrive logs: ${logs.length} / ${logCnt}`,
             }))
             await this.sleep(0) // 等待 UI 更新
-            console.log(logs)
+            ultra.emitter.emit('debug', 'web', `logs = ${JSON.stringify(logs)}`)
 
             // calc how many mfkey32v2 need to be run
             const bufToHex = buf => buf?.toString('hex').toUpperCase()
@@ -272,7 +272,7 @@ block script
                       key: this.mfkey32v2(r0.uid, r0, r1),
                     }], _.isEqual))
                   } catch (err) {
-                    console.log(err)
+                    ultra.emitter.emit('error', err)
                   }
                   recoverCnt++
                   await this.sleep(0) // 等待 UI 更新

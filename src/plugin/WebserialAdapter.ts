@@ -6,6 +6,7 @@ import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } 
 import { type EventEmitter } from '../EventEmitter'
 import { sleep } from '../helper'
 import { setObject } from '../iifeExportHelper'
+import { DfuOp } from '../enums'
 
 // https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/resource/tools/enter_dfu.py
 const WEBSERIAL_FILTERS = [
@@ -71,7 +72,6 @@ export default class WebserialAdapter implements ChameleonPlugin {
           ultra.port = {
             isOpen: () => this.#isOpen,
             isDfu: () => this.#isDfu,
-            isSlip: () => true,
             readable: this.port.readable.pipeThrough(new this.#TransformStream(new SlipDecodeTransformer(Buffer1))),
             writable: new this.#WritableStream({
               write: async (chunk: Buffer) => {
@@ -81,6 +81,22 @@ export default class WebserialAdapter implements ChameleonPlugin {
                 writer.releaseLock()
               },
             }),
+            dfuWriteObject: async (buf: Buffer, mtu?: number): Promise<void> => {
+              if (_.isNil(mtu)) throw new Error('mtu is required')
+              const mtu1 = Math.trunc((mtu - 1) / 2) - 1 // mtu before slipEncode
+              let chunk: Buffer | undefined
+              const writer = this.port?.writable?.getWriter()
+              if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
+              for (const buf1 of buf.chunk(mtu1)) {
+                if (chunk?.length !== buf1.length) {
+                  chunk = Buffer1.alloc(buf1.length + 1)
+                  chunk[0] = DfuOp.OBJECT_WRITE
+                }
+                chunk.set(buf1, 1)
+                await writer.write(slipEncode(chunk, Buffer1))
+              }
+              writer.releaseLock()
+            },
           }
         } else { // ChameleonUltra
           ultra.port = _.merge(this.port, {

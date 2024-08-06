@@ -20,8 +20,8 @@ export {
   Mf1PrngType,
   Mf1VblockOperator,
   MfuMaxPage,
-  MfuTagType,
-  MfuTagTypeName,
+  NxpMfuType,
+  NxpMfuTypeName,
   Slot,
   TagType,
 } from './enums'
