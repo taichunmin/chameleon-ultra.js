@@ -46,6 +46,7 @@ block content
           th UID
           th ATQA
           th SAK
+          th ATS
         tbody
           tr(
             v-for="tag in ss.tags",
@@ -53,9 +54,10 @@ block content
             :class="tag.ts + 1000 > tsnow ? 'animate__animated animate__flash' : ''",
           )
             td {{ dayjs(tag.ts).format('YYYY-MM-DD HH:mm:ss') }}
-            td(@click="btnCopy(tag.uid)") {{ tag.uid }}
+            td.text-left(@click="btnCopy(tag.uid)") {{ tag.uid }}
             td(@click="btnCopy(tag.atqa)") {{ tag.atqa }}
             td(@click="btnCopy(tag.sak)") {{ tag.sak }}
+            td.text-left(@click="btnCopy(tag.ats)") {{ tag.ats }}
 
 block script
   script.
@@ -119,6 +121,7 @@ block script
                 for (const tag of scanned) {
                   newTags.push({
                     atqa: toHex(tag.atqa.toReversed()),
+                    ats: toHex(tag.ats),
                     sak: toHex(tag.sak),
                     ts: Date.now(),
                     uid: toHex(tag.uid),
@@ -127,7 +130,7 @@ block script
                 this.$set(this.ss, 'tags', _.uniqBy([
                   ...newTags,
                   ...this.ss.tags,
-                ], c => `${c.uid}-${c.atqa}-${c.sak}`))
+                ], c => `${c.uid}-${c.atqa}-${c.sak}-${c.ats}`))
               } catch (err) {
                 if (!ultra.isConnected()) throw err
               }
