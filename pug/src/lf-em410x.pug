@@ -152,8 +152,8 @@ block script
             await ultra.cmdSlotResetTagType(slot, TagType.EM410X)
             await ultra.cmdSlotSetEnable(slot, FreqType.LF, true)
             if (_.isString(name) && name.length > 0) await ultra.cmdSlotSetFreqName(slot, FreqType.LF, name)
-            await ultra.cmdEm410xSetEmuId(uid)
             await ultra.cmdSlotSetActive(slot)
+            await ultra.cmdEm410xSetEmuId(uid)
             await Swal.fire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
             ultra.emitter.emit('error', err)

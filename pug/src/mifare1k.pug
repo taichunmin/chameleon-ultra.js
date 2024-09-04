@@ -275,6 +275,7 @@ block script
             await ultra.cmdSlotResetTagType(slot, TagType.MIFARE_1024)
             await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
             if (_.isString(name) && name.length > 0) await ultra.cmdSlotSetFreqName(slot, FreqType.HF, name)
+            await ultra.cmdSlotSetActive(slot)
             await ultra.cmdMf1SetAntiCollMode(antiColl)
             await ultra.cmdMf1SetDetectionEnable(detection)
             await ultra.cmdMf1SetGen1aMode(gen1a)
@@ -291,7 +292,6 @@ block script
               const sectorData = Buffer.from(dump[i], 'hex')
               await ultra.cmdMf1EmuWriteBlock(i << 2, sectorData)
             }
-            await ultra.cmdSlotSetActive(slot)
             await Swal.fire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
             ultra.emitter.emit('error', err)

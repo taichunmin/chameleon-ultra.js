@@ -343,9 +343,9 @@ block script
             await ultra.cmdSlotChangeTagType(slot, TagType.MIFARE_1024)
             await ultra.cmdSlotResetTagType(slot, TagType.MIFARE_1024)
             await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
+            await ultra.cmdSlotSetActive(slot)
             await ultra.cmdMf1SetAntiCollMode(true)
             await ultra.cmdMf1EmuWriteBlock(0, dump.subarray(0, 16)) // set block0
-            await ultra.cmdSlotSetActive(slot)
             await ultra.cmdSlotSaveSettings()
             await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
