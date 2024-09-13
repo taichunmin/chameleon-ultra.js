@@ -5,6 +5,7 @@ import { type bluetooth } from 'webbluetooth'
 import { type ChameleonPlugin, type ChameleonSerialPort, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
 import { DfuOp } from '../enums'
 import { sleep } from '../helper'
+import { setObject } from '../iifeExportHelper'
 
 const DFU_CTRL_CHAR_UUID = '8ec90001-f315-4f60-9fb8-838830daea50'
 const DFU_PACKT_CHAR_UUID = '8ec90002-f315-4f60-9fb8-838830daea50'
@@ -27,7 +28,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
   emitErr: (err: Error) => void
   name = 'adapter'
   packtChar?: BluetoothRemoteGATTCharacteristic
-  port?: ChameleonSerialPort<Buffer, Buffer>
+  port?: ChameleonSerialPort
   rxChar?: BluetoothRemoteGATTCharacteristic
   TransformStream: typeof TransformStream
   ultra?: ChameleonUltra
@@ -156,7 +157,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
   }
 }
 
-;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).WebbleAdapter = WebbleAdapter // eslint-disable-line @typescript-eslint/prefer-optional-chain
+setObject(globalThis, ['ChameleonUltraJS', 'WebbleAdapter'], WebbleAdapter)
 
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }

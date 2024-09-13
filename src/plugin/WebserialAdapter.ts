@@ -5,6 +5,7 @@ import { serial, type SerialPort } from 'web-serial-polyfill'
 import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
 import { type EventEmitter } from '../EventEmitter'
 import { sleep } from '../helper'
+import { setObject } from '../iifeExportHelper'
 
 // https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/resource/tools/enter_dfu.py
 const WEBSERIAL_FILTERS = [
@@ -74,7 +75,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
             readable: this.port.readable.pipeThrough(new this.#TransformStream(new SlipDecodeTransformer(Buffer1))),
             writable: new this.#WritableStream({
               write: async (chunk: Buffer) => {
-                const writer = this.port?.writable.getWriter()
+                const writer = this.port?.writable?.getWriter()
                 if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
                 await writer.write(slipEncode(chunk, Buffer1))
                 writer.releaseLock()
@@ -108,7 +109,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
   }
 }
 
-;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).WebserialAdapter = WebserialAdapter // eslint-disable-line @typescript-eslint/prefer-optional-chain
+setObject(globalThis, ['ChameleonUltraJS', 'WebserialAdapter'], WebserialAdapter)
 
 enum SlipByte {
   END = 0xC0,
@@ -147,7 +148,7 @@ class SlipDecodeTransformer implements Transformer<Buffer, Buffer> {
  * @group Internal
  * @internal
  */
-export function slipEncode (buf: Buffer, Buffer1: typeof Buffer): Buffer {
+function slipEncode (buf: Buffer, Buffer1: typeof Buffer): Buffer {
   let len1 = buf.length
   for (const b of buf) if (b === SlipByte.END || b === SlipByte.ESC) len1++
   const encoded = Buffer1.alloc(len1 + 1)
@@ -171,7 +172,7 @@ export function slipEncode (buf: Buffer, Buffer1: typeof Buffer): Buffer {
  * @group Internal
  * @internal
  */
-export function slipDecode (buf: Buffer): Buffer {
+function slipDecode (buf: Buffer): Buffer {
   let len1 = 0
   for (let i = 0; i < buf.length; i++) {
     if (buf[i] === SlipByte.ESC) {

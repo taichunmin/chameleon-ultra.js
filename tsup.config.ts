@@ -3,15 +3,11 @@ import { nodeModulesPolyfillPlugin } from 'esbuild-plugins-node-modules-polyfill
 import pkg from './package.json' assert { type: 'json' }
 
 const sharedConfig: Options = {
-  cjsInterop: true,
   dts: true,
   env: { VERSION: pkg.version },
   format: ['cjs', 'esm', 'iife'],
   keepNames: true,
-  plugins: [],
   publicDir: 'public',
-  shims: true,
-  sourcemap: true,
   splitting: false,
   esbuildPlugins: [
     nodeModulesPolyfillPlugin({

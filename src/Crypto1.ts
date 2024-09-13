@@ -4,7 +4,7 @@
  */
 import { Buffer } from '@taichunmin/buffer'
 import _ from 'lodash'
-import { Mf1KeyType } from './enums'
+import { setObject } from './iifeExportHelper'
 
 const LF_POLY_ODD = 0x29CE5C
 const LF_POLY_EVEN = 0x870804
@@ -1106,7 +1106,7 @@ export default class Crypto1 {
     const checkedKeys = new Set<number>()
     let prevKeys = new Set<number>()
     for (let i = 0; i < attempts; i++) {
-      const acquired = await fnAcquire(i)
+      const acquired = (await fnAcquire(i)) ?? {}
 
       const [uid, nt, ar] = _.map(['uid', 'nt', 'ar'] as const, k => {
         if (!Buffer.isBuffer(acquired[k]) || acquired[k].length !== 4) throw new TypeError(`Failed to acquire darkside result: invalid ${k}`)
@@ -1143,11 +1143,16 @@ export default class Crypto1 {
   }
 }
 
-;(globalThis as any ?? {}).Crypto1 = Crypto1 // eslint-disable-line @typescript-eslint/prefer-optional-chain
+setObject(globalThis, ['Crypto1'], Crypto1)
 
 type UInt32Like = Buffer | number | string
 
 interface RecoverContextUint32Array {
   s: number
   d: Uint32Array
+}
+
+enum Mf1KeyType {
+  KEY_A = 0x60,
+  KEY_B = 0x61,
 }

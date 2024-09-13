@@ -2,6 +2,7 @@ import { type Buffer } from '@taichunmin/buffer'
 import createDebugger, { type Debugger } from 'debug'
 import _ from 'lodash'
 import { type PluginInstallContext as ChameleonCtx, type ChameleonPlugin } from '../ChameleonUltra'
+import { setObject } from '../iifeExportHelper'
 
 let Buffer1: typeof Buffer
 
@@ -28,7 +29,7 @@ export default class Debug implements ChameleonPlugin {
   }
 }
 
-;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).Debug = Debug // eslint-disable-line @typescript-eslint/prefer-optional-chain
+setObject(globalThis, ['ChameleonUltraJS', 'Debug'], Debug)
 
 type DebugFilter = (namespace: string, formatter: any, ...args: [] | any[]) => boolean
 
