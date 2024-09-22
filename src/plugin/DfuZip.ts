@@ -1,6 +1,7 @@
 import { Buffer } from '@taichunmin/buffer'
 import JSZip from 'jszip'
 import _ from 'lodash'
+import { setObject } from '../iifeExportHelper'
 
 export default class DfuZip {
   readonly #buf: Buffer
@@ -52,7 +53,7 @@ export default class DfuZip {
   }
 }
 
-;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).DfuZip = DfuZip // eslint-disable-line @typescript-eslint/prefer-optional-chain
+setObject(globalThis, ['ChameleonUltraJS', 'DfuZip'], DfuZip)
 
 export interface DfuImage {
   type: DfuImageType

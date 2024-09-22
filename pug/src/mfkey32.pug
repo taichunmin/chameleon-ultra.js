@@ -249,7 +249,9 @@ block script
             console.log(logs)
 
             // calc how many mfkey32v2 need to be run
-            logs = _.values(_.groupBy(logs, log => `${log.uid.toString('hex')}-${log.block}-${log.isKeyB ? 1 : 0}`))
+            const bufToHex = buf => buf?.toString('hex').toUpperCase()
+            const blockToSector = block => block < 128 ? block >>> 2 : 24 + (block >>> 4)
+            logs = _.values(_.groupBy(logs, log => `${bufToHex(log.uid)}-${blockToSector(log.block)}-${'AB'[+log.isKeyB]}`))
             console.log(logs)
             const recoverMax = _.sumBy(logs, arr => arr.length * (arr.length - 1) / 2)
             this.$set(this.ss, 'detects', [])
@@ -266,7 +268,7 @@ block script
                   try {
                     this.$set(this.ss, 'detects', _.unionWith(this.ss.detects, [{
                       block: r0.block,
-                      keyType: r0.isKeyB ? 1 : 0,
+                      keyType: +r0.isKeyB,
                       key: this.mfkey32v2(r0.uid, r0, r1),
                     }], _.isEqual))
                   } catch (err) {

@@ -2,6 +2,7 @@ import _ from 'lodash'
 import { SerialPort } from 'serialport'
 import { Duplex } from 'stream'
 import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
+import { setObject } from '../iifeExportHelper'
 
 async function findDevicePath (): Promise<string> {
   const device = _.find(await SerialPort.list(), { vendorId: '6868', productId: '8686' }) // ChameleonUltra
@@ -66,7 +67,7 @@ export default class SerialPortAdapter implements ChameleonPlugin {
   }
 }
 
-;((globalThis as any ?? {}).ChameleonUltraJS ?? {}).SerialPortAdapter = SerialPortAdapter // eslint-disable-line @typescript-eslint/prefer-optional-chain
+setObject(globalThis, ['ChameleonUltraJS', 'SerialPortAdapter'], SerialPortAdapter)
 
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }

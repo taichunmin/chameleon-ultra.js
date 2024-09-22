@@ -37,8 +37,8 @@ import {
   isValidFreqType,
   Mf1KeyType,
   MfuCmd,
-  MfuVerToMfuTagType,
   MfuTagType,
+  MfuVerToMfuTagType,
   RespStatus,
   TagType,
 } from './enums'
@@ -161,7 +161,7 @@ export class ChameleonUltra {
   /**
    * @hidden
    */
-  port?: ChameleonSerialPort<Buffer, Buffer>
+  port?: ChameleonSerialPort
 
   constructor () {
     this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
@@ -228,6 +228,7 @@ export class ChameleonUltra {
         // serial.readable pipeTo this.rxSink
         const promiseConnected = new Promise<Date>(resolve => this.emitter.once('connected', resolve))
         this.#rxSink = this.isDfu() ? new DfuRxSink(this) : new UltraRxSink(this)
+        if (_.isNil(this.port.readable)) throw new Error('this.port.readable is nil')
         void this.port.readable.pipeTo(new this.#WritableStream(this.#rxSink), this.#rxSink.abortController)
           .catch(err => { this.#debug('rxSink', err) })
 
@@ -1489,11 +1490,11 @@ export class ChameleonUltra {
    *   const keyType = Mf1KeyType.KEY_A
    *   const key = await Crypto1.darkside(
    *     async attempt => {
-   *       const accquired = await ultra.cmdMf1AcquireDarkside(block, keyType, attempt === 0)
-   *       console.log(_.mapValues(accquired, buf => Buffer.isBuffer(buf) ? buf.toString('hex') : buf))
+   *       const acquired = await ultra.cmdMf1AcquireDarkside(block, keyType, attempt === 0)
+   *       console.log(_.mapValues(acquired, buf => Buffer.isBuffer(buf) ? buf.toString('hex') : buf))
    *       if (acquired.status === DarksideStatus.LUCKY_AUTH_OK) throw new Error('LUCKY_AUTH_OK')
    *       if (acquired.status !== DarksideStatus.OK) throw new Error('card is not vulnerable to Darkside attack')
-   *       return accquired
+   *       return acquired
    *     },
    *     async key => {
    *       return await ultra.cmdMf1CheckBlockKey({ block, keyType, key })
@@ -3514,7 +3515,7 @@ export class ChameleonUltra {
     mask?: Buffer
     maxSectors?: number
     onChunkKeys?: (opts: { keys: Buffer[], mask: Buffer }) => Promise<unknown>
-  }): Promise<Buffer[]> {
+  }): Promise<Array<Buffer | null>> {
     let { chunkSize = 20, keys, mask = new Buffer(10), maxSectors = 40, onChunkKeys } = opts
     keys = _.chain(keys)
       .filter(key => Buffer.isBuffer(key) && key.length === 6)
@@ -3530,7 +3531,7 @@ export class ChameleonUltra {
     // console.log({ chunkSize, keys, mask, maxSectors })
     for (let i = maxSectors ?? 40; i < 40; i++) mask[i >>> 2] |= 3 << (6 - i % 4 * 2)
 
-    const foundKeys = new Array(maxSectors * 2).fill(null)
+    const foundKeys: Array<Buffer | null> = new Array(maxSectors * 2).fill(null)
     for (const chunkKeys of _.chunk(keys, chunkSize)) {
       await onChunkKeys?.({ keys: chunkKeys, mask })
       const tmp = await this.cmdMf1CheckKeysOfSectors({ keys: chunkKeys, mask })
@@ -4202,12 +4203,12 @@ class DfuRxSink implements UnderlyingSink<Buffer> {
   }
 }
 
-export interface ChameleonSerialPort<I, O> {
+export interface ChameleonSerialPort<I extends Uint8Array = Uint8Array, O extends Uint8Array = Uint8Array> {
   isDfu?: () => boolean
   isOpen?: () => boolean
   isSlip?: () => boolean
-  readable: ReadableStream<I>
-  writable: WritableStream<O>
+  readable: ReadableStream<I> | null
+  writable: WritableStream<O> | null
 }
 
 /**
