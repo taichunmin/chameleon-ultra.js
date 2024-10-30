@@ -3,16 +3,15 @@ import _ from 'lodash'
 import { TransformStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
 import { type bluetooth } from 'webbluetooth'
 import { type ChameleonPlugin, type ChameleonSerialPort, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
-import { DfuOp } from '../enums'
 import { sleep } from '../helper'
 import { setObject } from '../iifeExportHelper'
 
-const DFU_CTRL_CHAR_UUID = '8ec90001-f315-4f60-9fb8-838830daea50'
-const DFU_PACKT_CHAR_UUID = '8ec90002-f315-4f60-9fb8-838830daea50'
-const DFU_SERV_UUID = '0000fe59-0000-1000-8000-00805f9b34fb'
-const ULTRA_RX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
-const ULTRA_SERV_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
-const ULTRA_TX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
+const DFU_CTRL_CHAR_UUID = toCanonicalUUID('8ec90001-f315-4f60-9fb8-838830daea50')
+const DFU_PACKT_CHAR_UUID = toCanonicalUUID('8ec90002-f315-4f60-9fb8-838830daea50')
+const DFU_SERV_UUID = toCanonicalUUID('0000fe59-0000-1000-8000-00805f9b34fb')
+const ULTRA_RX_CHAR_UUID = toCanonicalUUID('6e400002-b5a3-f393-e0a9-e50e24dcca9e')
+const ULTRA_SERV_UUID = toCanonicalUUID('6e400001-b5a3-f393-e0a9-e50e24dcca9e')
+const ULTRA_TX_CHAR_UUID = toCanonicalUUID('6e400003-b5a3-f393-e0a9-e50e24dcca9e')
 
 const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
   { name: 'ChameleonUltra' }, // Chameleon Ultra
@@ -63,13 +62,13 @@ export default class WebbleAdapter implements ChameleonPlugin {
       if (ultra.$adapter !== adapter) return await next() // 代表已經被其他 adapter 接管
 
       try {
-        if (!adapter.isSupported()) throw new Error('WebSerial not supported')
+        if (!adapter.isSupported()) throw new Error('WebBLE not supported')
         this.device = await this.bluetooth?.requestDevice({
           filters: BLE_SCAN_FILTERS,
           optionalServices: [DFU_SERV_UUID, ULTRA_SERV_UUID],
         }).catch(err => { throw _.set(new Error(err.message), 'originalError', err) })
         if (_.isNil(this.device)) throw new Error('no device')
-        this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect(new Error('Webble gattserverdisconnected')) })
+        this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect(new Error('WebBLE gattserverdisconnected')) })
         this.#debug(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)
 
         for (let i = 0; i < 100; i++) {
@@ -79,9 +78,8 @@ export default class WebbleAdapter implements ChameleonPlugin {
         }
         if (!gattIsConnected()) throw new Error('Failed to connect gatt')
 
-        const servs = (await this.device.gatt?.getPrimaryServices()) ?? []
-        const servUuids = new Set(_.map(servs, serv => _.toLower(serv.uuid)))
-        this.#debug(`gattServUuids = ${JSON.stringify([...servUuids])}`)
+        const servs = new Map(_.map((await this.device?.gatt?.getPrimaryServices()) ?? [], serv => [toCanonicalUUID(serv.uuid), serv]))
+        this.#debug(`gattServUuids = ${JSON.stringify([...servs.keys()])}`)
 
         const txStream = new this.TransformStream()
         const txStreamOnNotify = async (event: any): Promise<void> => {
@@ -92,39 +90,49 @@ export default class WebbleAdapter implements ChameleonPlugin {
           await writer.write(this.Buffer?.fromView(dv))
           writer.releaseLock()
         }
-        if (servUuids.has(ULTRA_SERV_UUID)) {
+        if (servs.has(ULTRA_SERV_UUID)) {
           this.port = {
             isOpen: () => this.#isOpen,
             readable: txStream.readable,
             writable: new this.WritableStream(new UltraRxSink(this)),
           }
-          const serv = _.find(servs, serv => _.toLower(serv.uuid) === ULTRA_SERV_UUID)
+          const serv = servs.get(ULTRA_SERV_UUID)
           if (_.isNil(serv)) throw new Error(`Failed to find gatt serv, uuid = ${ULTRA_SERV_UUID}`)
-          const chars = await serv.getCharacteristics()
-          this.#debug(`gattCharUuids = ${JSON.stringify(_.map(chars, char => char.uuid))}`)
+          const chars = new Map(_.map((await serv.getCharacteristics()) ?? [], char => [toCanonicalUUID(char.uuid), char]))
+          this.#debug(`gattCharUuids = ${JSON.stringify([...chars.keys()])}`)
 
-          this.rxChar = await serv.getCharacteristic(ULTRA_RX_CHAR_UUID)
+          this.rxChar = chars.get(ULTRA_RX_CHAR_UUID)
           if (_.isNil(this.rxChar)) throw new Error(`Failed to find rxChar, uuid = ${ULTRA_TX_CHAR_UUID}`)
-          const txChar = await serv.getCharacteristic(ULTRA_TX_CHAR_UUID)
+          const txChar = chars.get(ULTRA_TX_CHAR_UUID)
           if (_.isNil(txChar)) throw new Error(`Failed to find txChar, uuid = ${ULTRA_RX_CHAR_UUID}`)
           txChar.addEventListener('characteristicvaluechanged', txStreamOnNotify)
           await txChar.startNotifications()
           this.#isOpen = true
-        } else if (servUuids.has(DFU_SERV_UUID)) {
+        } else if (servs.has(DFU_SERV_UUID)) {
           this.port = {
             isOpen: () => this.#isOpen,
             isDfu: () => true,
             readable: txStream.readable,
             writable: new this.WritableStream(new DfuRxSink(this)),
+            dfuWriteObject: async (buf: Buffer, mtu?: number): Promise<void> => {
+              if (_.isNil(this.packtChar) || _.isNil(this.Buffer)) throw new Error('this.#adapter.packtChar can not be null')
+              let chunk: Buffer | undefined
+              for (const buf1 of buf.chunk(20)) {
+                if (chunk?.length !== buf1.length) chunk = new this.Buffer(buf1.length)
+                chunk.set(buf1)
+                await this.packtChar.writeValueWithoutResponse(chunk.buffer)
+                await sleep(5) // wait for data to be processed
+              }
+            },
           }
-          const serv = _.find(servs, serv => _.toLower(serv.uuid) === DFU_SERV_UUID)
+          const serv = servs.get(DFU_SERV_UUID)
           if (_.isNil(serv)) throw new Error(`Failed to find gatt serv, uuid = ${DFU_SERV_UUID}`)
-          const chars = await serv.getCharacteristics()
-          this.#debug(`gattCharUuids = ${JSON.stringify(_.map(chars, char => char.uuid))}`)
+          const chars = new Map(_.map((await serv.getCharacteristics()) ?? [], char => [toCanonicalUUID(char.uuid), char]))
+          this.#debug(`gattCharUuids = ${JSON.stringify([...chars.keys()])}`)
 
-          this.packtChar = await serv.getCharacteristic(DFU_PACKT_CHAR_UUID)
+          this.packtChar = chars.get(DFU_PACKT_CHAR_UUID)
           if (_.isNil(this.packtChar)) throw new Error(`Failed to find packtChar, uuid = ${DFU_PACKT_CHAR_UUID}`)
-          const ctrlChar = this.ctrlChar = await serv.getCharacteristic(DFU_CTRL_CHAR_UUID)
+          const ctrlChar = this.ctrlChar = chars.get(DFU_CTRL_CHAR_UUID)
           if (_.isNil(ctrlChar)) throw new Error(`Failed to find ctrlChar, uuid = ${DFU_CTRL_CHAR_UUID}`)
           ctrlChar.addEventListener('characteristicvaluechanged', txStreamOnNotify)
           await ctrlChar.startNotifications()
@@ -218,18 +226,10 @@ class DfuRxSink implements UnderlyingSink<Buffer> {
   async write (chunk: Buffer): Promise<void> {
     try {
       if (chunk.length !== chunk.buffer.byteLength) chunk = chunk.slice()
-
-      if (chunk[0] === DfuOp.OBJECT_WRITE) {
-        if (_.isNil(this.#adapter.packtChar)) throw new Error('this.#adapter.packtChar can not be null')
-        if (chunk.length > 21) throw new Error('chunk.length > 20 (BLE MTU)')
-        await this.#adapter.packtChar.writeValueWithoutResponse(chunk.slice(1).buffer)
-        await sleep(10) // wait for data to be processed
-      } else {
-        if (_.isNil(this.#adapter.ctrlChar)) throw new Error('this.#adapter.ctrlChar can not be null')
-        if (chunk.length > 20) throw new Error('chunk.length > 20 (BLE MTU)')
-        this.#debug(`bleWrite = ${chunk.toString('hex')}`)
-        await this.#adapter.ctrlChar.writeValueWithResponse(chunk.buffer)
-      }
+      if (_.isNil(this.#adapter.ctrlChar)) throw new Error('this.#adapter.ctrlChar can not be null')
+      if (chunk.length > 20) throw new Error('chunk.length > 20 (BLE MTU)')
+      this.#debug(`bleWrite = ${chunk.toString('hex')}`)
+      await this.#adapter.ctrlChar.writeValueWithResponse(chunk.buffer)
     } catch (err) {
       this.#adapter.emitErr(err)
       throw err
@@ -258,4 +258,8 @@ interface BluetoothLEScanFilter<T = Buffer> {
   readonly services?: BluetoothServiceUUID[] | undefined
   readonly manufacturerData?: Array<BluetoothManufacturerDataFilter<T>> | undefined
   readonly serviceData?: Array<BluetoothServiceDataFilter<T>> | undefined
+}
+
+function toCanonicalUUID (uuid: any): string {
+  return _.toLower(_.isInteger(uuid) ? BluetoothUUID.canonicalUUID(uuid) : uuid)
 }

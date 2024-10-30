@@ -8,7 +8,7 @@
   "module": "./dist/index.mjs",
   "name": "chameleon-ultra.js",
   "type": "commonjs",
-  "version": "0.3.18",
+  "version": "0.3.19",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -20,7 +20,7 @@
     }
   ],
   "dependencies": {
-    "@taichunmin/buffer": "^0.13.7",
+    "@taichunmin/buffer": "^0.13.9",
     "@taichunmin/crc": "^0.0.14",
     "debug": "^4.3.7",
     "jszip": "^3.10.1",
@@ -34,10 +34,10 @@
     "@types/debug": "^4.1.12",
     "@types/finalhandler": "^1.2.3",
     "@types/html-minifier": "^4.0.5",
-    "@types/jest": "^29.5.13",
+    "@types/jest": "^29.5.14",
     "@types/livereload": "^0.9.5",
-    "@types/lodash": "^4.17.7",
-    "@types/node": "^22.5.5",
+    "@types/lodash": "^4.17.13",
+    "@types/node": "^22.8.4",
     "@types/pug": "^2.0.10",
     "@types/serve-static": "^1.15.7",
     "@types/uglify-js": "^3.17.5",
@@ -52,9 +52,9 @@
     "eslint": "^8.57.0",
     "eslint-config-love": "^43",
     "eslint-config-standard": "^17.1.0",
-    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-local-rules": "^3.0.2",
-    "eslint-plugin-n": "^17.10.2",
+    "eslint-plugin-n": "^17.11.1",
     "eslint-plugin-promise": "^7.1.0",
     "eslint-plugin-pug": "^1.2.5",
     "eslint-plugin-tsdoc": "^0.3.0",
@@ -72,13 +72,13 @@
     "supports-color": "^9.4.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "tsup": "^8.3.0",
-    "tsx": "^4.19.1",
-    "typedoc": "^0.26.7",
-    "typedoc-plugin-mdn-links": "^3.3.1",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typedoc": "^0.26.10",
+    "typedoc-plugin-mdn-links": "^3.3.5",
     "typedoc-plugin-missing-exports": "^3.0.0",
     "typedoc-plugin-rename-defaults": "^0.7.1",
-    "typescript": "^5.6.2",
+    "typescript": "^5.6.3",
     "utility-types": "^3.11.0"
   },
   "exports": {
@@ -88,54 +88,54 @@
         "import": "./dist/index.d.mts",
         "require": "./dist/index.d.ts"
       },
+      "script": "./dist/index.global.js",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "script": "./dist/index.global.js"
+      "require": "./dist/index.js"
     },
     "./Crypto1": {
       "types": {
         "import": "./dist/Crypto1.d.mts",
         "require": "./dist/Crypto1.d.ts"
       },
+      "script": "./dist/Crypto1.global.js",
       "import": "./dist/Crypto1.mjs",
-      "require": "./dist/Crypto1.js",
-      "script": "./dist/Crypto1.global.js"
+      "require": "./dist/Crypto1.js"
     },
     "./plugin/DfuZip": {
       "types": {
         "import": "./dist/plugin/DfuZip.d.mts",
         "require": "./dist/plugin/DfuZip.d.ts"
       },
+      "script": "./dist/plugin/DfuZip.global.js",
       "import": "./dist/plugin/DfuZip.mjs",
-      "require": "./dist/plugin/DfuZip.js",
-      "script": "./dist/plugin/DfuZip.global.js"
+      "require": "./dist/plugin/DfuZip.js"
     },
     "./plugin/SerialPortAdapter": {
       "types": {
         "import": "./dist/plugin/SerialPortAdapter.d.mts",
         "require": "./dist/plugin/SerialPortAdapter.d.ts"
       },
+      "script": "./dist/plugin/SerialPortAdapter.global.js",
       "import": "./dist/plugin/SerialPortAdapter.mjs",
-      "require": "./dist/plugin/SerialPortAdapter.js",
-      "script": "./dist/plugin/SerialPortAdapter.global.js"
+      "require": "./dist/plugin/SerialPortAdapter.js"
     },
     "./plugin/WebbleAdapter": {
       "types": {
         "import": "./dist/plugin/WebbleAdapter.d.mts",
         "require": "./dist/plugin/WebbleAdapter.d.ts"
       },
+      "script": "./dist/plugin/WebbleAdapter.global.js",
       "import": "./dist/plugin/WebbleAdapter.mjs",
-      "require": "./dist/plugin/WebbleAdapter.js",
-      "script": "./dist/plugin/WebbleAdapter.global.js"
+      "require": "./dist/plugin/WebbleAdapter.js"
     },
     "./plugin/WebserialAdapter": {
       "types": {
         "import": "./dist/plugin/WebserialAdapter.d.mts",
         "require": "./dist/plugin/WebserialAdapter.d.ts"
       },
+      "script": "./dist/plugin/WebserialAdapter.global.js",
       "import": "./dist/plugin/WebserialAdapter.mjs",
-      "require": "./dist/plugin/WebserialAdapter.js",
-      "script": "./dist/plugin/WebserialAdapter.global.js"
+      "require": "./dist/plugin/WebserialAdapter.js"
     }
   },
   "keywords": [
