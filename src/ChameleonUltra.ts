@@ -161,7 +161,7 @@ export class ChameleonUltra {
   /**
    * @hidden
    */
-  port?: ChameleonSerialPort
+  port: ChameleonSerialPort | null = null
 
   constructor () {
     this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
@@ -229,8 +229,7 @@ export class ChameleonUltra {
         const promiseConnected = new Promise<Date>(resolve => this.emitter.once('connected', resolve))
         this.#rxSink = this.isDfu() ? new DfuRxSink(this) : new UltraRxSink(this)
         if (_.isNil(this.port.readable)) throw new Error('this.port.readable is nil')
-        void this.port.readable.pipeTo(new this.#WritableStream(this.#rxSink), this.#rxSink.abortController)
-          .catch(err => { this.#debug('rxSink', err) })
+        void this.port.readable.pipeTo(new this.#WritableStream(this.#rxSink), _.pick(this.#rxSink.abortController, ['signal'])).catch(err => { this.#debug('rxSink', err) })
 
         const connectedAt = await promiseConnected
         this.#debug('core', `connected at ${connectedAt.toISOString()}`)
@@ -267,7 +266,7 @@ export class ChameleonUltra {
           while (isLocked()) await sleep(10)
           await this.port?.readable?.cancel(err).catch(this.#emitErr)
           await this.port?.writable?.close().catch(this.#emitErr)
-          delete this.port
+          this.port = null
 
           const [disconnectedAt, reason] = await promiseDisconnected
           this.#debug('core', `disconnected at ${disconnectedAt.toISOString()}, reason = ${reason ?? '?'}`)
@@ -658,10 +657,15 @@ export class ChameleonUltra {
   async cmdDfuEnter (): Promise<void> {
     const cmd = Cmd.ENTER_BOOTLOADER // cmd = 1010
     await this.#sendCmd({ cmd })
+    // wait 5s for device disconnected
     for (let i = 500; i >= 0; i--) {
       if (!this.isConnected()) break
-      if (i === 0) throw new Error('Failed to enter bootloader mode')
       await sleep(10)
+    }
+    // if device is still connected, disconnect it
+    if (this.isConnected()) {
+      await this.disconnect(new Error('Enter bootloader mode'))
+      await sleep(500)
     }
     this.#debug('core', 'cmdDfuEnter: device disconnected')
   }
@@ -4015,10 +4019,15 @@ export class ChameleonUltra {
   async dfuUpdateImage (image: DfuImage): Promise<void> {
     await this.dfuUpdateObject(DfuObjType.COMMAND, image.header)
     await this.dfuUpdateObject(DfuObjType.DATA, image.body)
+    // wait 5s for device disconnected
     for (let i = 500; i >= 0; i--) {
       if (!this.isConnected()) break
-      if (i === 0) throw new Error('Failed to reboot device')
       await sleep(10)
+    }
+    // if device is still connected, disconnect it
+    if (this.isConnected()) {
+      await this.disconnect(new Error('Reboot after DFU'))
+      await sleep(500)
     }
     this.#debug('core', 'rebooted')
   }
