@@ -8,15 +8,16 @@ import { setObject } from '../iifeExportHelper'
 
 const DFU_CTRL_CHAR_UUID = toCanonicalUUID('8ec90001-f315-4f60-9fb8-838830daea50')
 const DFU_PACKT_CHAR_UUID = toCanonicalUUID('8ec90002-f315-4f60-9fb8-838830daea50')
-const DFU_SERV_UUID = toCanonicalUUID('0000fe59-0000-1000-8000-00805f9b34fb')
+const DFU_SERV_UUID = toCanonicalUUID(0xFE59)
 const ULTRA_RX_CHAR_UUID = toCanonicalUUID('6e400002-b5a3-f393-e0a9-e50e24dcca9e')
 const ULTRA_SERV_UUID = toCanonicalUUID('6e400001-b5a3-f393-e0a9-e50e24dcca9e')
 const ULTRA_TX_CHAR_UUID = toCanonicalUUID('6e400003-b5a3-f393-e0a9-e50e24dcca9e')
 
 const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
   { name: 'ChameleonUltra' }, // Chameleon Ultra
-  { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
+  { namePrefix: 'CU-' }, // Chameleon Ultra DFU
   { services: [DFU_SERV_UUID] }, // Chameleon Ultra DFU
+  { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
 ]
 
 export default class WebbleAdapter implements ChameleonPlugin {
@@ -262,5 +263,7 @@ interface BluetoothLEScanFilter<T = Buffer> {
 }
 
 function toCanonicalUUID (uuid: any): string {
-  return _.toLower(_.isInteger(uuid) ? BluetoothUUID.canonicalUUID(uuid) : uuid)
+  if (_.isString(uuid) && /^[0-9a-fA-F]{1,8}$/.test(uuid)) uuid = _.parseInt(uuid, 16)
+  if (_.isSafeInteger(uuid)) uuid = BluetoothUUID.canonicalUUID(uuid)
+  return _.toLower(uuid)
 }
