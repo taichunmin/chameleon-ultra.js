@@ -8,28 +8,29 @@ import { setObject } from '../iifeExportHelper'
 
 const DFU_CTRL_CHAR_UUID = toCanonicalUUID('8ec90001-f315-4f60-9fb8-838830daea50')
 const DFU_PACKT_CHAR_UUID = toCanonicalUUID('8ec90002-f315-4f60-9fb8-838830daea50')
-const DFU_SERV_UUID = toCanonicalUUID('0000fe59-0000-1000-8000-00805f9b34fb')
+const DFU_SERV_UUID = toCanonicalUUID(0xFE59)
 const ULTRA_RX_CHAR_UUID = toCanonicalUUID('6e400002-b5a3-f393-e0a9-e50e24dcca9e')
 const ULTRA_SERV_UUID = toCanonicalUUID('6e400001-b5a3-f393-e0a9-e50e24dcca9e')
 const ULTRA_TX_CHAR_UUID = toCanonicalUUID('6e400003-b5a3-f393-e0a9-e50e24dcca9e')
 
 const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
   { name: 'ChameleonUltra' }, // Chameleon Ultra
-  { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
+  { namePrefix: 'CU-' }, // Chameleon Ultra DFU
   { services: [DFU_SERV_UUID] }, // Chameleon Ultra DFU
+  { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
 ]
 
 export default class WebbleAdapter implements ChameleonPlugin {
   #isOpen: boolean = false
   bluetooth?: typeof bluetooth
   Buffer?: typeof Buffer
-  ctrlChar?: BluetoothRemoteGATTCharacteristic
-  device?: BluetoothDevice
+  ctrlChar: BluetoothRemoteGATTCharacteristic | null = null
+  device: BluetoothDevice | null = null
   emitErr: (err: Error) => void
   name = 'adapter'
-  packtChar?: BluetoothRemoteGATTCharacteristic
-  port?: ChameleonSerialPort
-  rxChar?: BluetoothRemoteGATTCharacteristic
+  packtChar: BluetoothRemoteGATTCharacteristic | null = null
+  port: ChameleonSerialPort | null = null
+  rxChar: BluetoothRemoteGATTCharacteristic | null = null
   TransformStream: typeof TransformStream
   ultra?: ChameleonUltra
   WritableStream: typeof WritableStream
@@ -67,7 +68,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
         this.device = await this.bluetooth?.requestDevice({
           filters: BLE_SCAN_FILTERS,
           optionalServices: [DFU_SERV_UUID, ULTRA_SERV_UUID],
-        }).catch(err => { throw _.set(new Error(err.message), 'originalError', err) })
+        }).catch(err => { throw _.set(new Error(err.message), 'originalError', err) }) ?? null
         if (_.isNil(this.device)) throw new Error('no device')
         this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect(new Error('WebBLE gattserverdisconnected')) })
         this.#debug(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)
@@ -102,7 +103,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
           const chars = new Map(_.map((await serv.getCharacteristics()) ?? [], char => [toCanonicalUUID(char.uuid), char]))
           this.#debug(`gattCharUuids = ${JSON.stringify([...chars.keys()])}`)
 
-          this.rxChar = chars.get(ULTRA_RX_CHAR_UUID)
+          this.rxChar = chars.get(ULTRA_RX_CHAR_UUID) ?? null
           if (_.isNil(this.rxChar)) throw new Error(`Failed to find rxChar, uuid = ${ULTRA_TX_CHAR_UUID}`)
           const txChar = chars.get(ULTRA_TX_CHAR_UUID)
           if (_.isNil(txChar)) throw new Error(`Failed to find txChar, uuid = ${ULTRA_RX_CHAR_UUID}`)
@@ -131,9 +132,9 @@ export default class WebbleAdapter implements ChameleonPlugin {
           const chars = new Map(_.map((await serv.getCharacteristics()) ?? [], char => [toCanonicalUUID(char.uuid), char]))
           this.#debug(`gattCharUuids = ${JSON.stringify([...chars.keys()])}`)
 
-          this.packtChar = chars.get(DFU_PACKT_CHAR_UUID)
+          this.packtChar = chars.get(DFU_PACKT_CHAR_UUID) ?? null
           if (_.isNil(this.packtChar)) throw new Error(`Failed to find packtChar, uuid = ${DFU_PACKT_CHAR_UUID}`)
-          const ctrlChar = this.ctrlChar = chars.get(DFU_CTRL_CHAR_UUID)
+          const ctrlChar = this.ctrlChar = chars.get(DFU_CTRL_CHAR_UUID) ?? null
           if (_.isNil(ctrlChar)) throw new Error(`Failed to find ctrlChar, uuid = ${DFU_CTRL_CHAR_UUID}`)
           ctrlChar.addEventListener('characteristicvaluechanged', txStreamOnNotify)
           await ctrlChar.startNotifications()
@@ -154,12 +155,8 @@ export default class WebbleAdapter implements ChameleonPlugin {
 
       await next()
       this.#isOpen = false
-      delete this.port
-      delete this.rxChar
-      delete this.ctrlChar
-      delete this.packtChar
       if (gattIsConnected()) this.device.gatt?.disconnect()
-      delete this.device
+      for (const k of ['port', 'rxChar', 'ctrlChar', 'packtChar', 'device'] as const) this[k] = null
     })
 
     return adapter
@@ -262,5 +259,7 @@ interface BluetoothLEScanFilter<T = Buffer> {
 }
 
 function toCanonicalUUID (uuid: any): string {
-  return _.toLower(_.isInteger(uuid) ? BluetoothUUID.canonicalUUID(uuid) : uuid)
+  if (_.isString(uuid) && /^[0-9a-fA-F]{1,8}$/.test(uuid)) uuid = _.parseInt(uuid, 16)
+  if (_.isSafeInteger(uuid)) uuid = BluetoothUUID.canonicalUUID(uuid)
+  return _.toLower(uuid)
 }
