@@ -156,7 +156,7 @@ block script
                 // 有可能是因為不支援 cmdGetGitVersion
                 ultra.emitter.emit('error', _.set(new Error(err.message), 'originalError', err))
               }
-              await Swal.fire({ icon: 'info', text: 'Click OK to enter DFU mode then reconnect device!' })
+              await this.alert({ icon: 'info', text: 'Please reconnect device after reboot.' })
               this.showLoading({ text: 'Connect device...' })
               await ultra.cmdDfuEnter()
               if (!ultra.isConnected()) await ultra.connect()
@@ -207,7 +207,7 @@ block script
                 // 有可能是因為不支援 cmdGetGitVersion
                 ultra.emitter.emit('error', _.set(new Error(err.message), 'originalError', err))
               }
-              await Swal.fire({ icon: 'info', text: 'Click OK to enter DFU mode then reconnect device!' })
+              await this.alert({ icon: 'info', text: 'Please reconnect device after reboot.' })
               this.showLoading({ text: 'Connect device...' })
               await ultra.cmdDfuEnter()
               if (!ultra.isConnected()) await ultra.connect()
@@ -239,8 +239,11 @@ block script
         async sleep (t) {
           await new Promise(resolve => setTimeout(resolve, t))
         },
+        async alert (opts) {
+          return await new Promise(resolve => { Swal.fire({ ...opts, didDestroy: resolve }) })
+        },
         async confirm (text, confirmButtonText, cancelButtonText) {
-          return await new Promise((resolve, reject) => {
+          return await new Promise(resolve => {
             let isConfirmed = false
             const args = {
               cancelButtonColor: '#3085d6',

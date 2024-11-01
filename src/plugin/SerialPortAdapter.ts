@@ -11,9 +11,14 @@ async function findDevicePath (): Promise<string> {
 }
 
 export default class SerialPortAdapter implements ChameleonPlugin {
-  duplex?: SerialPort
+  duplex: SerialPort | null = null
   name = 'adapter'
+  readonly #emitErr: (err: Error) => void
   ultra?: ChameleonUltra
+
+  constructor () {
+    this.#emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+  }
 
   #debug (formatter: any, ...args: [] | any[]): void {
     this.ultra?.emitter.emit('debug', 'serial', formatter, ...args)
@@ -58,9 +63,9 @@ export default class SerialPortAdapter implements ChameleonPlugin {
     ultra.addHook('disconnect', async (ctx: any, next: () => Promise<unknown>) => {
       if (ultra.$adapter !== adapter || _.isNil(this.duplex)) return await next() // 代表已經被其他 adapter 接管
 
-      await next()
+      await next().catch(this.#emitErr)
       await new Promise<void>((resolve, reject) => { this.duplex?.close(err => { _.isNil(err) ? resolve() : reject(err) }) })
-      delete this.duplex
+      this.duplex = null
     })
 
     return adapter
