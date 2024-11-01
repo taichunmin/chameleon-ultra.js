@@ -6,17 +6,20 @@ import { type ChameleonPlugin, type ChameleonSerialPort, type ChameleonUltra, ty
 import { sleep } from '../helper'
 import { setObject } from '../iifeExportHelper'
 
+const DFU_SERV_UUID_16 = 0xFE59
 const DFU_CTRL_CHAR_UUID = toCanonicalUUID('8ec90001-f315-4f60-9fb8-838830daea50')
 const DFU_PACKT_CHAR_UUID = toCanonicalUUID('8ec90002-f315-4f60-9fb8-838830daea50')
-const DFU_SERV_UUID = toCanonicalUUID('0000fe59-0000-1000-8000-00805f9b34fb')
+const DFU_SERV_UUID = toCanonicalUUID(DFU_SERV_UUID_16)
 const ULTRA_RX_CHAR_UUID = toCanonicalUUID('6e400002-b5a3-f393-e0a9-e50e24dcca9e')
 const ULTRA_SERV_UUID = toCanonicalUUID('6e400001-b5a3-f393-e0a9-e50e24dcca9e')
 const ULTRA_TX_CHAR_UUID = toCanonicalUUID('6e400003-b5a3-f393-e0a9-e50e24dcca9e')
 
 const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
   { name: 'ChameleonUltra' }, // Chameleon Ultra
-  { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
+  { namePrefix: 'CU-' }, // Chameleon Ultra DFU
+  { services: [DFU_SERV_UUID_16] }, // Chameleon Ultra DFU
   { services: [DFU_SERV_UUID] }, // Chameleon Ultra DFU
+  { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
 ]
 
 export default class WebbleAdapter implements ChameleonPlugin {
