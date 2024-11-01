@@ -2,7 +2,7 @@ import { Buffer } from '@taichunmin/buffer'
 import crc16a from '@taichunmin/crc/crc16a'
 import crc32 from '@taichunmin/crc/crc32'
 import _ from 'lodash'
-import { type ReadableStream, type UnderlyingSink, type WritableStreamDefaultController, WritableStream } from 'node:stream/web'
+import { type ReadableStream, type WritableStream } from 'node:stream/web'
 import {
   type AnimationMode,
   type ButtonAction,
@@ -37,8 +37,8 @@ import {
   isValidFreqType,
   Mf1KeyType,
   MfuCmd,
-  NxpMfuType,
   MfuVerToNxpMfuType,
+  NxpMfuType,
   RespStatus,
   TagType,
 } from './enums'
@@ -129,14 +129,13 @@ function toUpperHex (buf: Buffer): string {
  * </details>
  */
 export class ChameleonUltra {
-  readonly #emitErr: (err: Error) => void
   #deviceMode: DeviceMode | null = null
   #isDisconnecting: boolean = false
-  #rxSink?: UltraRxSink | DfuRxSink
+  #readAsyncGenerator: ReadableToAsyncGenerator<Uint8Array> | null = null
   #supportedCmds: Set<Cmd> = new Set<Cmd>()
+  readonly #emitErr: (err: Error) => void
   readonly #hooks = new Map<string, ReturnType<typeof middlewareCompose>>()
   readonly #middlewares = new Map<string, MiddlewareComposeFn[]>()
-  readonly #WritableStream: typeof WritableStream
 
   /**
    * The supported version of SDK.
@@ -161,10 +160,9 @@ export class ChameleonUltra {
   /**
    * @hidden
    */
-  port?: ChameleonSerialPort
+  port: ChameleonSerialPort | null = null
 
   constructor () {
-    this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
     this.#emitErr = (err: Error): void => { this.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
   }
 
@@ -227,10 +225,10 @@ export class ChameleonUltra {
 
         // serial.readable pipeTo this.rxSink
         const promiseConnected = new Promise<Date>(resolve => this.emitter.once('connected', resolve))
-        this.#rxSink = this.isDfu() ? new DfuRxSink(this) : new UltraRxSink(this)
         if (_.isNil(this.port.readable)) throw new Error('this.port.readable is nil')
-        void this.port.readable.pipeTo(new this.#WritableStream(this.#rxSink), this.#rxSink.abortController)
-          .catch(err => { this.#debug('rxSink', err) })
+        this.#readAsyncGenerator = new ReadableToAsyncGenerator(this.port.readable)
+        if (this.isDfu()) void this.#startDfuReadAsyncGenerator()
+        else void this.#startUltraReadAsyncGenerator()
 
         const connectedAt = await promiseConnected
         this.#debug('core', `connected at ${connectedAt.toISOString()}`)
@@ -240,6 +238,63 @@ export class ChameleonUltra {
       this.#emitErr(err1)
       await this.disconnect(err1)
       throw err1
+    }
+  }
+
+  async #startUltraReadAsyncGenerator (): Promise<void> {
+    const generator = this.#readAsyncGenerator
+    if (_.isNil(generator)) throw new Error('this.#readAsyncGenerator is nil')
+
+    try {
+      const bufs: Buffer[] = []
+      this.emitter.emit('connected', new Date())
+      for await (const chunk of generator) {
+        bufs.push(Buffer.isBuffer(chunk) ? chunk : Buffer.fromView(chunk))
+        let concated = Buffer.concat(bufs.splice(0, bufs.length))
+        try {
+          while (concated.length > 0) {
+            const sofIdx = concated.indexOf(START_OF_FRAME)
+            if (sofIdx < 0) break // end, SOF not found
+            else if (sofIdx > 0) concated = concated.subarray(sofIdx) // ignore bytes before SOF
+            // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
+            if (concated.length < 10) break // end, buf.length < 10
+            if (bufLrc(concated.subarray(2, 8)) !== concated[8]) {
+              concated = concated.subarray(1) // skip 1 byte, head lrc mismatch
+              continue
+            }
+            const lenFrame = concated.readUInt16BE(6) + 10
+            if (concated.length < lenFrame) break // end, wait for more data
+            if (bufLrc(concated.subarray(9, lenFrame - 1)) !== concated[lenFrame - 1]) {
+              concated = concated.subarray(1) // skip 1 byte, data lrc mismatch
+              continue
+            }
+            this.emitter.emit('resp', new UltraFrame(concated.slice(0, lenFrame)))
+            concated = concated.subarray(lenFrame)
+          }
+        } finally {
+          if (concated.length > 0) bufs.push(concated)
+        }
+      }
+      this.emitter.emit('disconnected', new Date())
+    } catch (err) {
+      this.#emitErr(err)
+      this.emitter.emit('disconnected', new Date(), err.message)
+    }
+  }
+
+  async #startDfuReadAsyncGenerator (): Promise<void> {
+    const generator = this.#readAsyncGenerator
+    if (_.isNil(generator)) throw new Error('this.#readAsyncGenerator is nil')
+
+    try {
+      this.emitter.emit('connected', new Date())
+      for await (const chunk of generator) {
+        this.emitter.emit('resp', new DfuFrame(Buffer.isBuffer(chunk) ? chunk : Buffer.fromView(chunk)))
+      }
+      this.emitter.emit('disconnected', new Date())
+    } catch (err) {
+      this.#emitErr(err)
+      this.emitter.emit('disconnected', new Date(), err.message)
     }
   }
 
@@ -262,12 +317,10 @@ export class ChameleonUltra {
           const promiseDisconnected: Promise<[Date, string | undefined]> = this.isConnected() ? new Promise(resolve => {
             this.emitter.once('disconnected', (disconnected: Date, reason?: string) => { resolve([disconnected, reason]) })
           }) : Promise.resolve([new Date(), err.message])
-          const isLocked = (): boolean => this.port?.readable?.locked ?? false
-          if (isLocked()) this.#rxSink?.abortController.abort(err)
-          while (isLocked()) await sleep(10)
-          await this.port?.readable?.cancel(err).catch(this.#emitErr)
+          await this.#readAsyncGenerator?.reader?.cancel(err).catch(this.#emitErr)
           await this.port?.writable?.close().catch(this.#emitErr)
-          delete this.port
+          this.#debug('core', `locked: readable = ${this.port?.readable?.locked ?? '?'}, writable = ${this.port?.writable?.locked ?? '?'}`)
+          this.port = null
 
           const [disconnectedAt, reason] = await promiseDisconnected
           this.#debug('core', `disconnected at ${disconnectedAt.toISOString()}, reason = ${reason ?? '?'}`)
@@ -347,7 +400,7 @@ export class ChameleonUltra {
   }): Promise<() => Promise<T>> {
     try {
       if (!this.isConnected()) await this.connect()
-      if (_.isNil(this.#rxSink)) throw new Error('rxSink is undefined')
+      if (_.isNil(this.#readAsyncGenerator)) throw new Error('#readAsyncGenerator is undefined')
       if (_.isNil(args.timeout)) args.timeout = this.readDefaultTimeout
       const respGenerator = new EventAsyncGenerator<T>()
       this.emitter.on('resp', respGenerator.onData)
@@ -658,10 +711,15 @@ export class ChameleonUltra {
   async cmdDfuEnter (): Promise<void> {
     const cmd = Cmd.ENTER_BOOTLOADER // cmd = 1010
     await this.#sendCmd({ cmd })
+    // wait 5s for device disconnected
     for (let i = 500; i >= 0; i--) {
       if (!this.isConnected()) break
-      if (i === 0) throw new Error('Failed to enter bootloader mode')
       await sleep(10)
+    }
+    // if device is still connected, disconnect it
+    if (this.isConnected()) {
+      await this.disconnect(new Error('Enter bootloader mode'))
+      await sleep(500)
     }
     this.#debug('core', 'cmdDfuEnter: device disconnected')
   }
@@ -4015,10 +4073,15 @@ export class ChameleonUltra {
   async dfuUpdateImage (image: DfuImage): Promise<void> {
     await this.dfuUpdateObject(DfuObjType.COMMAND, image.header)
     await this.dfuUpdateObject(DfuObjType.DATA, image.body)
+    // wait 5s for device disconnected
     for (let i = 500; i >= 0; i--) {
       if (!this.isConnected()) break
-      if (i === 0) throw new Error('Failed to reboot device')
       await sleep(10)
+    }
+    // if device is still connected, disconnect it
+    if (this.isConnected()) {
+      await this.disconnect(new Error('Reboot after DFU'))
+      await sleep(500)
     }
     this.#debug('core', 'rebooted')
   }
@@ -4077,109 +4140,6 @@ const DfuErrMsg = new Map<number, string>([
   [DfuResCode.VERIFICATION_FAILED, 'The hash of the received firmware image does not match the hash in the init packet'],
   [DfuResCode.INSUFFICIENT_SPACE, 'The available space on the device is insufficient to hold the firmware'],
 ])
-
-class UltraRxSink implements UnderlyingSink<Buffer> {
-  #closed: boolean = false
-  #started: boolean = false
-  abortController: AbortController = new AbortController()
-  bufs: Buffer[] = []
-  readonly #ultra: ChameleonUltra
-
-  constructor (ultra: ChameleonUltra) {
-    this.#ultra = ultra
-  }
-
-  start (controller: WritableStreamDefaultController): void {
-    if (this.#closed) throw new Error('UltraRxSink is closed')
-    if (this.#started) throw new Error('UltraRxSink is already started')
-    this.#ultra.emitter.emit('connected', new Date())
-    this.#started = true
-  }
-
-  write (chunk: Buffer, controller: WritableStreamDefaultController): void {
-    if (!this.#started || this.#closed) return
-    if (!Buffer.isBuffer(chunk)) chunk = Buffer.fromView(chunk)
-    this.bufs.push(chunk)
-    let buf = Buffer.concat(this.bufs.splice(0, this.bufs.length))
-    try {
-      while (buf.length > 0) {
-        const sofIdx = buf.indexOf(START_OF_FRAME)
-        if (sofIdx < 0) break // end, SOF not found
-        else if (sofIdx > 0) buf = buf.subarray(sofIdx) // ignore bytes before SOF
-        // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
-        if (buf.length < 10) break // end, buf.length < 10
-        if (bufLrc(buf.subarray(2, 8)) !== buf[8]) {
-          buf = buf.subarray(1) // skip 1 byte, head lrc mismatch
-          continue
-        }
-        const lenFrame = buf.readUInt16BE(6) + 10
-        if (buf.length < lenFrame) break // end, wait for more data
-        if (bufLrc(buf.subarray(9, lenFrame - 1)) !== buf[lenFrame - 1]) {
-          buf = buf.subarray(1) // skip 1 byte, data lrc mismatch
-          continue
-        }
-        this.#ultra.emitter.emit('resp', new UltraFrame(buf.slice(0, lenFrame)))
-        buf = buf.subarray(lenFrame)
-      }
-    } finally {
-      if (buf.length > 0) this.bufs.push(buf)
-    }
-  }
-
-  close (): void {
-    if (this.#closed) return
-    this.#closed = true
-    this.abortController.abort()
-    this.#ultra.emitter.emit('disconnected', new Date())
-  }
-
-  abort (reason: any): void {
-    if (this.#closed) return
-    this.#closed = true
-    this.abortController.abort()
-    this.#ultra.emitter.emit('disconnected', new Date(), reason)
-  }
-}
-
-class DfuRxSink implements UnderlyingSink<Buffer> {
-  #closed: boolean = false
-  #started: boolean = false
-  abortController: AbortController = new AbortController()
-  bufs: Buffer[] = []
-  readonly #ultra: ChameleonUltra
-
-  constructor (dfu: ChameleonUltra) {
-    this.#ultra = dfu
-  }
-
-  start (controller: WritableStreamDefaultController): void {
-    if (this.#closed) throw new Error('DfuRxSink is closed')
-    if (this.#started) throw new Error('DfuRxSink is already started')
-    this.#ultra.emitter.emit('connected', new Date())
-    this.#started = true
-  }
-
-  write (chunk: Buffer, controller: WritableStreamDefaultController): void {
-    if (!this.#started || this.#closed) return
-    if (!Buffer.isBuffer(chunk)) chunk = Buffer.fromView(chunk)
-    const resp = new DfuFrame(chunk)
-    this.#ultra.emitter.emit('resp', resp)
-  }
-
-  close (): void {
-    if (this.#closed) return
-    this.#closed = true
-    this.abortController.abort()
-    this.#ultra.emitter.emit('disconnected', new Date())
-  }
-
-  abort (reason: any): void {
-    if (this.#closed) return
-    this.#closed = true
-    this.abortController.abort()
-    this.#ultra.emitter.emit('disconnected', new Date(), reason)
-  }
-}
 
 export interface ChameleonSerialPort<I extends Uint8Array = Uint8Array, O extends Uint8Array = Uint8Array> {
   dfuWriteObject?: (buf: Buffer, mtu?: number) => Promise<void>
@@ -4302,6 +4262,30 @@ function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
   const data = resp.subarray(0, -2)
   if (crc16a(data) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
   return data
+}
+
+class ReadableToAsyncGenerator<T> implements AsyncGenerator<T> {
+  readonly reader: ReadableStreamDefaultReader<T>
+
+  constructor (readable: ReadableStream<T>) {
+    this.reader = readable.getReader()
+  }
+
+  async next (): Promise<IteratorResult<T>> {
+    return await this.reader.read() as IteratorResult<T>
+  }
+
+  async return (): Promise<IteratorResult<T>> {
+    await this.reader.cancel()
+    return { done: true, value: undefined }
+  }
+
+  async throw (err: any): Promise<IteratorResult<T>> {
+    await this.reader.cancel(err)
+    return { done: true, value: undefined }
+  }
+
+  [Symbol.asyncIterator] (): AsyncGenerator<T> { return this }
 }
 
 export { Decoder as ResponseDecoder }

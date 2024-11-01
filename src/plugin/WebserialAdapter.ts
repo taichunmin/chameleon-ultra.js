@@ -22,7 +22,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
   #isDfu: boolean = false
   #isOpen: boolean = false
   name = 'adapter'
-  port?: SerialPort1
+  port: SerialPort1 | null = null
   readonly #emitErr: (err: Error) => void
   readonly #serial: typeof serial
   readonly #TransformStream: typeof TransformStream
@@ -118,7 +118,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
       await this.port.close().catch(this.#emitErr)
       this.#isOpen = false
       this.#isDfu = false
-      delete this.port
+      this.port = null
     })
 
     return adapter
