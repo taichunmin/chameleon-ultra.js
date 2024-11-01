@@ -15,6 +15,7 @@ const ULTRA_TX_CHAR_UUID = toCanonicalUUID('6e400003-b5a3-f393-e0a9-e50e24dcca9e
 
 const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
   { name: 'ChameleonUltra' }, // Chameleon Ultra
+  { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
   { services: [DFU_SERV_UUID] }, // Chameleon Ultra DFU
 ]
 
