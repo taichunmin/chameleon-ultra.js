@@ -658,11 +658,14 @@ export class ChameleonUltra {
   async cmdDfuEnter (): Promise<void> {
     const cmd = Cmd.ENTER_BOOTLOADER // cmd = 1010
     await this.#sendCmd({ cmd })
+    // wait 5s for device disconnected
     for (let i = 500; i >= 0; i--) {
       if (!this.isConnected()) break
       if (i === 0) throw new Error('Failed to enter bootloader mode')
       await sleep(10)
     }
+    // if device is still connected, disconnect it
+    if (this.isConnected()) await this.disconnect(new Error('Enter bootloader mode'))
     this.#debug('core', 'cmdDfuEnter: device disconnected')
   }
 
@@ -4015,11 +4018,14 @@ export class ChameleonUltra {
   async dfuUpdateImage (image: DfuImage): Promise<void> {
     await this.dfuUpdateObject(DfuObjType.COMMAND, image.header)
     await this.dfuUpdateObject(DfuObjType.DATA, image.body)
+    // wait 5s for device disconnected
     for (let i = 500; i >= 0; i--) {
       if (!this.isConnected()) break
       if (i === 0) throw new Error('Failed to reboot device')
       await sleep(10)
     }
+    // if device is still connected, disconnect it
+    if (this.isConnected()) await this.disconnect(new Error('Reboot after DFU'))
     this.#debug('core', 'rebooted')
   }
 }
