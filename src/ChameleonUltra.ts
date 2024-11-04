@@ -131,7 +131,7 @@ function toUpperHex (buf: Buffer): string {
 export class ChameleonUltra {
   #deviceMode: DeviceMode | null = null
   #isDisconnecting: boolean = false
-  #readAsyncGenerator: ReadableToAsyncGenerator<Uint8Array> | null = null
+  #rxReader: ReadableStreamDefaultReader<Uint8Array> | null = null
   #supportedCmds: Set<Cmd> = new Set<Cmd>()
   readonly #emitErr: (err: Error) => void
   readonly #hooks = new Map<string, ReturnType<typeof middlewareCompose>>()
@@ -226,9 +226,9 @@ export class ChameleonUltra {
         // serial.readable pipeTo this.rxSink
         const promiseConnected = new Promise<Date>(resolve => this.emitter.once('connected', resolve))
         if (_.isNil(this.port.readable)) throw new Error('this.port.readable is nil')
-        this.#readAsyncGenerator = new ReadableToAsyncGenerator(this.port.readable)
-        if (this.isDfu()) void this.#startDfuReadAsyncGenerator()
-        else void this.#startUltraReadAsyncGenerator()
+        this.#rxReader = this.port.readable.getReader()
+        if (this.isDfu()) void this.#dfuStartReading()
+        else void this.#ultraStartReading()
 
         const connectedAt = await promiseConnected
         this.#debug('core', `connected at ${connectedAt.toISOString()}`)
@@ -241,14 +241,16 @@ export class ChameleonUltra {
     }
   }
 
-  async #startUltraReadAsyncGenerator (): Promise<void> {
-    const generator = this.#readAsyncGenerator
-    if (_.isNil(generator)) throw new Error('this.#readAsyncGenerator is nil')
+  async #ultraStartReading (): Promise<void> {
+    const reader = this.#rxReader
+    if (_.isNil(reader)) throw new Error('this.#rxReader is nil')
 
     try {
       const bufs: Buffer[] = []
       this.emitter.emit('connected', new Date())
-      for await (const chunk of generator) {
+      while (true) {
+        const { done, value: chunk } = await reader.read().catch(err => { throw _.set(new Error(err.message), 'originalError', err) })
+        if (_.isNil(chunk)) break
         bufs.push(Buffer.isBuffer(chunk) ? chunk : Buffer.fromView(chunk))
         let concated = Buffer.concat(bufs.splice(0, bufs.length))
         try {
@@ -274,6 +276,7 @@ export class ChameleonUltra {
         } finally {
           if (concated.length > 0) bufs.push(concated)
         }
+        if (done) break
       }
       this.emitter.emit('disconnected', new Date())
     } catch (err) {
@@ -282,14 +285,17 @@ export class ChameleonUltra {
     }
   }
 
-  async #startDfuReadAsyncGenerator (): Promise<void> {
-    const generator = this.#readAsyncGenerator
-    if (_.isNil(generator)) throw new Error('this.#readAsyncGenerator is nil')
+  async #dfuStartReading (): Promise<void> {
+    const reader = this.#rxReader
+    if (_.isNil(reader)) throw new Error('this.#rxReader is nil')
 
     try {
       this.emitter.emit('connected', new Date())
-      for await (const chunk of generator) {
+      while (true) {
+        const { done, value: chunk } = await reader.read().catch(err => { throw _.set(new Error(err.message), 'originalError', err) })
+        if (_.isNil(chunk)) break
         this.emitter.emit('resp', new DfuFrame(Buffer.isBuffer(chunk) ? chunk : Buffer.fromView(chunk)))
+        if (done) break
       }
       this.emitter.emit('disconnected', new Date())
     } catch (err) {
@@ -317,13 +323,14 @@ export class ChameleonUltra {
           const promiseDisconnected: Promise<[Date, string | undefined]> = this.isConnected() ? new Promise(resolve => {
             this.emitter.once('disconnected', (disconnected: Date, reason?: string) => { resolve([disconnected, reason]) })
           }) : Promise.resolve([new Date(), err.message])
-          await this.#readAsyncGenerator?.reader?.cancel(err).catch(this.#emitErr)
+          await this.#rxReader?.cancel(err).catch(this.#emitErr)
+          if (this.port?.readable?.locked) this.#rxReader?.releaseLock() // if cancel() not implemented
           await this.port?.writable?.close().catch(this.#emitErr)
           this.#debug('core', `locked: readable = ${this.port?.readable?.locked ?? '?'}, writable = ${this.port?.writable?.locked ?? '?'}`)
           this.port = null
 
           const [disconnectedAt, reason] = await promiseDisconnected
-          this.#debug('core', `disconnected at ${disconnectedAt.toISOString()}, reason = ${reason ?? '?'}`)
+          this.#debug('core', `disconnected at ${disconnectedAt.toISOString()}, reason = ${reason ?? err.message}`)
         } catch (err) {
           throw _.merge(new Error(err.message ?? 'Failed to disconnect'), { originalError: err })
         }
@@ -400,7 +407,7 @@ export class ChameleonUltra {
   }): Promise<() => Promise<T>> {
     try {
       if (!this.isConnected()) await this.connect()
-      if (_.isNil(this.#readAsyncGenerator)) throw new Error('#readAsyncGenerator is undefined')
+      if (_.isNil(this.#rxReader)) throw new Error('#rxReader is undefined')
       if (_.isNil(args.timeout)) args.timeout = this.readDefaultTimeout
       const respGenerator = new EventAsyncGenerator<T>()
       this.emitter.on('resp', respGenerator.onData)
@@ -4262,30 +4269,6 @@ function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
   const data = resp.subarray(0, -2)
   if (crc16a(data) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
   return data
-}
-
-class ReadableToAsyncGenerator<T> implements AsyncGenerator<T> {
-  readonly reader: ReadableStreamDefaultReader<T>
-
-  constructor (readable: ReadableStream<T>) {
-    this.reader = readable.getReader()
-  }
-
-  async next (): Promise<IteratorResult<T>> {
-    return await this.reader.read() as IteratorResult<T>
-  }
-
-  async return (): Promise<IteratorResult<T>> {
-    await this.reader.cancel()
-    return { done: true, value: undefined }
-  }
-
-  async throw (err: any): Promise<IteratorResult<T>> {
-    await this.reader.cancel(err)
-    return { done: true, value: undefined }
-  }
-
-  [Symbol.asyncIterator] (): AsyncGenerator<T> { return this }
 }
 
 export { Decoder as ResponseDecoder }
