@@ -30,12 +30,12 @@ export default class BufferMockAdapter implements ChameleonPlugin {
 
       this.port = {
         isOpen: () => true,
-        readable: new ReadableStream1({
+        readable: new ReadableStream1<Buffer>({
           start: async controller => {
             this.controller = controller
           },
         }),
-        writable: new WritableStream1({
+        writable: new WritableStream1<Buffer>({
           write: async chunk => {
             this.recv.push(Buffer.isBuffer(chunk) ? chunk : Buffer.fromView(chunk))
             if (this.sendIdx >= this.send.length) return // no more data to send

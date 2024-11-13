@@ -131,7 +131,7 @@ function toUpperHex (buf: Buffer): string {
 export class ChameleonUltra {
   #deviceMode: DeviceMode | null = null
   #isDisconnecting: boolean = false
-  #rxReader: ReadableStreamDefaultReader<Uint8Array> | null = null
+  #rxReader: ReadableStreamDefaultReader<Buffer> | null = null
   #supportedCmds: Set<Cmd> = new Set<Cmd>()
   readonly #emitErr: (err: Error) => void
   readonly #hooks = new Map<string, ReturnType<typeof middlewareCompose>>()
@@ -770,7 +770,7 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
     const data = (await readResp()).data
-    return (_.toUpper(data.toString('hex')).match(/.{2}/g) ?? []).join(':')
+    return (toUpperHex(data).match(/.{2}/g) ?? []).join(':')
   }
 
   /**
@@ -3602,7 +3602,42 @@ export class ChameleonUltra {
   }
 
   /**
-   * Read the sector data of Mifare Classic by given keys.
+   * Read a block data of Mifare Classic by given keys.
+   * @param block - The block number to be read.
+   * @param keys - The keys dictionary.
+   * @returns The block data read from a mifare tag. An error is thrown if the block cannot be read.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
+   *   const data = await ultra.mf1ReadBlockByKeys(0, keys)
+   *   console.log(data.toString('hex'))
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mf1ReadBlockByKeys (block: number, keys: Buffer[]): Promise<Buffer> {
+    const sector = Math.trunc(block / 4)
+    const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
+    if (_.isEmpty(sectorKey)) throw new Error('No valid key')
+    for (const keyType of [Mf1KeyType.KEY_B, Mf1KeyType.KEY_A]) {
+      const key = sectorKey[keyType]
+      if (_.isNil(key)) continue
+      try {
+        return await this.cmdMf1ReadBlock({ block, keyType, key })
+      } catch (err) {
+        if (!this.isConnected()) throw err
+        this.#debug('mf1', `Failed to read block ${block} with ${Mf1KeyType[keyType]} = ${toUpperHex(key)}`)
+      }
+    }
+    throw new Error(`Failed to read block ${block}`)
+  }
+
+  /**
+   * Read a sector data of Mifare Classic by given keys.
    * @param sector - The sector number to be read.
    * @param keys - The keys dictionary.
    * @returns The sector data and the read status of each block.
@@ -3635,7 +3670,7 @@ export class ChameleonUltra {
           break
         } catch (err) {
           if (!this.isConnected()) throw err
-          this.#debug('mf1', `Failed to read block ${sector * 4 + i} with ${Mf1KeyType[keyType]} = ${key.toString('hex')}`)
+          this.#debug('mf1', `Failed to read block ${sector * 4 + i} with ${Mf1KeyType[keyType]} = ${toUpperHex(key)}`)
         }
       }
     }
@@ -3645,7 +3680,46 @@ export class ChameleonUltra {
   }
 
   /**
-   * Write the sector data of Mifare Classic by given keys.
+   * Write a block data to Mifare Classic by given keys.
+   * @param block - The block number to be written.
+   * @param keys - The keys dictionary.
+   * @param data - Block data
+   * @returns An error is thrown if the block cannot be write.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
+   *   const data = Buffer.from('00000000000000000000000000000000', 'hex')
+   *   await ultra.mf1WriteBlockByKeys(1, keys, data)
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async mf1WriteBlockByKeys (block: number, keys: Buffer[], data: Buffer): Promise<void> {
+    bufIsLenOrFail(data, 16, 'data')
+    if (block % 4 === 3 && !this.mf1IsValidAcl(data)) throw new TypeError('Invalid ACL bytes of data')
+    const sector = Math.trunc(block / 4)
+    const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
+    if (_.isEmpty(sectorKey)) throw new Error('No valid key')
+    for (const keyType of [Mf1KeyType.KEY_B, Mf1KeyType.KEY_A]) {
+      const key = sectorKey[keyType]
+      if (_.isNil(key)) continue
+      try {
+        await this.cmdMf1WriteBlock({ block, keyType, key, data })
+        return
+      } catch (err) {
+        if (!this.isConnected()) throw err
+        this.#debug('mf1', `Failed to write block ${block} with ${Mf1KeyType[keyType]} = ${toUpperHex(key)}`)
+      }
+    }
+    throw new Error(`Failed to write block ${block}`)
+  }
+
+  /**
+   * Write a sector data to Mifare Classic by given keys.
    * @param sector - The sector number to be written.
    * @param keys - The key dictionary.
    * @param data - Sector data
@@ -3681,12 +3755,12 @@ export class ChameleonUltra {
         const key = sectorKey[keyType]
         if (_.isNil(key)) continue
         try {
-          await this.cmdMf1WriteBlock({ block: sector * 4 + i, keyType, key, data: data.slice(i * 16, i * 16 + 16) })
+          await this.cmdMf1WriteBlock({ block: sector * 4 + i, keyType, key, data: data.subarray(i * 16).subarray(0, 16) })
           success[i] = true
           break
         } catch (err) {
           if (!this.isConnected()) throw err
-          this.#debug('mf1', `Failed to write block ${sector * 4 + i} with ${Mf1KeyType[keyType]} = ${key.toString('hex')}`)
+          this.#debug('mf1', `Failed to write block ${sector * 4 + i} with ${Mf1KeyType[keyType]} = ${toUpperHex(key)}`)
         }
       }
     }
@@ -4010,7 +4084,7 @@ export class ChameleonUltra {
     const uploaded = await this.cmdDfuSelectObject(type)
     this.#debug('core', `uploaded = ${JSON.stringify(uploaded)}`)
     let buf1 = buf.subarray(0, uploaded.offset)
-    let crc1 = { offset: buf1.length, crc32: crc32(buf1) }
+    let crc1 = { offset: buf1.length, crc32: crc32(buf1 as any) }
     let crcFailCnt = 0
     if (!_.isMatch(uploaded, crc1)) { // abort
       this.#debug('core', 'aborted')
@@ -4025,7 +4099,7 @@ export class ChameleonUltra {
       // write object
       await this.port.dfuWriteObject(buf1, mtu)
       // check crc
-      const crc2 = { offset: uploaded.offset + buf1.length, crc32: crc32(buf1, uploaded.crc32) }
+      const crc2 = { offset: uploaded.offset + buf1.length, crc32: crc32(buf1 as any, uploaded.crc32) }
       crc1 = await this.cmdDfuGetObjectCrc()
       if (!_.isMatch(crc1, crc2)) {
         crcFailCnt++
@@ -4148,7 +4222,7 @@ const DfuErrMsg = new Map<number, string>([
   [DfuResCode.INSUFFICIENT_SPACE, 'The available space on the device is insufficient to hold the firmware'],
 ])
 
-export interface ChameleonSerialPort<I extends Uint8Array = Uint8Array, O extends Uint8Array = Uint8Array> {
+export interface ChameleonSerialPort<I extends Buffer = Buffer, O extends Buffer = Buffer> {
   dfuWriteObject?: (buf: Buffer, mtu?: number) => Promise<void>
   isDfu?: () => boolean
   isOpen?: () => boolean
@@ -4185,13 +4259,13 @@ class UltraFrame {
     // sof + sof lrc + cmd (2) + status (2) + data len (2) + head lrc + data + data lrc
     const { buf } = resp
     return [
-      buf.slice(0, 2).toString('hex'), // sof + sof lrc
-      buf.slice(2, 4).toString('hex'), // cmd
-      buf.slice(4, 6).toString('hex'), // status
-      buf.slice(6, 8).toString('hex'), // data len
-      buf.slice(8, 9).toString('hex'), // head lrc
-      buf.readUInt16BE(6) > 0 ? buf.slice(9, -1).toString('hex') : '(no data)', // data
-      buf.slice(-1).toString('hex'), // data lrc
+      toUpperHex(buf.subarray(0, 2)), // sof + sof lrc
+      toUpperHex(buf.subarray(2, 4)), // cmd
+      toUpperHex(buf.subarray(4, 6)), // status
+      toUpperHex(buf.subarray(6, 8)), // data len
+      toUpperHex(buf.subarray(8, 9)), // head lrc
+      buf.readUInt16BE(6) > 0 ? toUpperHex(buf.subarray(9, -1)) : '(no data)', // data
+      toUpperHex(buf.subarray(-1)), // data lrc
     ].join(' ')
   }
 
@@ -4214,9 +4288,9 @@ export class DfuFrame {
   }
 
   static inspect (frame: DfuFrame): string {
-    if (frame.isResp === 1) return `op = ${DfuOp[frame.op]}, resCode = ${DfuResCode[frame.result]}, data = ${frame.data.toString('hex')}`
+    if (frame.isResp === 1) return `op = ${DfuOp[frame.op]}, resCode = ${DfuResCode[frame.result]}, data = ${toUpperHex(frame.data)}`
     if (frame.op === DfuOp.OBJECT_WRITE) return `op = ${DfuOp[frame.op]}, data.length = ${frame.data.length}`
-    return `op = ${DfuOp[frame.op]}, data = ${frame.data.toString('hex')}`
+    return `op = ${DfuOp[frame.op]}, data = ${toUpperHex(frame.data)}`
   }
 
   get isResp (): number { return +(this.buf[0] === DfuOp.RESPONSE) }
@@ -4264,10 +4338,10 @@ function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
 
 function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
   const createErr = (status: RespStatus, msg: string): Error => _.merge(new Error(msg), { status, data: { resp } })
-  if (resp.length === 1 && resp[0] !== 0x0A) throw createErr(RespStatus.HF_ERR_STAT, `received NAK 0x${resp.toString('hex')}`)
+  if (resp.length === 1 && resp[0] !== 0x0A) throw createErr(RespStatus.HF_ERR_STAT, `received NAK 0x${toUpperHex(resp)}`)
   if (resp.length < 3) throw createErr(RespStatus.HF_ERR_CRC, 'unexpected resp')
   const data = resp.subarray(0, -2)
-  if (crc16a(data) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
+  if (crc16a(data as any) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
   return data
 }
 
