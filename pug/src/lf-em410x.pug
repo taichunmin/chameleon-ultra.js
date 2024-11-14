@@ -148,12 +148,10 @@ block script
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating tag...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await ultra.cmdSlotChangeTagType(slot, TagType.EM410X)
-            await ultra.cmdSlotResetTagType(slot, TagType.EM410X)
-            await ultra.cmdSlotSetEnable(slot, FreqType.LF, true)
+            await ultra.slotChangeTagTypeAndActive(slot, null, TagType.EM410X) // reset slot
             if (_.isString(name) && name.length > 0) await ultra.cmdSlotSetFreqName(slot, FreqType.LF, name)
-            await ultra.cmdSlotSetActive(slot)
             await ultra.cmdEm410xSetEmuId(uid)
+            await ultra.cmdSlotSaveSettings()
             await Swal.fire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
@@ -170,11 +168,7 @@ block script
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Resetting...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            // reset slot
-            await ultra.cmdSlotChangeTagType(slot, TagType.EM410X)
-            await ultra.cmdSlotResetTagType(slot, TagType.EM410X)
-            await ultra.cmdSlotSetEnable(slot, FreqType.LF, true)
-            await ultra.cmdSlotSetActive(slot)
+            await ultra.slotChangeTagTypeAndActive(slot, null, TagType.EM410X) // reset slot
             await Swal.fire({ icon: 'success', title: 'Reset success' })
           } catch (err) {
             ultra.emitter.emit('error', err)

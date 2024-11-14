@@ -11,7 +11,6 @@ import {
   type DeviceModel,
   type DfuFwId,
   type DfuFwType,
-  type FreqType,
   type Mf1EmuWriteMode,
   type Mf1PrngType,
   type Mf1VblockOperator,
@@ -21,6 +20,7 @@ import {
   DfuObjType,
   DfuOp,
   DfuResCode,
+  FreqType,
   isAnimationMode,
   isButtonAction,
   isButtonType,
@@ -367,7 +367,7 @@ export class ChameleonUltra {
     if (!this.isConnected()) await this.connect()
     const frame = this.isDfu() ? new DfuFrame(buf) : new UltraFrame(buf)
     if (!(frame instanceof DfuFrame) || frame.op !== DfuOp.OBJECT_WRITE) this.#debug('send', frame.inspect)
-    const writer = (this.port?.writable as any)?.getWriter()
+    const writer = this.port?.writable?.getWriter()
     if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
     await writer.write(buf)
     writer.releaseLock()
@@ -621,6 +621,43 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data: Buffer.pack('!BB?', slot, freq, enable) })
     await readResp()
+  }
+
+  /**
+   * Helper function to change slot to tagType, reset to default tagType data, enable slot, save settings and set active slot.
+   * @param slot - The target slot.
+   * @param hfTagType - The hf tagType to be change. If `null`, the hf of slot will be skip.
+   * @param lfTagType - The lf tagType to be change. If `null`, the lf of slot will be skip.
+   * @group Slot Related
+   * @example
+   * ```js
+   * async function run (ultra) {
+   *   const { Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.slotChangeTagTypeAndActive(Slot.SLOT_1, TagType.MIFARE_1024, TagType.EM410X)
+   * }
+   *
+   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ```
+   */
+  async slotChangeTagTypeAndActive (slot: Slot, hfTagType?: TagType | null, lfTagType?: TagType | null): Promise<void> {
+    if (!isSlot(slot)) throw new TypeError('Invalid slot')
+
+    if (!_.isNil(hfTagType)) {
+      if (!isTagType(hfTagType) || hfTagType <= TagType.LF_END) throw new TypeError(`Invalid hfTagType = ${hfTagType}`)
+      await this.cmdSlotChangeTagType(slot, hfTagType)
+      await this.cmdSlotResetTagType(slot, hfTagType)
+      await this.cmdSlotSetEnable(slot, FreqType.HF, true)
+    }
+
+    if (!_.isNil(lfTagType)) {
+      if (!isTagType(lfTagType) || lfTagType > TagType.LF_END) throw new TypeError(`Invalid lfTagType = ${lfTagType}`)
+      await this.cmdSlotChangeTagType(slot, lfTagType)
+      await this.cmdSlotResetTagType(slot, lfTagType)
+      await this.cmdSlotSetEnable(slot, FreqType.LF, true)
+    }
+
+    await this.cmdSlotSaveSettings()
+    await this.cmdSlotSetActive(slot)
   }
 
   /**
@@ -4084,7 +4121,7 @@ export class ChameleonUltra {
     const uploaded = await this.cmdDfuSelectObject(type)
     this.#debug('core', `uploaded = ${JSON.stringify(uploaded)}`)
     let buf1 = buf.subarray(0, uploaded.offset)
-    let crc1 = { offset: buf1.length, crc32: crc32(buf1 as any) }
+    let crc1 = { offset: buf1.length, crc32: crc32(buf1) }
     let crcFailCnt = 0
     if (!_.isMatch(uploaded, crc1)) { // abort
       this.#debug('core', 'aborted')
@@ -4099,7 +4136,7 @@ export class ChameleonUltra {
       // write object
       await this.port.dfuWriteObject(buf1, mtu)
       // check crc
-      const crc2 = { offset: uploaded.offset + buf1.length, crc32: crc32(buf1 as any, uploaded.crc32) }
+      const crc2 = { offset: uploaded.offset + buf1.length, crc32: crc32(buf1, uploaded.crc32) }
       crc1 = await this.cmdDfuGetObjectCrc()
       if (!_.isMatch(crc1, crc2)) {
         crcFailCnt++
@@ -4341,7 +4378,7 @@ function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
   if (resp.length === 1 && resp[0] !== 0x0A) throw createErr(RespStatus.HF_ERR_STAT, `received NAK 0x${toUpperHex(resp)}`)
   if (resp.length < 3) throw createErr(RespStatus.HF_ERR_CRC, 'unexpected resp')
   const data = resp.subarray(0, -2)
-  if (crc16a(data as any) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
+  if (crc16a(data) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
   return data
 }
 

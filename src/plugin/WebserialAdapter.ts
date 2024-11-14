@@ -78,12 +78,12 @@ export default class WebserialAdapter implements ChameleonPlugin {
           ultra.port = {
             isOpen: () => this.#isOpen,
             isDfu: () => this.#isDfu,
-            readable: this.port.readable.pipeThrough(new this.#TransformStream(new SlipDecodeTransformer(Buffer1)) as any),
+            readable: this.port.readable.pipeThrough(new this.#TransformStream(new SlipDecodeTransformer(Buffer1))),
             writable: new this.#WritableStream({
               write: async (chunk: Buffer) => {
                 const writer = this.port?.writable?.getWriter()
                 if (_.isNil(writer)) throw new Error('Failed to getWriter(). Did you remember to use adapter plugin?')
-                await writer.write(slipEncode(chunk, Buffer1) as any)
+                await writer.write(slipEncode(chunk, Buffer1))
                 writer.releaseLock()
               },
             }),
@@ -99,7 +99,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
                   chunk[0] = DfuOp.OBJECT_WRITE
                 }
                 chunk.set(buf1, 1)
-                await writer.write(slipEncode(chunk, Buffer1) as any)
+                await writer.write(slipEncode(chunk, Buffer1))
               }
               writer.releaseLock()
             },

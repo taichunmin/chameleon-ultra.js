@@ -271,11 +271,8 @@ block script
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating tag...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await ultra.cmdSlotChangeTagType(slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotResetTagType(slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
+            await ultra.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
             if (_.isString(name) && name.length > 0) await ultra.cmdSlotSetFreqName(slot, FreqType.HF, name)
-            await ultra.cmdSlotSetActive(slot)
             await ultra.cmdMf1SetAntiCollMode(antiColl)
             await ultra.cmdMf1SetDetectionEnable(detection)
             await ultra.cmdMf1SetGen1aMode(gen1a)
@@ -292,6 +289,7 @@ block script
               const sectorData = Buffer.from(dump[i], 'hex')
               await ultra.cmdMf1EmuWriteBlock(i << 2, sectorData)
             }
+            await this.cmdSlotSaveSettings()
             await Swal.fire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
@@ -308,11 +306,7 @@ block script
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Resetting...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            // reset slot
-            await ultra.cmdSlotChangeTagType(slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotResetTagType(slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
-            await ultra.cmdSlotSetActive(slot)
+            await ultra.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
             await Swal.fire({ icon: 'success', title: 'Reset success' })
           } catch (err) {
             ultra.emitter.emit('error', err)

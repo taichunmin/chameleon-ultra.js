@@ -8,7 +8,7 @@
   "module": "./dist/index.mjs",
   "name": "chameleon-ultra.js",
   "type": "commonjs",
-  "version": "0.3.23",
+  "version": "0.3.24",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -20,7 +20,7 @@
     }
   ],
   "dependencies": {
-    "@taichunmin/buffer": "^0.13.10",
+    "@taichunmin/buffer": "^0.13.11",
     "@taichunmin/crc": "^0.0.14",
     "debug": "^4.3.7",
     "jszip": "^3.10.1",
