@@ -1073,7 +1073,8 @@ export default class Crypto1 {
    * @returns The recovered key.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, DarksideStatus, DeviceMode, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const { default: Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
    *   await ultra.cmdChangeDeviceMode(DeviceMode.READER)
@@ -1092,9 +1093,7 @@ export default class Crypto1 {
    *     },
    *   )
    *   console.log(`key founded: ${key.toString('hex')}`)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   static async darkside (

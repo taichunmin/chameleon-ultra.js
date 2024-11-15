@@ -296,6 +296,16 @@ block script
         },
       },
       methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
+        async btnAdapterTips () {
+          await this.swalFire({
+            title: 'Browser & OS',
+            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
+          })
+        },
         async calcSavedTagName () {
           const { idb } = this
           try {
@@ -331,7 +341,7 @@ block script
             this.$set(this, 'tagPicker', { cb: null, cur: null, flexsearch: null, keyword: '', mTags: null, tags: [] })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Load failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Load failed', text: err.message })
           }
         },
         async btnSaveTag () {
@@ -344,10 +354,10 @@ block script
             const oldTag = await idb.tags.get(_.omit(tag, ['name']))
             await idb.tags.put({ ...tag, id: oldTag?.id })
             await this.calcSavedTagName()
-            await Swal.fire({ icon: 'success', title: 'Save successfully' })
+            await this.swalFire({ icon: 'success', title: 'Save successfully' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Save failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Save failed', text: err.message })
           }
         },
         async btnTagCsv () {
@@ -391,11 +401,11 @@ block script
                   await idb.tags.clear()
                   await idb.tags.bulkPut(newTags)
                 })
-                await Swal.fire({ icon: 'success', title: `${newTags.length} records imported` })
+                await this.swalFire({ icon: 'success', title: `${newTags.length} records imported` })
                 break
               } catch (err) {
                 ultra.emitter.emit('error', err)
-                await Swal.fire({ icon: 'error', title: 'Import failed', text: err.message })
+                await this.swalFire({ icon: 'error', title: 'Import failed', text: err.message })
                 newVal = await new Promise(resolve => {
                   this.$set(this.exportimport, 'cb', resolve)
                 })
@@ -406,7 +416,7 @@ block script
             this.$set(this.exportimport, 'cb', null)
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed', text: err.message })
           }
         },
         async btnReadSlot () {
@@ -434,7 +444,7 @@ block script
             Swal.close()
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Read failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
         },
         async btnEmulateSlot () {
@@ -461,13 +471,13 @@ block script
             // set emulated tag
             await ultra.cmdMf1SetAntiCollMode(false)
             await ultra.cmdHf14aSetAntiCollData(anticoll)
-            await ultra.cmdMf1EmuWriteBlock(0, this.mf1GenerateBlock0()) // set block0
+            await ultra.cmdMf1EmuWriteBlock(0, this.mf1GenMagicBlock0()) // set block0
             await ultra.cmdSlotSetFreqName(slot, FreqType.HF, tag.name)
             await ultra.cmdSlotSaveSettings()
-            await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
+            await this.swalFire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Emulate Failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Emulate Failed', text: err.message })
           }
         },
         async btnScanTag () {
@@ -490,7 +500,7 @@ block script
             Swal.close()
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
           }
         },
         async btnWriteTag () {
@@ -500,7 +510,7 @@ block script
             if (!/^[\dA-F]{8}$/.test(uid)) throw new Error('Only support 4 bytes UID')
             this.showLoading({ text: 'Writing tag...' })
             const errs = [null, null]
-            const block0 = this.mf1GenerateBlock0()
+            const block0 = this.mf1GenMagicBlock0()
             // try Gen1a
             await ultra.mf1Gen1aWriteBlocks(0, block0).catch(err => {
               ultra.emitter.emit('error', err)
@@ -521,10 +531,10 @@ block script
             // double check
             const scanned = toHex(_.first(await ultra.cmdHf14aScan()).uid)
             if (scanned !== uid) throw new Error(`UID mismatch after write, scanned = ${scanned}`)
-            await Swal.fire({ icon: 'success', title: 'Write successfully' })
+            await this.swalFire({ icon: 'success', title: 'Write successfully' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
         },
         async btnEditMfkeys () {
@@ -540,7 +550,7 @@ block script
           $ref.modal('hide')
           this.$set(this.exportimport, 'cb', null)
         },
-        mf1GenerateBlock0 () {
+        mf1GenMagicBlock0 () {
           const { ultra } = this
           const { atqa, sak, uid } = this.ss
           const tag = {
@@ -548,8 +558,7 @@ block script
             sak: Buffer.from(sak, 'hex'),
             uid: Buffer.from(uid, 'hex').slice(-4),
           }
-          const uidLen = tag.uid.length
-          const block0 = Buffer.pack(`!${uidLen}sBs2s${12 - uidLen}x`, tag.uid, tag.uid.xor(), tag.sak, tag.atqa)
+          const block0 = ChameleonUltra.mf1GenMagicBlock0(tag)
           ultra.emitter.emit('debug', 'web', `block0 = ${toHex(block0)}`)
           return block0
         },
@@ -589,13 +598,7 @@ block script
           dom.setSelectionRange(0, 1e6) // For mobile devices
           document.execCommand('copy')
           container.removeChild(dom)
-          await Swal.fire({ icon: 'success', title: `${text.length} bytes copied.` })
-        },
-        async btnAdapterTips () {
-          await Swal.fire({
-            title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
-          })
+          await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
           return await new Promise((resolve, reject) => {

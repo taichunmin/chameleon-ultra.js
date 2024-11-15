@@ -456,11 +456,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdGetAppVersion()) // '1.0'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetAppVersion (): Promise<`${number}.${number}`> {
@@ -478,12 +477,11 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { DeviceMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdChangeDeviceMode (mode: DeviceMode): Promise<void> {
@@ -501,13 +499,12 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { DeviceMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const deviceMode = await ultra.cmdGetDeviceMode()
    *   console.log(DeviceMode[deviceMode]) // 'TAG'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetDeviceMode (): Promise<DeviceMode> {
@@ -534,12 +531,11 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotSetActive(Slot.SLOT_1)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotSetActive (slot: Slot): Promise<void> {
@@ -557,12 +553,11 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotChangeTagType(Slot.SLOT_1, TagType.MIFARE_1024)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotChangeTagType (slot: Slot, tagType: TagType): Promise<void> {
@@ -581,12 +576,11 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotResetTagType(Slot.SLOT_1, TagType.MIFARE_1024)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotResetTagType (slot: Slot, tagType: TagType): Promise<void> {
@@ -605,12 +599,11 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { FreqType, Slot } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotSetEnable(Slot.SLOT_1, FreqType.HF, true)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotSetEnable (slot: Slot, freq: FreqType, enable: boolean | number): Promise<void> {
@@ -631,12 +624,11 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.slotChangeTagTypeAndActive(Slot.SLOT_1, TagType.MIFARE_1024, TagType.EM410X)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async slotChangeTagTypeAndActive (slot: Slot, hfTagType?: TagType | null, lfTagType?: TagType | null): Promise<void> {
@@ -668,12 +660,11 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotSetFreqName(Slot.SLOT_1, FreqType.HF, 'My Tag')
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotSetFreqName (slot: Slot, freq: FreqType, name: string): Promise<void> {
@@ -696,13 +687,12 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const name = await ultra.cmdSlotGetFreqName(Slot.SLOT_1, FreqType.HF)
    *   console.log(name) // 'My Tag'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotGetFreqName (slot: Slot, freq: FreqType): Promise<string | undefined> {
@@ -724,13 +714,12 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdMf1EmuWriteBlock(1, Buffer.alloc(16))
    *   await ultra.cmdSlotSaveSettings()
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotSaveSettings (): Promise<void> {
@@ -745,11 +734,10 @@ export class ChameleonUltra {
    * @group DFU Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdDfuEnter()
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdDfuEnter (): Promise<void> {
@@ -774,11 +762,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdGetDeviceChipId()) // 'db1c624228d9634c'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetDeviceChipId (): Promise<string> {
@@ -795,11 +782,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdBleGetAddress()) // 'E8:B6:3D:04:B6:FE'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdBleGetAddress (): Promise<string> {
@@ -815,11 +801,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdSaveSettings()
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSaveSettings (): Promise<void> {
@@ -834,11 +819,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdResetSettings()
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdResetSettings (): Promise<void> {
@@ -854,12 +838,11 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { AnimationMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSetAnimationMode(AnimationMode.SHORT)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSetAnimationMode (mode: AnimationMode): Promise<void> {
@@ -876,13 +859,12 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { AnimationMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const mode = await ultra.cmdGetAnimationMode()
    *   console.log(AnimationMode[mode]) // 'FULL'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetAnimationMode (): Promise<AnimationMode> {
@@ -898,11 +880,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdGetGitVersion()) // '98605be'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetGitVersion (): Promise<string> {
@@ -918,13 +899,12 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const slot = await ultra.cmdSlotGetActive()
    *   console.log(Slot[slot]) // 'SLOT_1'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotGetActive (): Promise<Slot> {
@@ -940,7 +920,8 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const slots = await ultra.cmdSlotGetInfo()
    *   console.log(JSON.stringify(slots))
    *   /**
@@ -955,9 +936,7 @@ export class ChameleonUltra {
    *    *   { "hfTagType": 0, "lfTagType": 0 }
    *    * ]
    *    *\/
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotGetInfo (): Promise<Array<{
@@ -975,11 +954,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdWipeFds()
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdWipeFds (): Promise<void> {
@@ -997,12 +975,11 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(await ultra.cmdSlotDeleteFreqName(Slot.SLOT_1, FreqType.HF)) // true
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotDeleteFreqName (slot: Slot, freq: FreqType): Promise<boolean> {
@@ -1026,7 +1003,8 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const enabledSlots = await ultra.cmdSlotGetIsEnable()
    *   console.log(JSON.stringify(enabledSlots))
    *   // [
@@ -1039,9 +1017,7 @@ export class ChameleonUltra {
    *   //   { "hf": false, "lf": false },
    *   //   { "hf": true, "lf": false }
    *   // ]
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotGetIsEnable (): Promise<Array<{
@@ -1061,12 +1037,11 @@ export class ChameleonUltra {
    * @group Slot Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSlotDeleteFreqType(Slot.SLOT_1, FreqType.HF)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSlotDeleteFreqType (slot: Slot, freq: FreqType): Promise<void> {
@@ -1084,12 +1059,11 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const battery = await ultra.cmdGetBatteryInfo()
    *   console.log(JSON.stringify(battery)) // { "voltage": 4192, "level": 99 }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetBatteryInfo (): Promise<{
@@ -1109,13 +1083,12 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { ButtonAction, ButtonType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const btnAction = await ultra.cmdGetButtonPressAction(ButtonType.BUTTON_A)
    *   console.log(ButtonAction[btnAction]) // 'CYCLE_SLOT_INC'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetButtonPressAction (btn: ButtonType): Promise<ButtonAction> {
@@ -1133,12 +1106,11 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { ButtonAction, ButtonType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSetButtonPressAction(ButtonType.BUTTON_A, ButtonAction.CYCLE_SLOT_INC)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSetButtonPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
@@ -1157,13 +1129,12 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { ButtonAction, ButtonType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const btnAction = await ultra.cmdGetButtonLongPressAction(ButtonType.BUTTON_A)
    *   console.log(ButtonAction[btnAction]) // 'CLONE_IC_UID'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetButtonLongPressAction (btn: ButtonType): Promise<ButtonAction> {
@@ -1181,12 +1152,11 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { ButtonAction, ButtonType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdSetButtonLongPressAction(ButtonType.BUTTON_A, ButtonAction.CYCLE_SLOT_INC)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdSetButtonLongPressAction (btn: ButtonType, action: ButtonAction): Promise<void> {
@@ -1204,11 +1174,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdBleSetPairingKey('123456')
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdBleSetPairingKey (key: string): Promise<void> {
@@ -1225,11 +1194,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdBleGetPairingKey()) // '123456'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdBleGetPairingKey (): Promise<string> {
@@ -1244,11 +1212,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdBleDeleteAllBonds()
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdBleDeleteAllBonds (): Promise<void> {
@@ -1263,13 +1230,12 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { DeviceModel } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const model = await ultra.cmdGetDeviceModel()
    *   console.log(DeviceModel[model]) // 'ULTRA'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetDeviceModel (): Promise<DeviceModel> {
@@ -1285,7 +1251,8 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const settings = await ultra.cmdGetDeviceSettings()
    *   console.log(JSON.stringify(settings)
    *   /**
@@ -1298,9 +1265,7 @@ export class ChameleonUltra {
    *    *   "blePairingKey": "123456"
    *    * }
    *    *\/
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetDeviceSettings (): Promise<{
@@ -1323,12 +1288,11 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const cmds = await ultra.cmdGetSupportedCmds()
    *   console.log(cmds.size) // 67
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdGetSupportedCmds (): Promise<Set<Cmd>> {
@@ -1347,12 +1311,11 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Cmd } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(await ultra.isCmdSupported(Cmd.GET_APP_VERSION)) // true
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async isCmdSupported (cmd: Cmd): Promise<boolean> {
@@ -1366,11 +1329,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdBleGetPairingMode()) // false
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdBleGetPairingMode (): Promise<boolean> {
@@ -1386,11 +1348,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdBleSetPairingMode(false)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdBleSetPairingMode (enable: boolean | number): Promise<void> {
@@ -1408,13 +1369,12 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const antiColl = _.first(await ultra.cmdHf14aScan())
    *   console.log(_.mapValues(antiColl, val => val.toString('hex')))
    *   // { uid: '040dc4420d2981', atqa: '4400', sak: '00', ats: ''}
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdHf14aScan (): Promise<Array<{
@@ -1436,11 +1396,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMf1IsSupport()) // true
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1IsSupport (): Promise<boolean> {
@@ -1463,12 +1422,11 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Mf1PrngType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(Mf1PrngType[await ultra.cmdMf1TestPrngType()]) // 'WEAK'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1TestPrngType (): Promise<Mf1PrngType> {
@@ -1492,7 +1450,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1AcquireStaticNested({
@@ -1515,9 +1474,7 @@ export class ChameleonUltra {
    *   //     { nt1: '01200145', nt2: 'cdd400f3' },
    *   //   ],
    *   // }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1AcquireStaticNested (
@@ -1544,7 +1501,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Mf1KeyType, DarksideStatus } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const res1 = await ultra.cmdMf1AcquireDarkside(0, Mf1KeyType.KEY_A, true)
    *   console.log(res1)
@@ -1569,15 +1527,14 @@ export class ChameleonUltra {
    *   //   "status": "OK (0)",
    *   //   "uid": "d3efed0c"
    *   // }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    *
    * If you want to use darkside attack to recover the key, you can use the following example code:
    *
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, DarksideStatus, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const block = 0
    *   const keyType = Mf1KeyType.KEY_A
@@ -1594,9 +1551,7 @@ export class ChameleonUltra {
    *     },
    *   )
    *   console.log(`key founded: ${key.toString('hex')}`)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1AcquireDarkside (
@@ -1634,7 +1589,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
@@ -1660,9 +1616,7 @@ export class ChameleonUltra {
    *   //     { nt1: 'cff2b3ef', nt2: '825ba8ea', par: 5 },
    *   //   ]
    *   // }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1TestNtDistance (known: {
@@ -1694,7 +1648,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const res1 = await ultra.cmdMf1TestNtDistance({ block: 0, keyType: Mf1KeyType.KEY_A, key })
@@ -1720,9 +1675,7 @@ export class ChameleonUltra {
    *   //     { nt1: 'cff2b3ef', nt2: '825ba8ea', par: 5 },
    *   //   ]
    *   // }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1AcquireNested (
@@ -1749,7 +1702,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   console.log(await ultra.cmdMf1CheckBlockKey({
@@ -1757,9 +1711,7 @@ export class ChameleonUltra {
    *     keyType: Mf1KeyType.KEY_A,
    *     key,
    *   })) // true
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1CheckBlockKey (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<boolean> {
@@ -1788,7 +1740,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const block1 = await ultra.cmdMf1ReadBlock({
@@ -1797,9 +1750,7 @@ export class ChameleonUltra {
    *     key,
    *   })
    *   console.log(block1.toString('hex')) // '00000000000000000000000000000000'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1ReadBlock (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<Buffer> {
@@ -1822,7 +1773,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const block1 = Buffer.from('00000000000000000000000000000000', 'hex')
@@ -1832,9 +1784,7 @@ export class ChameleonUltra {
    *     key,
    *     data: block1,
    *   })
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1WriteBlock (opts: {
@@ -1859,16 +1809,15 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Mf1PrngType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const tag = _.first(await ultra.hf14aInfo())
    *   console.log(tag.nxpTypeBySak) // 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'
    *   console.log(Mf1PrngType[tag.prngType]) // 'WEAK'
    *   console.log(_.mapValues(tag.antiColl, val => val.toString('hex')))
    *   // { uid: 'dbe3d63d', atqa: '0400', sak: '08', ats: '' }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async hf14aInfo (): Promise<Array<{
@@ -1970,7 +1919,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
@@ -1982,9 +1932,7 @@ export class ChameleonUltra {
    *     { block: 4, keyType: Mf1KeyType.KEY_A, key },
    *   )
    *   console.log(await ultra.mf1VblockGetValue(src))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1VblockManipulate (
@@ -2015,15 +1963,14 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
    *   console.log(await ultra.mf1VblockGetValue(src))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1VblockGetValue (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<{ value: number, adr: number }> {
@@ -2047,15 +1994,14 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType, Mf1VblockOperator } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
    *   const src = { block: 4, keyType: Mf1KeyType.KEY_A, key }
    *   await ultra.mf1VblockSetValue(src, { value: 2 })
    *   console.log(await ultra.mf1VblockGetValue(src))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1VblockSetValue (
@@ -2082,7 +2028,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const mask = Buffer.from('00000000FFFFFFFFFFFF', 'hex')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
@@ -2091,7 +2038,7 @@ export class ChameleonUltra {
    *   console.log(`Time: ${Date.now() - tsStart}ms`)
    *   const replacer = function (k, v) { return Buffer.isBuffer(this[k]) ? this[k].toString('hex') : v }
    *   console.log(JSON.stringify(result, replacer, 2))
-   * }
+   * })(vm.ultra)
    * // {
    * //   "found": "ffffffff000000000000",
    * //   "sectorKeys": [
@@ -2117,8 +2064,6 @@ export class ChameleonUltra {
    * //     null, null, null, null,
    * //   ]
    * // }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * ```
    */
   async cmdMf1CheckKeysOfSectors (opts: { keys: Buffer[], mask: Buffer }): Promise<null | {
@@ -2152,12 +2097,11 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const id = await ultra.cmdEm410xScan()
    *   console.log(id.toString('hex')) // 'deadbeef88'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdEm410xScan (): Promise<Buffer> {
@@ -2176,16 +2120,15 @@ export class ChameleonUltra {
    * @group Reader Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const id = Buffer.from('deadbeef88', 'hex')
    *   // https://github.com/RfidResearchGroup/proxmark3/blob/master/client/dictionaries/t55xx_default_pwds.dic
    *   const newKey = Buffer.from('20206666', 'hex')
    *   const oldKeys = Buffer.from('5124364819920427', 'hex').chunk(4)
    *   await ultra.cmdEm410xWriteToT55xx(id, newKey, oldKeys)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdEm410xWriteToT55xx (id: Buffer, newKey: Buffer, oldKeys: Buffer[]): Promise<void> {
@@ -2208,12 +2151,11 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdMf1EmuWriteBlock(1, Buffer.alloc(16))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1EmuWriteBlock (offset: number, data: Buffer): Promise<void> {
@@ -2234,16 +2176,15 @@ export class ChameleonUltra {
    * @group Emulator Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdHf14aSetAntiCollData({
    *     atqa: Buffer.from('0400', 'hex'),
    *     sak: Buffer.from('08', 'hex'),
    *     uid: Buffer.from('01020304', 'hex')
    *   })
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdHf14aSetAntiCollData (opts: {
@@ -2269,11 +2210,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdMf1SetDetectionEnable(true)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1SetDetectionEnable (enable: boolean | number): Promise<void> {
@@ -2290,11 +2230,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMf1GetDetectionCount()) // 0
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1GetDetectionCount (): Promise<number> {
@@ -2311,7 +2250,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const logs = await ultra.cmdMf1GetDetectionLogs(0)
    *   console.log(logs)
    *   /**
@@ -2325,9 +2265,7 @@ export class ChameleonUltra {
    *    *   "ar": Buffer.from('5c7c6f89', 'hex'),
    *    * }
    *    *\/
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1GetDetectionLogs (offset: number = 0): Promise<Array<{
@@ -2352,11 +2290,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMf1GetDetectionEnable()) // false
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1GetDetectionEnable (): Promise<boolean> {
@@ -2374,12 +2311,11 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.cmdMf1EmuReadBlock(1)
    *   console.log(data.toString('hex')) // '00000000000000000000000000000000'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1EmuReadBlock (offset: number = 0, length: number = 1): Promise<Buffer> {
@@ -2395,7 +2331,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const mf1Settings = await ultra.cmdMf1GetEmuSettings()
    *   console.log(JSON.stringify(mf1Settings))
    *   /**
@@ -2407,9 +2344,7 @@ export class ChameleonUltra {
    *    *   "write": 0
    *    *  }
    *    *\/
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1GetEmuSettings (): Promise<{
@@ -2431,11 +2366,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMf1GetGen1aMode()) // false
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1GetGen1aMode (): Promise<boolean> {
@@ -2451,11 +2385,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdMf1SetGen1aMode(false)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1SetGen1aMode (enable: boolean | number): Promise<void> {
@@ -2472,11 +2405,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMf1GetGen2Mode()) // false
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1GetGen2Mode (): Promise<boolean> {
@@ -2492,11 +2424,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdMf1SetGen2Mode(false)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1SetGen2Mode (enable: boolean | number): Promise<void> {
@@ -2513,11 +2444,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMf1GetAntiCollMode()) // false
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1GetAntiCollMode (): Promise<boolean> {
@@ -2533,11 +2463,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdMf1SetAntiCollMode(false)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1SetAntiCollMode (enable: boolean | number): Promise<void> {
@@ -2554,11 +2483,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMf1GetWriteMode()) // 0
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1GetWriteMode (): Promise<Mf1EmuWriteMode> {
@@ -2574,12 +2502,11 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Mf1EmuWriteMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdMf1SetWriteMode(Mf1EmuWriteMode.NORMAL)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMf1SetWriteMode (mode: Mf1EmuWriteMode): Promise<void> {
@@ -2596,7 +2523,8 @@ export class ChameleonUltra {
    * @group Emulator Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const res = await ultra.cmdHf14aGetAntiCollData()
    *   console.log(JSON.stringify(res))
    *   // {
@@ -2605,9 +2533,7 @@ export class ChameleonUltra {
    *   //   "sak": { "type": "Buffer", "data": [8] },
    *   //   "ats": { "type": "Buffer", "data": [] }
    *   // }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdHf14aGetAntiCollData (): Promise<{ uid: Buffer, atqa: Buffer, sak: Buffer, ats: Buffer } | null> {
@@ -2633,11 +2559,10 @@ export class ChameleonUltra {
    * @returns The magic mode of actived slot.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMfuGetMagicMode()) // false
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuGetMagicMode (): Promise<boolean> {
@@ -2662,11 +2587,10 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdMfuSetMagicMode(false)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuSetMagicMode (enable: boolean | number): Promise<void> {
@@ -2685,12 +2609,11 @@ export class ChameleonUltra {
    * @returns The page data of actived slot.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.cmdMfuReadEmuPage(1)
    *   console.log(data.toString('hex')) // 'fa5c6480'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuReadEmuPage (offset: number = 0, length: number = 1): Promise<Buffer> {
@@ -2708,12 +2631,11 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdMfuWriteEmuPage(1, Buffer.from('fa5c6480', 'hex'))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuWriteEmuPage (offset: number, data: Buffer): Promise<void> {
@@ -2734,12 +2656,11 @@ export class ChameleonUltra {
    * @returns The version of actived slot.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.cmdMfuGetEmuVersion()
    *   console.log(data.toString('hex')) // '0004040201001103'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuGetEmuVersion (): Promise<Buffer | undefined> {
@@ -2756,12 +2677,11 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdMfuSetEmuVersion(Buffer.from('0004040201001103', 'hex'))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuSetEmuVersion (version: Buffer): Promise<void> {
@@ -2778,12 +2698,11 @@ export class ChameleonUltra {
    * @returns The signature of actived slot.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.cmdMfuGetEmuSignature()
    *   console.log(data.toString('hex')) // '0000000000000000000000000000000000000000000000000000000000000000'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuGetEmuSignature (): Promise<Buffer | undefined> {
@@ -2800,13 +2719,12 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const signature = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex')
    *   await ultra.cmdMfuSetEmuSignature(signature)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuSetEmuSignature (signature: Buffer): Promise<void> {
@@ -2828,12 +2746,11 @@ export class ChameleonUltra {
    * - tearing: The slot is in tearing mode or not.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMfuGetEmuCounter(0))
    *   // { "counter": 0, "tearing": false }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuGetEmuCounter (addr: number): Promise<{ counter?: number, tearing?: boolean }> {
@@ -2857,13 +2774,12 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdMfuSetEmuCounter({ addr: 0, counter: 1 })
    *   console.log(await ultra.cmdMfuGetEmuCounter(0))
    *   // { "counter": 1, "tearing": false }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuSetEmuCounter (opts: {
@@ -2889,11 +2805,10 @@ export class ChameleonUltra {
    * @returns The original value of the unsuccessful auth counter before reset.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMfuResetEmuAuthFailedCounter()) // 0
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuResetEmuAuthFailedCounter (): Promise<number> {
@@ -2909,11 +2824,10 @@ export class ChameleonUltra {
    * @returns The number of pages available in the actived slot.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   console.log(await ultra.cmdMfuGetEmuPageSize()) // 135
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdMfuGetEmuPageSize (): Promise<number> {
@@ -2971,12 +2885,11 @@ export class ChameleonUltra {
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=16)
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.mfuReadPages({ start: 0 })
    *   console.log(data.toString('hex')) // '040dc445420d2981e7480000e1100600'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuReadPages (opts: { key?: Buffer, start: number, timeout?: number }): Promise<Buffer> {
@@ -3002,12 +2915,11 @@ export class ChameleonUltra {
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=16)
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.mfuFastReadPages({ start: 0, end: 3 })
    *   console.log(data.toString('hex')) // '047c79896cb62a8171480000e1103e00'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuFastReadPages (opts: { key?: Buffer, start: number, end: number, timeout?: number }): Promise<Buffer> {
@@ -3031,13 +2943,12 @@ export class ChameleonUltra {
    * @see [Proxmark3 `hf mfu info`](https://github.com/RfidResearchGroup/proxmark3/blob/4e0d4d3ad454285e62fc1a22c2ef3adda508ed01/client/src/cmdhfmfu.c#L2089)
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { NxpMfuTypeName } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const NxpMfuType = await ultra.mfuDetectTagType()
    *   console.log(`tagType = ${NxpMfuTypeName.get(NxpMfuType)}`)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuDetectTagType (): Promise<NxpMfuType> {
@@ -3114,13 +3025,12 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const dump = await ultra.mfuReadDump()
    *   console.log(`Read ${dump.length} bytes.`) // Read 160 bytes.
    *   return dump
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuReadDump (opts: {
@@ -3151,13 +3061,12 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const tagType = await ultra.mfuAssertEmuTagType()
    *   console.log(TagType[tagType]) // '040dc445420d2981e7480000e1100600'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuAssertEmuTagType (): Promise<TagType> {
@@ -3180,12 +3089,11 @@ export class ChameleonUltra {
    * - version: The version information for the specific NTAG21x type.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.mfuGetEmuSettings()
    *   console.log(data)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuGetEmuSettings (): Promise<{
@@ -3219,12 +3127,11 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const cnt = await ultra.mfuReadCounter({ addr: 2 })
    *   console.log(cnt) // 0
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuReadCounter (opts: { addr?: number, key?: Buffer }): Promise<number> {
@@ -3245,12 +3152,11 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.mfuReadSignature()
    *   console.log(data.toString('base64url')) // 'w9dq8MPprf1Ro-C1si32rg3y7cO8UChrtXlNyjLScS4'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuReadSignature (): Promise<Buffer> {
@@ -3280,12 +3186,11 @@ export class ChameleonUltra {
    * | 7 | protocol | 0x03 | 0x03 | 0x03 | ISO/IEC 14443-3 compliant |
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const data = await ultra.mfuGetVersion()
    *   console.log(data.toString('hex')) // '0004040201001103'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuGetVersion (opts: { timeout?: number } = {}): Promise<Buffer> {
@@ -3307,12 +3212,11 @@ export class ChameleonUltra {
    * @see [MF0ICU1 MIFARE Ultralight contactless single-ticket IC](https://www.nxp.com/docs/en/data-sheet/MF0ICU1.pdf#page=17)
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const data = await ultra.mfuWritePage({ start: 9, data: Buffer.from('00000000', 'hex') })
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuWritePage (opts: { data: Buffer, key?: Buffer, start: number }): Promise<void> {
@@ -3334,12 +3238,11 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const dump = await ultra.mfuReadEmuDump()
    *   console.log(`Read ${dump.length} bytes.`)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuReadEmuDump (): Promise<Buffer> {
@@ -3358,14 +3261,13 @@ export class ChameleonUltra {
    * @group Mifare Ultralight Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const dump = new Buffer(540) // Dump size of NTAG_213 is 540 bytes.
    *   dump.set(Buffer.from('04689571fa5c648042480fe0', 'hex'))
    *   dump.set(Buffer.from('040000ff00000000ffffffff', 'hex'), 524)
    *   await ultra.mfuWriteEmuDump(dump)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mfuWriteEmuDump (dump: Buffer): Promise<void> {
@@ -3384,12 +3286,11 @@ export class ChameleonUltra {
    * @group Emulator Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdEm410xSetEmuId(Buffer.from('deadbeef88', 'hex'))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
@@ -3406,12 +3307,11 @@ export class ChameleonUltra {
    * @group Emulator Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const id = await ultra.cmdEm410xGetEmuId()
    *   console.log(id.toString('hex')) // 'deadbeef88'
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdEm410xGetEmuId (): Promise<Buffer> {
@@ -3427,11 +3327,10 @@ export class ChameleonUltra {
    * @group Device Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   if (await ultra.isSupportedAppVersion()) throw new Error('Firmware version is not supported. Please update the firmware.')
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async isSupportedAppVersion (): Promise<boolean> {
@@ -3444,11 +3343,10 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.mf1Halt()
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1Halt (): Promise<void> {
@@ -3485,12 +3383,11 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const card = await ultra.mf1Gen1aReadBlocks(0, 64)
    *   console.log(_.map(card.chunk(16), chunk => chunk.toString('hex')).join('\n'))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1Gen1aReadBlocks (offset: number, length: number = 1): Promise<Buffer> {
@@ -3517,12 +3414,11 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.mf1Gen1aWriteBlocks(1, new Buffer(16))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1Gen1aWriteBlocks (offset: number, data: Buffer): Promise<void> {
@@ -3546,13 +3442,11 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run () {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ;(() => {
    *   const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
-   *   console.log(ChameleonUltra.mf1TrailerBlockNoOfSector(0))
-   *   // 3
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   *   console.log(ChameleonUltra.mf1TrailerBlockNoOfSector(0)) // 3
+   * })()
    * ```
    */
   static mf1TrailerBlockNoOfSector (sector: number): number {
@@ -3567,15 +3461,14 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const sectorKey = await ultra.mf1CheckSectorKeys(0, keys)
    *   console.log(_.mapValues(sectorKey, key => key.toString('hex')))
    *   // { "96": "ffffffffffff", "97": "ffffffffffff" }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1CheckSectorKeys (sector: number, keys: Buffer[]): Promise<{
@@ -3646,14 +3539,13 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const data = await ultra.mf1ReadBlockByKeys(0, keys)
    *   console.log(data.toString('hex'))
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1ReadBlockByKeys (block: number, keys: Buffer[]): Promise<Buffer> {
@@ -3681,15 +3573,14 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const { data, success } = await ultra.mf1ReadSectorByKeys(0, keys)
    *   console.log({ data: data.toString('hex'), success })
    *   // { "data": "...", "success": [true, true, true, true] }
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1ReadSectorByKeys (sector: number, keys: Buffer[]): Promise<{ data: Buffer, success: boolean[] }> {
@@ -3725,19 +3616,18 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const data = Buffer.from('00000000000000000000000000000000', 'hex')
    *   await ultra.mf1WriteBlockByKeys(1, keys, data)
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1WriteBlockByKeys (block: number, keys: Buffer[], data: Buffer): Promise<void> {
     bufIsLenOrFail(data, 16, 'data')
-    if (block % 4 === 3 && !this.mf1IsValidAcl(data)) throw new TypeError('Invalid ACL bytes of data')
+    if (block % 4 === 3 && !ChameleonUltra.mf1IsValidAcl(data)) throw new TypeError('Invalid ACL bytes of data')
     const sector = Math.trunc(block / 4)
     const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
     if (_.isEmpty(sectorKey)) throw new Error('No valid key')
@@ -3764,7 +3654,8 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('FFFFFFFFFFFF\n000000000000\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
    *   const data = Buffer.concat([
@@ -3776,14 +3667,12 @@ export class ChameleonUltra {
    *   const { success } = await ultra.mf1WriteSectorByKeys(1, keys, data)
    *   console.log(success)
    *   // [true, true, true, true]
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async mf1WriteSectorByKeys (sector: number, keys: Buffer[], data: Buffer): Promise<{ success: boolean[] }> {
     bufIsLenOrFail(data, 64, 'data')
-    if (!this.mf1IsValidAcl(data)) throw new TypeError('Invalid ACL bytes of data')
+    if (!ChameleonUltra.mf1IsValidAcl(data)) throw new TypeError('Invalid ACL bytes of data')
     const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
     if (_.isEmpty(sectorKey)) throw new Error('No valid key')
     const success = _.times(4, () => false)
@@ -3811,15 +3700,14 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```js
-   * async function run (ultra) {
-   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
-   *   console.log(ultra.mf1IsValidAcl(Buffer.from('ff078069', 'hex'))) // true
-   * }
-   *
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ;(() => {
+   *   const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   console.log(ChameleonUltra.mf1IsValidAcl(Buffer.from('ff078069', 'hex'))) // true
+   * })()
    * ```
    */
-  mf1IsValidAcl (data: Buffer): boolean {
+  static mf1IsValidAcl (data: Buffer): boolean {
     if (!Buffer.isBuffer(data) || !_.includes([3, 4, 16, 64], data.length)) throw new TypeError('data must be a Buffer with length 3, 4, 16 or 64')
     if (data.length === 16) data = data.subarray(6)
     else if (data.length === 64) data = data.subarray(54)
@@ -3827,6 +3715,51 @@ export class ChameleonUltra {
     const acl: number[] = []
     for (let i = 0; i < 3; i++) acl.push((data[i] & 0xF0) >>> 4, data[i] & 0x0F)
     return _.every([[1, 2], [0, 5], [3, 4]], ([a, b]: [number, number]) => (acl[a] ^ acl[b]) === 0xF)
+  }
+
+  /**
+   * Generate block 0 (manufacturer block) for magic mifare classic tag.
+   * @param opts.atqa - The ATQA of the tag.
+   * @param opts.buf - If provided, the data will be written to this buffer.
+   * @param opts.sak - The SAK of the tag.
+   * @param opts.uid - The UID of the tag.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * ;(() => {
+   *   const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const block0 = ChameleonUltra.mf1GenMagicBlock0({
+   *     uid: Buffer.from('deadbeef', 'hex'),
+   *     atqa: Buffer.from('0004', 'hex').reverse(),
+   *     sak: Buffer.from('08', 'hex'),
+   *   })
+   *   console.log(block0.toString('hex')) // deadbeef220804000000000000000000
+   * })()
+   * ```
+   */
+  static mf1GenMagicBlock0 (opts: {
+    atqa?: Buffer
+    buf?: Buffer
+    sak?: Buffer
+    uid: Buffer
+  }): Buffer {
+    const buf = opts.buf ?? new Buffer(16)
+    if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('Invalid buf')
+    if (!Buffer.isBuffer(opts.uid) || !_.includes([4, 7, 10], opts.uid.length)) throw new TypeError('Invalid uid')
+    buf.set(opts.uid, 0)
+
+    if (opts.uid.length !== 4) return buf // 7 bytes or 10 bytes UID
+
+    // 4 bytes UID
+    opts.sak ??= new Buffer([0x08])
+    bufIsLenOrFail(opts.sak, 1, 'sak')
+    opts.atqa ??= new Buffer([0x04, 0x00])
+    bufIsLenOrFail(opts.atqa, 2, 'atqa')
+    buf[4] = opts.uid.xor()
+    buf[5] = opts.sak[0]
+    buf.set(opts.atqa, 6)
+    return buf
   }
 
   /**
@@ -3838,12 +3771,12 @@ export class ChameleonUltra {
    * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdDfuEnter()
    *   console.log(await ultra.cmdDfuGetProtocol()) // Print: 1
    *   await ultra.cmdDfuAbort()
-   * }
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdDfuGetProtocol (): Promise<number> {
@@ -3952,12 +3885,12 @@ export class ChameleonUltra {
    * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdDfuEnter()
    *   console.log(await ultra.cmdDfuGetMtu()) // Print: 1025
    *   await ultra.cmdDfuAbort()
-   * }
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdDfuGetMtu (): Promise<number | undefined> {
@@ -3978,12 +3911,12 @@ export class ChameleonUltra {
    * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdDfuEnter()
    *   console.log(await ultra.cmdDfuPing(1)) // Print: 1
    *   await ultra.cmdDfuAbort()
-   * }
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdDfuPing (id: number): Promise<number> {
@@ -4007,7 +3940,8 @@ export class ChameleonUltra {
    * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdDfuEnter()
    *   console.log(await ultra.cmdDfuGetHardwareVersion())
    *   await ultra.cmdDfuAbort()
@@ -4018,8 +3952,7 @@ export class ChameleonUltra {
    *   //   "ramSize": 262144,
    *   //   "romPageSize": 4096
    *   // }
-   * }
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdDfuGetHardwareVersion (): Promise<{
@@ -4049,7 +3982,8 @@ export class ChameleonUltra {
    * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { DfuFwId, DfuFwType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdDfuEnter()
    *   for (const fwId of [DfuFwId.BOOTLOADER, DfuFwId.APPLICATION, DfuFwId.SOFTDEVICE]) {
@@ -4060,8 +3994,7 @@ export class ChameleonUltra {
    *   // type = BOOTLOADER, version = 1, addr = 0xf3000, len = 45056
    *   // type = SOFTDEVICE, version = 7002000, addr = 0x1000, len = 159744
    *   // type = APPLICATION, version = 1, addr = 0x27000, len = 222844
-   * }
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdDfuGetFirmwareVersion (id: DfuFwId): Promise<{
@@ -4086,11 +4019,11 @@ export class ChameleonUltra {
    * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   await ultra.cmdDfuEnter()
    *   await ultra.cmdDfuAbort()
-   * }
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async cmdDfuAbort (): Promise<void> {
@@ -4157,7 +4090,8 @@ export class ChameleonUltra {
    * @see Please refer to {@link https://docs.nordicsemi.com/bundle/sdk_nrf5_v17.1.0/page/lib_dfu_transport.html | nRF5 SDK: DFU Protocol} for more infomation.
    * @example
    * ```js
-   * async function run (ultra) {
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
    *   const { DeviceModel } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const { default: DfuZip } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/DfuZip.mjs/+esm')
    *   const model = (await ultra.cmdGetDeviceModel()) === DeviceModel.ULTRA ? 'ultra' : 'lite'
@@ -4184,8 +4118,7 @@ export class ChameleonUltra {
    *   // }
    *   await ultra.dfuUpdateImage(image)
    *   ultra.emitter.removeListener('progress', console.log)
-   * }
-   * await run(vm.ultra) // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * })(vm.ultra)
    * ```
    */
   async dfuUpdateImage (image: DfuImage): Promise<void> {

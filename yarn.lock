@@ -6592,6 +6592,11 @@ typed-array-length@^1.0.6:
     is-typed-array "^1.1.13"
     possible-typed-array-names "^1.0.0"
 
+typedoc-plugin-ga@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/typedoc-plugin-ga/-/typedoc-plugin-ga-1.0.4.tgz#5e881129c078e2943779c5956da341e993c05a97"
+  integrity sha512-3YdtfRzeiRGKPgA0wlQ0p4NBIMV2As7BaTkjRVkIvu5m9bsmstxp07CWMe49nF4shIwi2xmq0OU44D7RTMTmJw==
+
 typedoc-plugin-mdn-links@^3.3.7:
   version "3.3.7"
   resolved "https://registry.yarnpkg.com/typedoc-plugin-mdn-links/-/typedoc-plugin-mdn-links-3.3.7.tgz#d85315e07af0df8a71d11caa1bb067cf0e282b20"

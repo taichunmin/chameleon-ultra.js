@@ -113,8 +113,12 @@ block script
         },
       },
       methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
         async btnAdapterTips () {
-          await Swal.fire({
+          await this.swalFire({
             title: 'Browser & OS',
             html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
           })
@@ -130,10 +134,10 @@ block script
               name: await ultra.cmdSlotGetFreqName(slot, FreqType.LF),
               uid: toHex(await ultra.cmdEm410xGetEmuId()),
             })
-            await Swal.fire({ icon: 'success', title: 'Load success' })
+            await this.swalFire({ icon: 'success', title: 'Load success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Load failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Load failed', text: err.message })
           }
         },
         async btnEmuWrite () {
@@ -152,10 +156,10 @@ block script
             if (_.isString(name) && name.length > 0) await ultra.cmdSlotSetFreqName(slot, FreqType.LF, name)
             await ultra.cmdEm410xSetEmuId(uid)
             await ultra.cmdSlotSaveSettings()
-            await Swal.fire({ icon: 'success', title: 'Emulate success' })
+            await this.swalFire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Emulate failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Emulate failed', text: err.message })
           }
         },
         async btnEmuReset () {
@@ -169,10 +173,10 @@ block script
             this.showLoading({ text: 'Resetting...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             await ultra.slotChangeTagTypeAndActive(slot, null, TagType.EM410X) // reset slot
-            await Swal.fire({ icon: 'success', title: 'Reset success' })
+            await this.swalFire({ icon: 'success', title: 'Reset success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Reset failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
         },
         async btnScanTag () {
@@ -183,7 +187,7 @@ block script
             Swal.close()
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Scan failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Scan failed', text: err.message })
           }
         },
         async btnT55xxWrite () {
@@ -198,10 +202,10 @@ block script
             await ultra.cmdEm410xWriteToT55xx(uid, newKey, oldKeys)
             const uid2 = await ultra.cmdEm410xScan()
             if (!uid.equals(uid2)) throw new Error(`ID mismatch after write, scanned = ${toHex(uid2)}`)
-            await Swal.fire({ icon: 'success', title: 'Write success' })
+            await this.swalFire({ icon: 'success', title: 'Write success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
         },
         async btnKeysReset () {

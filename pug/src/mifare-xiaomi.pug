@@ -187,8 +187,12 @@ block script
         },
       },
       methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
         async btnAdapterTips () {
-          await Swal.fire({
+          await this.swalFire({
             title: 'Browser & OS',
             html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
           })
@@ -225,10 +229,10 @@ block script
               default:
                 throw new Error(`Unsupported file extension: ${ext}`)
             }
-            await Swal.fire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
+            await this.swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Import failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Import failed', text: err.message })
           }
         },
         async btnImportDumpBin (file, buf) {
@@ -326,7 +330,7 @@ block script
             this.setDump(getEmptyDump())
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Reset failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
         },
         async btnEmuWrite () {
@@ -343,10 +347,10 @@ block script
             await ultra.cmdMf1SetAntiCollMode(true)
             await ultra.cmdMf1EmuWriteBlock(0, dump.subarray(0, 16)) // set block0
             await ultra.cmdSlotSaveSettings()
-            await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
+            await this.swalFire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
           }
         },
         async btnGen2Write () {
@@ -380,10 +384,10 @@ block script
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             _.pull(failed, 0) // ignore error of block 0
             if (failed.length !== 0) throw new Error(`${failed.length} blocks failed: ${failed.join(',')}`)
-            await Swal.fire({ icon: 'success', title: 'Write success' })
+            await this.swalFire({ icon: 'success', title: 'Write success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
         },
         async mfVerifyUid () {
@@ -435,10 +439,10 @@ block script
               if (!blk1.equals(blk2)) diffs.push(i)
             }
             if (diffs.length !== 0) throw new Error(`${diffs.length} blocks are different: ${diffs.join(',')}`)
-            await Swal.fire({ icon: 'success', title: 'All blocks is equal.' })
+            await this.swalFire({ icon: 'success', title: 'All blocks is equal.' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Verify failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Verify failed', text: err.message })
           }
         },
         async btnGen2Read () {
@@ -447,10 +451,10 @@ block script
             const other = await this.mfGen2Read()
             other.set(dump.subarray(0, 16), 0) // ignore block 0
             this.setDump(other)
-            await Swal.fire({ icon: 'success', title: 'Read success' })
+            await this.swalFire({ icon: 'success', title: 'Read success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Read failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
