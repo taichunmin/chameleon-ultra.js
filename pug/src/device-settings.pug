@@ -171,8 +171,12 @@ block script
         },
       },
       methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
         async btnAdapterTips () {
-          await Swal.fire({
+          await this.swalFire({
             title: 'Browser & OS',
             html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
           })
@@ -205,7 +209,7 @@ block script
             Swal.close()
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', text: err.message })
+            await this.swalFire({ icon: 'error', text: err.message })
           }
         },
         async btnSaveDevice () {
@@ -223,10 +227,10 @@ block script
               await ultra.cmdSetButtonLongPressAction(btn, ss[`longPressBtn${btnName}`])
             }
             await ultra.cmdSaveSettings()
-            await Swal.fire({ icon: 'success', text: 'Settings save successfully!' })
+            await this.swalFire({ icon: 'success', text: 'Settings save successfully!' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', text: err.message })
+            await this.swalFire({ icon: 'error', text: err.message })
           }
         },
         async btnEnterBootloader () {

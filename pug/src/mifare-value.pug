@@ -132,8 +132,12 @@ block script
         },
       },
       methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
         async btnAdapterTips () {
-          await Swal.fire({
+          await this.swalFire({
             title: 'Browser & OS',
             html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
           })
@@ -142,7 +146,7 @@ block script
           const { ultra } = this
           src = this.mf1ParseBlockKey(src)
           const res = await ultra.mf1VblockGetValue(src)
-          await Swal.fire({ icon: 'success', title: 'Success', text: `block[${src.block}] = ${JSON.stringify(res)}` })
+          await this.swalFire({ icon: 'success', title: 'Success', text: `block[${src.block}] = ${JSON.stringify(res)}` })
         },
         async btnGetValue () {
           const { ultra } = this
@@ -151,7 +155,7 @@ block script
             await this.cmdVblockGet(this.ss.src)
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed to get value from src', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed to get value from src', text: err.message })
           }
         },
         async btnSetValue () {
@@ -163,7 +167,7 @@ block script
             await this.cmdVblockGet(this.ss.src)
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed to set value to src', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed to set value to src', text: err.message })
           }
         },
         async btnManipulateValue (operator) {
@@ -177,7 +181,7 @@ block script
             await this.cmdVblockGet(this.ss.src)
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: `Failed to ${Mf1VblockOperator[operator]} value`, text: err.message })
+            await this.swalFire({ icon: 'error', title: `Failed to ${Mf1VblockOperator[operator]} value`, text: err.message })
           }
         },
         mf1ParseBlockKey ({ block, keyType, key }) {

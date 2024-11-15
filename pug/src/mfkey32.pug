@@ -153,8 +153,12 @@ block script
         },
       },
       methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
         async btnAdapterTips () {
-          await Swal.fire({
+          await this.swalFire({
             title: 'Browser & OS',
             html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
           })
@@ -178,7 +182,7 @@ block script
             Swal.close()
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
           }
         },
         async btnEmulateTag () {
@@ -201,18 +205,14 @@ block script
             await ultra.cmdMf1SetAntiCollMode(false)
             await ultra.cmdHf14aSetAntiCollData(tag)
             await ultra.cmdMf1SetDetectionEnable(true) // enable detection
-            const block0 = Buffer.allocUnsafe(16)
-            tag.uid.copy(block0) // copy uid
-            block0[tag.uid.length] = tag.uid.xor() // bcc for magic card
-            block0[tag.uid.length + 1] = tag.sak[0] // sak
-            tag.atqa.copy(block0, tag.uid.length + 2) // atqa
+            const block0 = ChameleonUltra.mf1GenMagicBlock0(tag)
             ultra.emitter.emit('debug', 'web', `block0 = ${block0.toString('hex')}`)
             await ultra.cmdMf1EmuWriteBlock(0, block0) // set block0
             await ultra.cmdSlotSaveSettings()
-            await Swal.fire({ icon: 'success', title: 'Emulate successfully!' })
+            await this.swalFire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
           }
         },
         async btnRecover () {
@@ -275,10 +275,10 @@ block script
                 }
               }
             }
-            await Swal.fire({ icon: 'success', title: 'Recover successfully!' })
+            await this.swalFire({ icon: 'success', title: 'Recover successfully!' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed to recover key.', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed to recover key.', text: err.message })
           }
         },
         async btnCheck () {
@@ -292,11 +292,11 @@ block script
               key: Buffer.from(key, 'hex'),
             })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            if (!isCorrect) return await Swal.fire({ icon: 'error', title: 'Key is incorrect!' })
-            await Swal.fire({ icon: 'success', title: 'Key is correct!' })
+            if (!isCorrect) return await this.swalFire({ icon: 'error', title: 'Key is incorrect!' })
+            await this.swalFire({ icon: 'success', title: 'Key is correct!' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Failed to check key.', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Failed to check key.', text: err.message })
           }
         },
         async btnCopy (text, container = null) {
@@ -308,7 +308,7 @@ block script
           dom.setSelectionRange(0, 1e6) // For mobile devices
           document.execCommand('copy')
           container.removeChild(dom)
-          await Swal.fire({ icon: 'success', title: 'Copied' })
+          await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
           return await new Promise((resolve, reject) => {

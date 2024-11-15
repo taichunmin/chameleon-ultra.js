@@ -233,8 +233,12 @@ block script
         },
       },
       methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
         async btnAdapterTips () {
-          await Swal.fire({
+          await this.swalFire({
             title: 'Browser & OS',
             html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
           })
@@ -255,10 +259,10 @@ block script
               if (!this.ss.toggle[i]) continue
               this.mfSetSectorDump(i, await ultra.cmdMf1EmuReadBlock(i << 2, 4))
             }
-            await Swal.fire({ icon: 'success', title: 'Load success' })
+            await this.swalFire({ icon: 'success', title: 'Load success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Load failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Load failed', text: err.message })
           }
         },
         async btnEmuWrite () {
@@ -290,10 +294,10 @@ block script
               await ultra.cmdMf1EmuWriteBlock(i << 2, sectorData)
             }
             await this.cmdSlotSaveSettings()
-            await Swal.fire({ icon: 'success', title: 'Emulate success' })
+            await this.swalFire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Emulate failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Emulate failed', text: err.message })
           }
         },
         async btnEmuReset () {
@@ -307,10 +311,10 @@ block script
             this.showLoading({ text: 'Resetting...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
             await ultra.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
-            await Swal.fire({ icon: 'success', title: 'Reset success' })
+            await this.swalFire({ icon: 'success', title: 'Reset success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Reset failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
         },
         async btnGen1aRead () {
@@ -327,10 +331,10 @@ block script
               this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await Swal.fire({ icon: 'success', title: 'Read success' })
+            await this.swalFire({ icon: 'success', title: 'Read success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Read failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
         },
         async btnGen1aWrite () {
@@ -349,10 +353,10 @@ block script
               this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await Swal.fire({ icon: 'success', title: 'Write success' })
+            await this.swalFire({ icon: 'success', title: 'Write success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
         },
         async btnGen2Read () {
@@ -384,11 +388,11 @@ block script
               this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            if (failed.length === 0) return await Swal.fire({ icon: 'success', title: 'Read success' })
-            await Swal.fire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
+            if (failed.length === 0) return await this.swalFire({ icon: 'success', title: 'Read success' })
+            await this.swalFire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Read failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
         },
         async btnGen2Write () {
@@ -416,11 +420,11 @@ block script
               this.showLoading(genSwalCfg(i + 1))
             }
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            if (failed.length === 0) return await Swal.fire({ icon: 'success', title: 'Write success' })
-            await Swal.fire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
+            if (failed.length === 0) return await this.swalFire({ icon: 'success', title: 'Write success' })
+            await this.swalFire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Write failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
         },
         async btnKeysGrab () {
@@ -439,10 +443,10 @@ block script
             keys = _.uniq(keys)
             if (keys.length === 0) throw new Error('No keys found')
             this.$set(this.ss, 'keys', keys.join('\n'))
-            await Swal.fire({ icon: 'success', title: 'Grab success', text: `Grab ${keys.length} keys.` })
+            await this.swalFire({ icon: 'success', title: 'Grab success', text: `Grab ${keys.length} keys.` })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Grab failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Grab failed', text: err.message })
           }
         },
         async btnKeysReset () {
@@ -482,10 +486,10 @@ block script
               default:
                 throw new Error(`Unsupported file extension: ${ext}`)
             }
-            await Swal.fire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
+            await this.swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Import failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Import failed', text: err.message })
           }
         },
         async btnImportDumpBin (file, buf) {
@@ -602,7 +606,7 @@ block script
             this.$set(this, 'ss', { ...this.ss, ...tmp })
           } catch (err) {
             ultra.emitter.emit('error', err)
-            await Swal.fire({ icon: 'error', title: 'Reset failed', text: err.message })
+            await this.swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
         },
         async confirm (text, confirmButtonText, cancelButtonText) {

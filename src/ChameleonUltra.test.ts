@@ -1312,9 +1312,9 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     { acl: '78778869', expected: true },
     { acl: 'BBF8D48E031978778869C19085AF2635', expected: true },
     { acl: '45687B3167880400C810002000000016 0E140001070208030904081000000000 00000000000000000000000000000000 BBF8D48E031978778869C19085AF2635', expected: true },
-  ])('#mf1IsValidAcl($acl) = $expected', async ({ acl, expected }) => {
+  ])('.mf1IsValidAcl($acl) = $expected', async ({ acl, expected }) => {
     // act
-    const actual = ultra.mf1IsValidAcl(Buffer.from(acl, 'hex'))
+    const actual = ChameleonUltra.mf1IsValidAcl(Buffer.from(acl, 'hex'))
 
     // assert
     expect(actual).toBe(expected)
