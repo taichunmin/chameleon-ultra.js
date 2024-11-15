@@ -270,3 +270,20 @@ test.each([
   const actual = await Crypto1.darkside(fnAcquire, fnCheckKey)
   expect(actual.toString('hex')).toEqual(opts.expected)
 })
+
+test.each([
+  { uid: '65535D33', key: '974C262B9278', nt: 'BE2B7B5D', nrEnc: 'B1E1B891', arEnc: '2CF7A248' },
+  { uid: '65535D33', key: 'A9AC67832330', nt: '2C198BE4', nrEnc: 'FEDAC6D2', arEnc: 'CF0A3C7E' },
+  { uid: '65535D33', key: 'A9AC67832330', nt: 'F73E638F', nrEnc: '4F4F867A', arEnc: '18CCB40B' },
+] as const)('tag send nt and use key to verify nrEnc and arEnc', async ({ uid, key, nt, nrEnc, arEnc }) => {
+  const tag: any = {}
+  _.merge(tag, _.mapValues({ uid, nt, nrEnc, arEnc }, hex => Buffer.from(hex, 'hex').readUInt32BE(0)))
+  tag.state = new Crypto1()
+  tag.state.setLfsr(Buffer.from(key, 'hex').readUIntBE(0, 6))
+  tag.ks0 = tag.state.lfsrWord(tag.uid ^ tag.nt, 0)
+  tag.ks1 = tag.state.lfsrWord(tag.nrEnc, 1)
+  tag.ks2 = tag.state.lfsrWord(0, 0)
+  tag.ar = (tag.ks2 ^ tag.arEnc) >>> 0
+  const expected = Crypto1.prngSuccessor(tag.nt, 64)
+  expect(tag.ar).toEqual(expected)
+})

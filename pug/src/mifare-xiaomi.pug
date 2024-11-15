@@ -339,11 +339,7 @@ block script
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating tag...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            // reset slot
-            await ultra.cmdSlotChangeTagType(slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotResetTagType(slot, TagType.MIFARE_1024)
-            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
-            await ultra.cmdSlotSetActive(slot)
+            await ultra.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
             await ultra.cmdMf1SetAntiCollMode(true)
             await ultra.cmdMf1EmuWriteBlock(0, dump.subarray(0, 16)) // set block0
             await ultra.cmdSlotSaveSettings()

@@ -1180,10 +1180,10 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@taichunmin/buffer@^0.13.10":
-  version "0.13.10"
-  resolved "https://registry.yarnpkg.com/@taichunmin/buffer/-/buffer-0.13.10.tgz#e7d14d65a7c8549b49bf93fc0969b25a7009ce68"
-  integrity sha512-wFounwBY+jt/QUA9CmO+jMfQnSYUtoiRATWkpgvIOGAKwKLZmkLGq0x9avOjVq75QPse5Ph5YBYotv2a+DawKQ==
+"@taichunmin/buffer@^0.13.11":
+  version "0.13.11"
+  resolved "https://registry.yarnpkg.com/@taichunmin/buffer/-/buffer-0.13.11.tgz#ac99d3ce9d51cc4aeba982e423750607e4a0e358"
+  integrity sha512-DnBciBfadZLXPruXq32uTJR7fbt4jftlp9mqf1cbIQJRAKyYKkO29GQsCu9IO8HiR12k8A0lkYeihhWqw7xPfQ==
   dependencies:
     lodash "^4.17.21"
 

@@ -457,11 +457,7 @@ block script
               sak: Buffer.from(tag.sak, 'hex'),
               uid: Buffer.from(tag.uid, 'hex').slice(-4),
             }
-            // reset slot
-            await ultra.cmdSlotChangeTagType(slot, tag.tagType)
-            await ultra.cmdSlotResetTagType(slot, tag.tagType)
-            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
-            await ultra.cmdSlotSetActive(slot)
+            await ultra.slotChangeTagTypeAndActive(slot, tag.tagType) // reset slot
             // set emulated tag
             await ultra.cmdMf1SetAntiCollMode(false)
             await ultra.cmdHf14aSetAntiCollData(anticoll)

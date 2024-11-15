@@ -191,11 +191,7 @@ block script
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating tag...' })
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            // reset slot
-            await ultra.cmdSlotChangeTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
-            await ultra.cmdSlotResetTagType(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024)
-            await ultra.cmdSlotSetEnable(slot, FreqType.HF, true)
-            await ultra.cmdSlotSetActive(slot)
+            await ultra.slotChangeTagTypeAndActive(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024) // reset slot
             // set anti-coll
             const tag = {
               atqa: Buffer.from(atqa, 'hex').reverse(),
