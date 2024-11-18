@@ -206,7 +206,7 @@ block script
             await ultra.cmdHf14aSetAntiCollData(tag)
             await ultra.cmdMf1SetDetectionEnable(true) // enable detection
             const block0 = ChameleonUltra.mf1GenMagicBlock0(tag)
-            ultra.emitter.emit('debug', 'web', `block0 = ${block0.toString('hex')}`)
+            ultra.emitter.emit('debug', 'web', `block0 = ${toHex(block0)}`)
             await ultra.cmdMf1EmuWriteBlock(0, block0) // set block0
             await ultra.cmdSlotSaveSettings()
             await this.swalFire({ icon: 'success', title: 'Emulate successfully!' })
@@ -234,6 +234,7 @@ block script
                 currentProgressStep: 1,
                 text: `Retrive logs: ${logs.length} / ${logCnt}`,
               }))
+              await this.sleep(0) // 等待 UI 更新
               const tmp = await ultra.cmdMf1GetDetectionLogs(logs.length)
               logs.push(...tmp)
             }
@@ -245,9 +246,8 @@ block script
             ultra.emitter.emit('debug', 'web', `logs = ${JSON.stringify(logs)}`)
 
             // calc how many mfkey32v2 need to be run
-            const bufToHex = buf => buf?.toString('hex').toUpperCase()
             const blockToSector = block => block < 128 ? block >>> 2 : 24 + (block >>> 4)
-            logs = _.values(_.groupBy(logs, log => `${bufToHex(log.uid)}-${blockToSector(log.block)}-${'AB'[+log.isKeyB]}`))
+            logs = _.values(_.groupBy(logs, log => `${toHex(log.uid)}-${blockToSector(log.block)}-${'AB'[+log.isKeyB]}`))
             console.log(logs)
             const recoverMax = _.sumBy(logs, arr => arr.length * (arr.length - 1) / 2)
             this.$set(this.ss, 'detects', [])
@@ -258,20 +258,33 @@ block script
                 for (let j = i + 1; j < grp.length; j++) {
                   this.showLoading(_.merge(swalCfg, {
                     currentProgressStep: 2,
-                    text: `Recover key: ${recoverCnt} / ${recoverMax}`,
+                    text: `Recover key: ${recoverCnt++} / ${recoverMax}`,
                   }))
+                  await this.sleep(0) // 等待 UI 更新
                   const r1 = grp[j]
+                  if (r0.skip || r1.skip) continue // skip by known key
                   try {
+                    const key1 = this.mfkey32v2(r0.uid, r0, r1)
                     this.$set(this.ss, 'detects', _.unionWith(this.ss.detects, [{
                       block: r0.block,
                       keyType: +r0.isKeyB,
-                      key: this.mfkey32v2(r0.uid, r0, r1),
+                      key: toHex(key1),
                     }], _.isEqual))
+                    r0.skip = r1.skip = true
+                    for (let k = 0; k < grp.length; k++) {
+                      if (grp[k].skip) continue
+                      const isReaderHasKey = Crypto1.mfkey32IsReaderHasKey({
+                        uid: grp[k].uid,
+                        nt: grp[k].nt,
+                        nr: grp[k].nr,
+                        ar: grp[k].ar,
+                        key: key1,
+                      })
+                      if (isReaderHasKey) grp[k].skip = true
+                    }
                   } catch (err) {
                     ultra.emitter.emit('error', err)
                   }
-                  recoverCnt++
-                  await this.sleep(0) // 等待 UI 更新
                 }
               }
             }
@@ -302,7 +315,7 @@ block script
         async btnCopy (text, container = null) {
           if (!container) container = document.body
           const dom = document.createElement('textarea')
-          dom.value = text
+          dom.value = text = `${text}`
           container.appendChild(dom)
           dom.select()
           dom.setSelectionRange(0, 1e6) // For mobile devices
@@ -340,7 +353,7 @@ block script
             nt1: r1.nt,
             nr1: r1.nr,
             ar1: r1.ar,
-          }).toString('hex')
+          })
         },
         btnSetTestFromDetect (detect) {
           _.merge(this.ss, _.pick(detect, ['block', 'keyType', 'key']))

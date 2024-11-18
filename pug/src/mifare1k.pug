@@ -293,7 +293,7 @@ block script
               const sectorData = Buffer.from(dump[i], 'hex')
               await ultra.cmdMf1EmuWriteBlock(i << 2, sectorData)
             }
-            await this.cmdSlotSaveSettings()
+            await ultra.cmdSlotSaveSettings()
             await this.swalFire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
             ultra.emitter.emit('error', err)
