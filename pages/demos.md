@@ -122,9 +122,9 @@ A tool for Xiaomi Watch to clone encrypted Mifare Classic tag.
 
 ## [mifare-value.html](https://taichunmin.idv.tw/chameleon-ultra.js/mifare-value.html)
 
-在台灣有些 MIFARE Classic 卡片使用 value block 來儲存卡片的餘額，但是有些中國魔術卡不支援 value block 指令，所以無法使用這些魔術卡來複製 MIFARE Classic 卡片。這個工具可以讓你測試卡片是否支援 value block 指令。
+在台灣有些系統會使用 MIFARE Classic 卡片的 value block 來儲存餘額，value block 的 increment/decrement/restore 指令的資料是由 2 個部分所組成，在第 2 部分傳送完成後卡片不會回傳 ACK，所以讀卡機如果在 Timeout 之前沒有收到 NACK，就可以視為執行成功並繼續執行下一個指令。但有些魔術卡需要更多時間來完成指令，否則就會執行失敗，這個工具可以讓你測試卡片是否能夠成功執行 value block 的指令。
 
-A ChameleonUltra tool for MIFARE Classic value block commands. Some MIFARE Classic cards in Taiwan are using value block to store the balance of the card. But some chinese magic cards didn't support value block commands. So you can't use these magic cards to clone original MIFARE Classic cards. This tool can help you to test whether the card support value block commands or not.
+In Taiwan, some systems use the value block of MIFARE Classic cards to store balances. The data for the value block's increment/decrement/restore commands consists of two parts. After the second part is transmitted, the card will not return ACK. Therefore, if the reader does not receive a NACK before timeout, it can be considered successful and proceed to the next command. However, some magic cards needs more time to complete the value block's command, otherwise the command will fail. This tool allows you to test whether the card can successfully execute the value block commands.
 
 ![](https://i.imgur.com/jJ3pNvn.png)
 

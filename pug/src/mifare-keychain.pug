@@ -592,7 +592,7 @@ block script
         async btnCopy (text, container = null) {
           if (!container) container = document.body
           const dom = document.createElement('textarea')
-          dom.value = text
+          dom.value = text = `${text}`
           container.appendChild(dom)
           dom.select()
           dom.setSelectionRange(0, 1e6) // For mobile devices

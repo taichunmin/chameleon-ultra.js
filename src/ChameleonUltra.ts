@@ -3522,7 +3522,7 @@ export class ChameleonUltra {
       await onChunkKeys?.({ keys: chunkKeys, mask })
       const tmp = await this.cmdMf1CheckKeysOfSectors({ keys: chunkKeys, mask })
       if (_.isNil(tmp)) break // all founded
-      for (let i = 0; i < 10; i++) mask[i] |= tmp.found[i]
+      mask.or(tmp.found)
       for (let i = 0; i < maxSectors * 2; i++) {
         if (_.isNil(tmp.sectorKeys[i])) continue
         foundKeys[i] = tmp.sectorKeys[i]
