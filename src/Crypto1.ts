@@ -1,6 +1,8 @@
 /**
  * @example
+ * ```js
  * import Crypto1 from 'chameleon-ultra.js/Crypto1'
+ * ```
  */
 import { Buffer } from '@taichunmin/buffer'
 import _ from 'lodash'
@@ -53,6 +55,7 @@ const fastfwd = [
 
 /**
  * JavaScript implementation of the Crypto1 cipher.
+ * @see [crypto1.c | RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/blob/master/common/crapto1/crypto1.c)
  */
 export default class Crypto1 {
   /**
@@ -166,7 +169,7 @@ export default class Crypto1 {
    * @returns The lfsr output bit.
    */
   lfsrBit (input: number, isEncrypted: number): number {
-    const { evenParity32, filter, toBool, toUint32 } = Crypto1
+    const { evenParity32, filter, toBool } = Crypto1
     const output = filter(this.odd)
 
     const feedin = (output & toBool(isEncrypted)) ^
@@ -175,7 +178,7 @@ export default class Crypto1 {
       (LF_POLY_EVEN & this.even)
 
     ;[this.odd, this.even] = [
-      toUint32(this.even << 1 | evenParity32(feedin)),
+      (this.even << 1) & 0xFFFFFF | evenParity32(feedin),
       this.odd,
     ]
 
@@ -764,6 +767,46 @@ export default class Crypto1 {
       if (toUint32(state.lfsrWord(0, 0) ^ p641) === ar1) return new Buffer(6).writeUIntBE(key, 0, 6)
     }
     throw new Error('failed to recover key')
+  }
+
+  /**
+   * A method for Tag to validate Reader has the correct key.
+   * @param opts.ar - The encrypted prng successor of `opts.nt`.
+   * @param opts.key - The 6-bytes key to be test.
+   * @param opts.nr - The encrypted nonce from reader.
+   * @param opts.nt - The nonce from tag.
+   * @param opts.uid - The 4-bytes uid of tag.
+   * @example
+   * ```js
+   * const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   * const { default: Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm')
+   *
+   * console.log(Crypto1.mfkey32IsReaderHasKey({
+   *   ar: 'CF0A3C7E',
+   *   key: 'A9AC67832330',
+   *   nr: 'FEDAC6D2',
+   *   nt: '2C198BE4',
+   *   uid: '65535D33',
+   * }).toString('hex')) // true
+   * ```
+   */
+  static mfkey32IsReaderHasKey (opts: {
+    ar: UInt32Like
+    key: Buffer
+    nr: UInt32Like
+    nt: UInt32Like
+    uid: UInt32Like
+  }): boolean {
+    if (!Buffer.isBuffer(opts.key) || opts.key.length !== 6) throw new TypeError('invalid opts.key')
+    const { castToUint32, prngSuccessor, toUint32 } = Crypto1
+    const tag: Record<string, any> = { state: new Crypto1() }
+    ;[tag.uid, tag.nt, tag.nrEnc, tag.arEnc] = _.map(['uid', 'nt', 'nr', 'ar'] as const, k => castToUint32(opts[k]))
+    tag.state.setLfsr(opts.key.readUIntBE(0, 6))
+    tag.ks0 = tag.state.lfsrWord(tag.uid ^ tag.nt, 0)
+    tag.ks1 = tag.state.lfsrWord(tag.nrEnc, 1)
+    tag.ks2 = tag.state.lfsrWord(0, 0)
+    tag.ar = toUint32(tag.ks2 ^ tag.arEnc)
+    return tag.ar === prngSuccessor(tag.nt, 64)
   }
 
   /**
