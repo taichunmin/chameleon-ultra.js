@@ -207,11 +207,15 @@ function slipDecode (buf: Buffer): Buffer {
   return buf.slice(0, len1)
 }
 
+/** @inline */
 type SerialPort1 = SerialPort & EventEmitter
+
+/** @inline */
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }
 }
 
+/** @inline */
 interface AdapterInstallResp {
   isSupported: () => boolean
 }

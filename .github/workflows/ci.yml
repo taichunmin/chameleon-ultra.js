@@ -80,9 +80,15 @@ jobs:
         with:
           access: public
           token: ${{ secrets.NPM_TOKEN }}
-      - name: jsDelivr Purge
+      - name: Update GitHub Release
         if: ${{ steps.npm-publish.outputs.type }}
+        uses: sersoft-gmbh/running-release-tags-action@v3
+        with:
+          tag: v${{ steps.npm-publish.outputs.version }}
+          update-full-release: true
+      - name: jsDelivr Purge
         uses: egad13/purge-jsdelivr-cache@v1
+        if: ${{ steps.npm-publish.outputs.type }}
         with:
           url: |
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0

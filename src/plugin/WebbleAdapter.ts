@@ -170,10 +170,12 @@ export default class WebbleAdapter implements ChameleonPlugin {
 
 setObject(globalThis, ['ChameleonUltraJS', 'WebbleAdapter'], WebbleAdapter)
 
+/** @inline */
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }
 }
 
+/** @inline */
 interface AdapterInstallResp {
   isSupported: () => boolean
 }

@@ -74,15 +74,18 @@ export default class SerialPortAdapter implements ChameleonPlugin {
 
 setObject(globalThis, ['ChameleonUltraJS', 'SerialPortAdapter'], SerialPortAdapter)
 
+/** @inline */
 type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }
 }
 
+/** @inline */
 interface SerialPortOption {
   path?: string
   baudRate?: number
 }
 
+/** @inline */
 interface AdapterInstallResp {
   isSupported: () => boolean
 }

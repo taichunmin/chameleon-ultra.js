@@ -1,4 +1,4 @@
-/** SDK version of chameleon-ultra.js */
+/** version of chameleon-ultra.js SDK */
 export const version = process.env.VERSION ?? 'unknown'
 
 export { Buffer } from '@taichunmin/buffer'

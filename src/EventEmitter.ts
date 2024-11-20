@@ -121,19 +121,29 @@ export class EventEmitter implements NodeJS.EventEmitter, EventTarget {
   }
 }
 
+/** @inline */
 type EventListener<T extends any[] = any[]> = EventListenerOrig<T> & { listener?: EventListenerOrig<T> }
+
+/** @inline */
 type EventListenerOrig<T extends any[] = any[]> = (...args: T) => unknown | Promise<unknown>
+
+/** @inline */
 type EventMap = Map<EventName, EventListener[]>
+
+/** @inline */
 type EventName = string | symbol
 
+/** @inline */
 interface DomEvent {
   type: string
 }
 
+/** @inline */
 interface EventListenerOptions {
   capture?: boolean
 }
 
+/** @inline */
 interface AddEventListenerOptions extends EventListenerOptions {
   once?: boolean
   passive?: boolean

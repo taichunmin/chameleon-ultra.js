@@ -1,4 +1,4 @@
-code {
+.tsd-comment code {
   :not(pre)>& {
     background-color: #2c3437;
     border-radius: 0.4rem;

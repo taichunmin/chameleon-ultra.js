@@ -1,5 +1,6 @@
 import _ from 'lodash'
 
+/** @inline */
 export type MiddlewareComposeFn = (ctx: Record<string, any>, next: () => Promise<unknown>) => Promise<unknown>
 
 enum MiddlewareStatus {
