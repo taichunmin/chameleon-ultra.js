@@ -9,8 +9,8 @@ on:
 
 permissions:
   contents: read
-  pages: write
   id-token: write
+  pages: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -51,6 +51,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Print all context
+        run: |
+          echo 'env=${{ toJSON(env) }}'
+          echo 'github=${{ toJSON(github) }}'
+          echo 'inputs=${{ toJSON(inputs) }}'
+          echo 'job=${{ toJSON(job) }}'
+          echo 'runner=${{ toJSON(runner) }}'
+          echo 'secrets=${{ toJSON(secrets) }}'
+          echo 'steps=${{ toJSON(steps) }}'
+          echo 'vars=${{ toJSON(vars) }}'
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -80,12 +90,6 @@ jobs:
         with:
           access: public
           token: ${{ secrets.NPM_TOKEN }}
-      - name: Update GitHub Release
-        if: ${{ steps.npm-publish.outputs.type }}
-        uses: sersoft-gmbh/running-release-tags-action@v3
-        with:
-          tag: v${{ steps.npm-publish.outputs.version }}
-          update-full-release: true
       - name: jsDelivr Purge
         uses: egad13/purge-jsdelivr-cache@v1
         if: ${{ steps.npm-publish.outputs.type }}

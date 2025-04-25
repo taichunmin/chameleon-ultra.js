@@ -1,0 +1,43 @@
+name: Update Release
+run-name: "Update Release: ${{ inputs.tag || github.ref_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag Name
+        type: string
+        required: true
+  push:
+    tags:
+      - v*.*
+
+env:
+  REF_NAME: ${{ inputs.tag || github.ref_name }}
+
+# Allow one concurrent deployment
+concurrency:
+  group: deploy-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Print all context
+        run: |
+          echo 'env=${{ toJSON(env) }}'
+          echo 'github=${{ toJSON(github) }}'
+          echo 'inputs=${{ toJSON(inputs) }}'
+          echo 'job=${{ toJSON(job) }}'
+          echo 'runner=${{ toJSON(runner) }}'
+          echo 'secrets=${{ toJSON(secrets) }}'
+          echo 'steps=${{ toJSON(steps) }}'
+          echo 'vars=${{ toJSON(vars) }}'
+      - uses: actions/checkout@v4
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.REF_NAME }}
+          name: Release ${{ env.REF_NAME }}
