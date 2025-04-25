@@ -8,9 +8,9 @@ on:
     branches: [ master ]
 
 permissions:
-  contents: read
-  pages: write
+  contents: write
   id-token: write
+  pages: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -81,10 +81,9 @@ jobs:
           access: public
           token: ${{ secrets.NPM_TOKEN }}
       - name: Update GitHub Release
-        if: ${{ steps.npm-publish.outputs.type }}
         uses: sersoft-gmbh/running-release-tags-action@v3
         with:
-          tag: v${{ steps.npm-publish.outputs.version }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           update-full-release: true
       - name: jsDelivr Purge
         uses: egad13/purge-jsdelivr-cache@v1
