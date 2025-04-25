@@ -72,7 +72,7 @@ function toUpperHex (buf: Buffer): string {
  * @see You can learn how to use `@taichunmin/buffer` from {@link https://taichunmin.idv.tw/js-buffer/ | here}.
  * @example
  * <details>
- * <summary>Click here to expend import example.</summary>
+ * <summary>Click here see how to use the SDK.</summary>
  *
  * Example of import the library using `import` or `require`:
  *
@@ -875,14 +875,17 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get the git version of firmware.
+   * Get the git version of firmware. The returned string is the output of `git describe --abbrev=7 --dirty --always --tags --match "v*.*"`. Depending on the status of repo, the string can be:
+   * - a short tag, e.g. `v2.0.0` if the firmware is built from the tagged commit
+   * - a longer tag indicating how many commits far from the latest tag and 7 nibbles of its commit hash, prepended with g, e.g. 5 commits away from v2.0.0: `v2.0.0-5-g617d6d0`
+   * - a long tag finishing with `-dirty` if the local repo contains changes not yet committed, e.g. `v2.0.0-5-g617d6d0-dirty`
    * @returns The git version of firmware.
    * @group Device Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async ultra => {
-   *   console.log(await ultra.cmdGetGitVersion()) // '98605be'
+   *   console.log(await ultra.cmdGetGitVersion()) // 'v2.0.0-209-gc68ea99'
    * })(vm.ultra)
    * ```
    */
@@ -2181,7 +2184,7 @@ export class ChameleonUltra {
    *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   await ultra.cmdHf14aSetAntiCollData({
    *     atqa: Buffer.from('0400', 'hex'),
-   *     sak: Buffer.from('08', 'hex'),
+   *     sak: Buffer.of(0x08),
    *     uid: Buffer.from('01020304', 'hex')
    *   })
    * })(vm.ultra)
@@ -3443,7 +3446,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
-   * ;(() => {
+   * await (async () => {
    *   const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(ChameleonUltra.mf1TrailerBlockNoOfSector(0)) // 3
    * })()
@@ -3701,7 +3704,7 @@ export class ChameleonUltra {
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
-   * ;(() => {
+   * await (async () => {
    *   const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   console.log(ChameleonUltra.mf1IsValidAcl(Buffer.from('ff078069', 'hex'))) // true
    * })()
@@ -3727,12 +3730,12 @@ export class ChameleonUltra {
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
-   * ;(() => {
+   * await (async () => {
    *   const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const block0 = ChameleonUltra.mf1GenMagicBlock0({
    *     uid: Buffer.from('deadbeef', 'hex'),
    *     atqa: Buffer.from('0004', 'hex').reverse(),
-   *     sak: Buffer.from('08', 'hex'),
+   *     sak: Buffer.of(0x08),
    *   })
    *   console.log(block0.toString('hex')) // deadbeef220804000000000000000000
    * })()
@@ -3752,14 +3755,285 @@ export class ChameleonUltra {
     if (opts.uid.length !== 4) return buf // 7 bytes or 10 bytes UID
 
     // 4 bytes UID
-    opts.sak ??= new Buffer([0x08])
+    opts.sak ??= Buffer.of(0x08)
     bufIsLenOrFail(opts.sak, 1, 'sak')
-    opts.atqa ??= new Buffer([0x04, 0x00])
+    opts.atqa ??= Buffer.of(0x04, 0x00)
     bufIsLenOrFail(opts.atqa, 2, 'atqa')
     buf[4] = opts.uid.xor()
     buf[5] = opts.sak[0]
     buf.set(opts.atqa, 6)
     return buf
+  }
+
+  /**
+   * Generate empty dump for magic mifare classic tag.
+   * @param opts.atqa - The ATQA of the tag.
+   * @param opts.buf - If provided, the data will be written to this buffer.
+   * @param opts.sak - The SAK of the tag.
+   * @param opts.tagType - The tag type of the mifare classic tag.
+   * @param opts.uid - The UID of the tag.
+   * @group Mifare Classic Related
+   * @returns The empty dump for magic mifare classic tag.
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const dump = ChameleonUltra.mf1GenEmptyDump({
+   *     uid: Buffer.from('deadbeef', 'hex'),
+   *     atqa: Buffer.from('0004', 'hex').reverse(),
+   *     sak: Buffer.of(0x08),
+   *     tagType: TagType.MIFARE_1024,
+   *   })
+   *   console.log(dump.chunk(16).map(blk => blk.toString('hex')).join('\n'))
+   * })()
+   * ```
+   */
+  static mf1GenEmptyDump (opts: {
+    atqa?: Buffer
+    buf?: Buffer
+    sak?: Buffer
+    tagType?: TagType
+    uid?: Buffer
+  } = {}): Buffer {
+    opts.tagType ??= TagType.MIFARE_1024
+    opts.uid ??= Buffer.of(0xDE, 0xAD, 0xBE, 0xEF)
+    const blkAcl = Buffer.from('FFFFFFFFFFFFFF078069FFFFFFFFFFFF', 'hex')
+
+    switch (opts.tagType) {
+      case TagType.MIFARE_1024:
+        opts.atqa ??= Buffer.of(0x04, 0x00)
+        opts.buf ??= new Buffer(1024)
+        opts.sak ??= Buffer.of(0x08)
+        bufIsLenOrFail(opts.buf, 1024, 'buf')
+        ChameleonUltra.mf1GenMagicBlock0(opts as any)
+        for (let i = 0; i < 16; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
+        return opts.buf
+
+      case TagType.MIFARE_2048:
+        opts.atqa ??= Buffer.of(0x04, 0x00)
+        opts.buf ??= new Buffer(2048)
+        opts.sak ??= Buffer.of(0x08)
+        bufIsLenOrFail(opts.buf, 2048, 'buf')
+        ChameleonUltra.mf1GenMagicBlock0(opts as any)
+        for (let i = 0; i < 32; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
+        return opts.buf
+
+      case TagType.MIFARE_4096:
+        opts.atqa ??= Buffer.of(0x02, 0x00)
+        opts.buf ??= new Buffer(4096)
+        opts.sak ??= Buffer.of(0x18)
+        bufIsLenOrFail(opts.buf, 4096, 'buf')
+        ChameleonUltra.mf1GenMagicBlock0(opts as any)
+        for (let i = 0; i < 32; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
+        for (let i = 32; i < 40; i++) opts.buf.set(blkAcl, i * 256 - 5904) // block 16n+15
+        return opts.buf
+
+      default:
+        throw new Error(`opts.tagType is not supported: ${TagType[opts.tagType] ?? opts.tagType}`)
+    }
+  }
+
+  /**
+   * Convert dump to [Proxmark3](https://github.com/RfidResearchGroup/proxmark3) compatible JSON Object for exporting Mifare Classic.
+   * @param opts.atqa - The ATQA of the tag.
+   * @param opts.ats - The ATS of the tag.
+   * @param opts.body - The body of the tag.
+   * @param opts.sak - The SAK of the tag.
+   * @param opts.uid - The UID of the tag.
+   * @returns The JSON Object for exporting Mifare Classic.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const dump = ChameleonUltra.mf1GenEmptyDump({ tagType: TagType.MIFARE_1024 })
+   *   const json = ChameleonUltra.mf1DumpToPm3Json({
+   *     atqa: Buffer.from('0004', 'hex').reverse(),
+   *     body: dump,
+   *     sak: Buffer.of(0x08),
+   *     uid: Buffer.from('deadbeef', 'hex'),
+   *   })
+   *   console.log(json)
+   * })()
+   * ```
+   */
+  static mf1DumpToPm3Json (opts: {
+    atqa: Buffer
+    ats?: Buffer
+    body: Buffer
+    sak: Buffer
+    uid: Buffer
+  }): Mf1DumpToPm3JsonResp {
+    const { body } = opts
+    if (!Buffer.isBuffer(body)) throw new TypeError('body must be a Buffer')
+    if (body.length % 16 !== 0) throw new Error('Invalid body length')
+    bufIsLenOrFail(opts.atqa, 2, 'atqa')
+    bufIsLenOrFail(opts.sak, 1, 'sak')
+    const blocks = _.fromPairs(_.map(body.chunk(16), (block, blockNo) => [blockNo, toUpperHex(block)]))
+    return {
+      Created: 'chameleon-ultra.js',
+      FileType: 'mfcard',
+      blocks,
+      Card: {
+        UID: toUpperHex(opts.uid),
+        ATQA: toUpperHex(opts.atqa),
+        SAK: toUpperHex(opts.sak),
+        ATS: toUpperHex(opts.ats ?? new Buffer()),
+      },
+    }
+  }
+
+  /**
+   * Convert [Proxmark3](https://github.com/RfidResearchGroup/proxmark3) compatible JSON Object to dump for importing Mifare Classic.
+   * @param pm3Json - [Proxmark3](https://github.com/RfidResearchGroup/proxmark3) compatible JSON Object. If a string, `Uint8Array`, `Buffer` is provided, it will be parsed using `JSON.parse`.
+   * @group Mifare Classic Related
+   * @see [loadFileJSONex | RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/blob/c3a7a11ae78558f1cc187570f40e023dd24f8fb6/client/src/fileutils.c#L1444)
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const dump = ChameleonUltra.mf1GenEmptyDump({ tagType: TagType.MIFARE_1024 })
+   *   const json = ChameleonUltra.mf1DumpToPm3Json({
+   *     atqa: Buffer.from('0004', 'hex').reverse(),
+   *     body: dump,
+   *     sak: Buffer.of(0x08),
+   *     uid: Buffer.from('deadbeef', 'hex'),
+   *   })
+   *   const resp = ChameleonUltra.mf1DumpFromPm3Json(json)
+   *   console.log(resp)
+   * })()
+   * ```
+   */
+  static mf1DumpFromPm3Json (pm3Json: Buffer | Uint8Array | string | {
+    FileType: string
+    blocks: Record<number, string>
+    Card: { ATQA: string, ATS?: string, SAK: string, UID: string }
+  }): Mf1DumpFromPm3JsonResp {
+    if (ArrayBuffer.isView(pm3Json)) pm3Json = Buffer.fromView(pm3Json)
+    if (Buffer.isBuffer(pm3Json)) pm3Json = pm3Json.toString('utf8')
+    if (_.isString(pm3Json)) pm3Json = JSON.parse(pm3Json)
+    if (!_.isObject(pm3Json)) throw new TypeError('invalid type of pm3Json')
+    const json: Record<'FileType' | 'blocks' | 'Card', any> = pm3Json as any
+    if (!_.includes(['mfcard', 'mfc v2', 'mfc v3'], json.FileType)) throw new Error(`Unsupported FileType: ${json.FileType}`)
+
+    json.blocks ??= []
+    const maxBlkNo = _.max(_.map(json.blocks, (v, k) => _.toInteger(k))) ?? 0
+    const tagType = maxBlkNo < 64 ? TagType.MIFARE_1024 : (maxBlkNo < 128 ? TagType.MIFARE_2048 : TagType.MIFARE_4096)
+    const body = new Buffer(tagType === TagType.MIFARE_1024 ? 1024 : (tagType === TagType.MIFARE_2048 ? 2048 : 4096))
+    for (const [blkNo, blkHex] of _.entries<string>(json.blocks)) {
+      const blk = Buffer.from(blkHex.replaceAll('-', '0'), 'hex')
+      if (blk.length !== 16) continue
+      body.set(blk, _.toInteger(blkNo) * 16)
+    }
+    return {
+      atqa: Buffer.from(json.Card?.ATQA ?? '', 'hex'),
+      uid: Buffer.from(json.Card?.UID ?? '', 'hex'),
+      sak: Buffer.from(json.Card?.SAK ?? '', 'hex'),
+      ats: Buffer.from(json.Card?.ATS ?? '', 'hex'),
+      tagType,
+      body,
+    }
+  }
+
+  /**
+   * Convert dump to [Proxmark3](https://github.com/RfidResearchGroup/proxmark3) compatible EML string for exporting Mifare Classic.
+   * @param opts.body - The body of the tag.
+   * @returns The EML string for exporting Mifare Classic.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const dump = ChameleonUltra.mf1GenEmptyDump({ tagType: TagType.MIFARE_1024 })
+   *   const eml = ChameleonUltra.mf1DumpToEml({ body: dump })
+   *   console.log(eml)
+   * })()
+   * ```
+   */
+  static mf1DumpToEml (opts: { body: Buffer }): string {
+    const { body } = opts
+    if (!Buffer.isBuffer(body)) throw new TypeError('body must be a Buffer')
+    if (body.length % 16 !== 0) throw new Error('Invalid body length')
+    return body.chunk(16).map(toUpperHex).join('\n')
+  }
+
+  /**
+   * Convert [Proxmark3](https://github.com/RfidResearchGroup/proxmark3) compatible EML string to dump for importing Mifare Classic.
+   * @param eml - The EML string of the Mifare Classic.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const dump = ChameleonUltra.mf1GenEmptyDump({ tagType: TagType.MIFARE_1024 })
+   *   const eml = ChameleonUltra.mf1DumpToEml({ body: dump })
+   *   const buf = ChameleonUltra.mf1DumpFromEml(eml)
+   *   console.log(buf)
+   * })()
+   * ```
+   */
+  static mf1DumpFromEml (eml: Buffer | Uint8Array | string): Buffer {
+    if (ArrayBuffer.isView(eml)) eml = Buffer.fromView(eml)
+    if (Buffer.isBuffer(eml)) eml = eml.toString('utf8')
+    if (!_.isString(eml)) throw new TypeError('invalid type of eml')
+    return Buffer.from(eml.replaceAll('-', '0'), 'hex')
+  }
+
+  /**
+   * Convert dump to [MifareClassicTool](https://play.google.com/store/apps/details?id=de.syss.MifareClassicTool) compatible MCT string for exporting Mifare Classic.
+   * @param opts.body - The body of the tag.
+   * @returns The EML string for exporting Mifare Classic.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const dump = ChameleonUltra.mf1GenEmptyDump({ tagType: TagType.MIFARE_1024 })
+   *   const eml = ChameleonUltra.mf1DumpToMct({ body: dump })
+   *   console.log(eml)
+   * })()
+   * ```
+   */
+  static mf1DumpToMct (opts: { body: Buffer }): string {
+    const { body } = opts
+    if (!Buffer.isBuffer(body)) throw new TypeError('body must be a Buffer')
+    if (body.length % 16 !== 0) throw new Error('Invalid body length')
+    const blks = body.chunk(16)
+    const rows: string[] = []
+    for (let i = 0; i < blks.length; i++) {
+      // sector no
+      if ((i < 128 ? i % 4 : i % 16) === 0) rows.push(`+Sector: ${i < 128 ? (i / 4) : (i / 16 + 24)}`)
+      rows.push(toUpperHex(blks[i]))
+    }
+    return rows.join('\n')
+  }
+
+  static mf1DumpFromMct (mct: Buffer | Uint8Array | string): Buffer {
+    if (ArrayBuffer.isView(mct)) mct = Buffer.fromView(mct)
+    if (Buffer.isBuffer(mct)) mct = mct.toString('utf8')
+    if (!_.isString(mct)) throw new TypeError('invalid type of mct')
+    const buf = new Buffer(4096)
+    let [maxBlkNo, blkNo] = [0, 0]
+    for (const row of mct.split(/(\r?\n)+/)) {
+      if (/^[+]Sector: \d+$/.test(row)) {
+        const secNo = _.parseInt(row.slice(9))
+        blkNo = secNo < 32 ? secNo * 4 : (secNo - 24) * 16
+      } else if (/^[0-9a-fA-F-]{32}$/.test(row)) { // hex
+        if (blkNo >= 256) throw new Error(`Invalid block number: ${blkNo}`)
+        const blockbuf = Buffer.from(row.replaceAll('-', '0'), 'hex')
+        if (blockbuf.length !== 16) throw new Error(`Invalid block size: ${blockbuf.length} bytes`)
+        buf.set(blockbuf, blkNo * 16)
+        if (blkNo > maxBlkNo) maxBlkNo = blkNo
+        blkNo++
+      }
+    }
+    return buf.subarray(0, maxBlkNo < 64 ? 1024 : (maxBlkNo < 128 ? 2048 : 4096))
   }
 
   /**
@@ -4192,6 +4466,7 @@ const DfuErrMsg = new Map<number, string>([
   [DfuResCode.INSUFFICIENT_SPACE, 'The available space on the device is insufficient to hold the firmware'],
 ])
 
+/** @inline */
 export interface ChameleonSerialPort<I extends Buffer = Buffer, O extends Buffer = Buffer> {
   dfuWriteObject?: (buf: Buffer, mtu?: number) => Promise<void>
   isDfu?: () => boolean
@@ -4200,19 +4475,13 @@ export interface ChameleonSerialPort<I extends Buffer = Buffer, O extends Buffer
   writable: WritableStream<O> | null
 }
 
-/**
- * @internal
- * @group Internal
- */
+/** @inline */
 export type PluginInstallContext = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
   Buffer: typeof Buffer
   ultra: ChameleonUltra
 }
 
-/**
- * @internal
- * @group Internal
- */
+/** @inline */
 export interface ChameleonPlugin {
   name: string
   install: <T extends PluginInstallContext>(context: T, pluginOption: any) => Promise<unknown>
@@ -4313,6 +4582,24 @@ function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
   const data = resp.subarray(0, -2)
   if (crc16a(data) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
   return data
+}
+
+/** @inline */
+interface Mf1DumpToPm3JsonResp {
+  blocks: Record<number, string>
+  Card: { ATQA: string, ATS?: string, SAK: string, UID: string }
+  Created: string
+  FileType: string
+}
+
+/** @inline */
+interface Mf1DumpFromPm3JsonResp {
+  atqa?: Buffer
+  ats?: Buffer
+  body: Buffer
+  sak?: Buffer
+  tagType: TagType
+  uid?: Buffer
 }
 
 export { Decoder as ResponseDecoder }

@@ -9,7 +9,7 @@
   "projectDocuments": ["pages/*.md"],
   "gaID": "G-KB8ZL6LPH5",
   "navigationLinks": {
-    "Demos": "https://github.com/taichunmin/chameleon-ultra.js/blob/master/pages/demos.md",
+    "Demos": "https://taichunmin.idv.tw/chameleon-ultra.js/documents/Demos.html",
     "GitHub": "https://github.com/taichunmin/chameleon-ultra.js",
     "NPM": "https://www.npmjs.com/package/chameleon-ultra.js",
     "jsDelivr": "https://www.jsdelivr.com/package/npm/chameleon-ultra.js"

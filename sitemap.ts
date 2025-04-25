@@ -47,7 +47,7 @@ export async function build (): Promise<void> {
   await writeSitemapByUrls({
     baseurl: getSiteurl(),
     dist: publicDir,
-    urls: _.map(await fg('dist/**/*.html'), path => getSiteurl(path.slice(5))),
+    urls: _.map(await fg('dist/**/*.html'), filepath => getSiteurl(path.relative(publicDir, filepath))),
   })
 }
 

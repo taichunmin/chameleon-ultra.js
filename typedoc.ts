@@ -15,7 +15,7 @@ async function main (): Promise<void> {
     try {
       file = path.resolve(__dirname, file)
       let content = await fsPromises.readFile(file, 'utf8')
-      content = content.replace(/pkg.version/g, pkg.version)
+      content = content.replace(/[.]{3}/g, `&#39;${pkg.version}&#39;`)
       await fsPromises.writeFile(file, content, 'utf8')
     } catch (err) {
       err.message = `${err.message}, file: ${file}`

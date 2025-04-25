@@ -587,7 +587,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     expect(actual).toMatchObject([{
       atqa: Buffer.from('0400', 'hex'),
       ats: Buffer.from('', 'hex'),
-      sak: Buffer.from('08', 'hex'),
+      sak: Buffer.of(0x08),
       uid: Buffer.from('94194a3d', 'hex'),
     }])
     expect(adapter.recv).toEqual([
@@ -630,7 +630,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     expect(actual).toMatchObject({
       atqa: Buffer.from('0400', 'hex'),
       ats: Buffer.from('', 'hex'),
-      sak: Buffer.from('08', 'hex'),
+      sak: Buffer.of(0x08),
       uid: Buffer.from('deadbeef', 'hex'),
     })
     expect(adapter.recv).toEqual([Buffer.from('11ef 0fb2 0000 0000 3f 00', 'hex')])
@@ -643,7 +643,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // act
     await ultra.cmdHf14aSetAntiCollData({
       atqa: Buffer.from('0400', 'hex'),
-      sak: Buffer.from('08', 'hex'),
+      sak: Buffer.of(0x08),
       uid: Buffer.from('01020304', 'hex'),
     })
 
@@ -1080,7 +1080,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       antiColl: {
         atqa: Buffer.from('0400', 'hex'),
         ats: Buffer.from('', 'hex'),
-        sak: Buffer.from('08', 'hex'),
+        sak: Buffer.of(0x08),
         uid: Buffer.from('94194a3d', 'hex'),
       },
       nxpTypeBySak: 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K',

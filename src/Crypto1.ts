@@ -1187,8 +1187,10 @@ export default class Crypto1 {
 
 setObject(globalThis, ['Crypto1'], Crypto1)
 
+/** @inline */
 type UInt32Like = Buffer | number | string
 
+/** @inline */
 interface RecoverContextUint32Array {
   s: number
   d: Uint32Array

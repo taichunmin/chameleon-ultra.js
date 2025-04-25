@@ -55,11 +55,14 @@ export default class DfuZip {
 
 setObject(globalThis, ['ChameleonUltraJS', 'DfuZip'], DfuZip)
 
+/** @inline */
 export interface DfuImage {
   type: DfuImageType
   header: Buffer
   body: Buffer
 }
 
+/** @inline */
 type DfuManifest = Record<DfuImageType, { bin_file: string, dat_file: string }>
+
 type DfuImageType = 'application' | 'softdevice' | 'bootloader' | 'softdevice_bootloader'

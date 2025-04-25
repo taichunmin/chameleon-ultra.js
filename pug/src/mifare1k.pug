@@ -172,15 +172,6 @@ block script
     const toHex = buf => _.toUpper(buf.toString('hex'))
     const WELL_KNOWN_KEYS = ['FFFFFFFFFFFF', 'A0A1A2A3A4A5', 'D3F7D3F7D3F7']
 
-    function getEmptyDump () {
-      const buf = new Buffer(1024)
-      const blkFactory = Buffer.from('DEADBEEF220804000177A2CC35AFA51D', 'hex')
-      const blkAcl = Buffer.from('FFFFFFFFFFFFFF078069FFFFFFFFFFFF', 'hex')
-      buf.set(blkFactory, 0) // block 0
-      for (let i = 0; i < 16; i++) buf.set(blkAcl, i * 64 + 48) // block 4n+3
-      return buf
-    }
-
     function toSectorsHex (dump) {
       return _.map(dump.chunk(64), sectorDump => _.map(sectorDump.chunk(16), toHex).join('\n'))
     }
@@ -195,7 +186,7 @@ block script
           antiColl: 0,
           atqa: '0004',
           ats: '',
-          dump: toSectorsHex(getEmptyDump()),
+          dump: toSectorsHex(ChameleonUltra.mf1GenEmptyDump()),
           detection: 0,
           gen1a: 0,
           gen2: 0,
@@ -469,73 +460,43 @@ block script
             this.showLoading({ text: 'Importing' })
             const ext = _.toLower(file.name.slice(dotIdx + 1))
             const buf = new Buffer(await file.arrayBuffer())
+            let dump = null
             switch (ext) {
-              case 'bin':
-                await this.btnImportDumpBin(file, buf)
+              case 'bin': {
+                dump = buf
                 break
+              }
               case 'json':
-              case 'json5':
-                await this.btnImportDumpJson(file, buf)
+              case 'json5': {
+                const card = ChameleonUltra.mf1DumpFromPm3Json(buf)
+                _.merge(this.ss, {
+                  uid: toHex(card.uid),
+                  atqa: toHex(card.atqa.toReversed()),
+                  sak: toHex(card.sak),
+                  ats: toHex(card.ats),
+                })
+                dump = card?.body
                 break
-              case 'eml':
-                await this.btnImportDumpEml(file, buf)
+              }
+              case 'eml': {
+                dump = ChameleonUltra.mf1DumpFromEml(buf)
                 break
-              case 'mct':
-                await this.btnImportDumpMct(file, buf)
+              }
+              case 'mct': {
+                dump = ChameleonUltra.mf1DumpFromMct(buf)
                 break
+              }
               default:
                 throw new Error(`Unsupported file extension: ${ext}`)
             }
+            if (_.isNil(dump)) throw new Error('Failed to import dump')
+            if (dump?.length !== 1024) throw new Error(`dump size invalid: ${dump.length} bytes`)
+            for (const [i, sectorData] of _.entries(dump.chunk(64))) this.mfSetSectorDump(i, sectorData)
             await this.swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
           } catch (err) {
             ultra.emitter.emit('error', err)
             await this.swalFire({ icon: 'error', title: 'Import failed', text: err.message })
           }
-        },
-        async btnImportDumpBin (file, buf) {
-          if (file.size !== 1024) throw new Error(`Invalid file size: ${file.size} bytes`)
-          _.each(buf.chunk(64), (sectorDump, i) => this.mfSetSectorDump(i, sectorDump))
-        },
-        async btnImportDumpJson (file, buf) {
-          const json = JSON5.parse(buf.toString('utf8'))
-          if (json.FileType !== 'mfcard') throw new Error(`Invalid file type: ${json.FileType}`)
-          if (!_.isNil(json?.Card?.UID)) this.$set(this.ss, 'uid', toHex(Buffer.from(json.Card.UID, 'hex')))
-          if (!_.isNil(json?.Card?.ATQA)) this.$set(this.ss, 'atqa', toHex(Buffer.from(json.Card.ATQA, 'hex').reverse()))
-          if (!_.isNil(json?.Card?.SAK)) this.$set(this.ss, 'sak', toHex(Buffer.from(json.Card.SAK, 'hex')))
-          if (!_.isNil(json?.blocks)) {
-            for (let i = 0; i < 16; i++) {
-              const sectorDump = new Buffer(64)
-              for (let j = 0; j < 4; j++) {
-                const blkHex = (json?.blocks?.[i * 4 + j] ?? '').replaceAll('-', '0')
-                const blkBuf = Buffer.from(blkHex, 'hex')
-                if (blkBuf.length !== 16) continue
-                blkBuf.copy(sectorDump, j * 16)
-              }
-              this.mfSetSectorDump(i, sectorDump)
-            }
-          }
-        },
-        async btnImportDumpEml (file, buf) {
-          buf = Buffer.from(buf.toString('utf8').replaceAll('-', '0'), 'hex')
-          if (buf.length !== 1024) throw new Error(`Invalid eml size: ${buf.length} bytes`)
-          _.each(buf.chunk(64), (sectorDump, i) => this.mfSetSectorDump(i, sectorDump))
-        },
-        async btnImportDumpMct (file, buf) {
-          const rows = buf.toString('utf8').split(/\r?\n/)
-          buf = new Buffer(1024)
-          let blockNo = 0
-          for (const row of rows) {
-            if (/^[+]Sector: \d+$/.test(row)) {
-              blockNo = _.parseInt(row.slice(9)) * 4
-            } else if (/^[0-9a-fA-F-]{32}$/.test(row)) { // hex
-              if (blockNo >= 64) throw new Error(`Invalid block number: ${blockNo}`)
-              const blockbuf = Buffer.from(row.replaceAll('-', '0'), 'hex')
-              if (blockbuf.length !== 16) throw new Error(`Invalid block size: ${blockbuf.length} bytes`)
-              blockbuf.copy(buf, blockNo * 16)
-              blockNo++
-            }
-          }
-          _.each(buf.chunk(64), (sectorDump, i) => this.mfSetSectorDump(i, sectorDump))
         },
         async btnExportDump () {
           const dump = new Buffer(1024)
@@ -544,46 +505,37 @@ block script
             if (sectorData.length !== 64) continue // skip invalid sector
             sectorData.copy(dump, i * 64)
           }
-          const uid = toHex(Buffer.from(this.ss.uid, 'hex'))
-          const atqa = toHex(Buffer.from(this.ss.atqa, 'hex').reverse())
-          const sak = toHex(Buffer.from(this.ss.sak, 'hex'))
+          const atqa = Buffer.from(this.ss.atqa, 'hex').toReversed()
+          const ats = Buffer.from(this.ss.ats, 'hex')
+          const sak = Buffer.from(this.ss.sak, 'hex')
+          const uid = Buffer.from(this.ss.uid, 'hex')
+          const strUid = toHex(uid)
 
           // json
-          const json = {
-            Created: 'chameleon-ultra.js',
-            FileType: 'mfcard',
-            Card: {
-              UID: uid,
-              ATQA: atqa,
-              SAK: sak,
-            },
-            blocks: _.fromPairs(_.entries(_.map(dump.chunk(16), toHex))),
-          }
+          const json = ChameleonUltra.mf1DumpToPm3Json({ atqa, ats, body: dump, sak, uid })
           this.$set(this.dumpExport, 'json', {
             href: URL.createObjectURL(new Blob([JSON.stringify(json, null, 2)], { type: 'application/octet-stream' })),
-            download: `hf-mf-${uid}.json`,
+            download: `hf-mf-${strUid}.json`,
           })
 
           // bin
           this.$set(this.dumpExport, 'bin', {
             href: URL.createObjectURL(new Blob([dump], { type: 'application/octet-stream' })),
-            download: `hf-mf-${uid}.bin`,
+            download: `hf-mf-${strUid}.bin`,
           })
 
           // eml
-          const eml = _.map(dump.chunk(16), toHex).join('\n')
+          const eml = ChameleonUltra.mf1DumpToEml({ body: dump })
           this.$set(this.dumpExport, 'eml', {
             href: URL.createObjectURL(new Blob([eml], { type: 'application/octet-stream' })),
-            download: `hf-mf-${uid}.eml`,
+            download: `hf-mf-${strUid}.eml`,
           })
 
           // mct
-          const mct = _.map(dump.chunk(64), (sector, sectorNo) => {
-            return `+Sector: ${sectorNo}\n${_.map(sector.chunk(16), toHex).join('\n')}`
-          }).join('\n')
+          const mct = ChameleonUltra.mf1DumpToMct({ body: dump })
           this.$set(this.dumpExport, 'mct', {
             href: URL.createObjectURL(new Blob([mct], { type: 'application/octet-stream' })),
-            download: `hf-mf-${uid}.mct`,
+            download: `hf-mf-${strUid}.mct`,
           })
 
           await new Promise(resolve => this.$nextTick(resolve)) // wait for DOM update
@@ -600,7 +552,7 @@ block script
               atqa: '0004',
               sak: '08',
               ats: '',
-              dump: toSectorsHex(getEmptyDump()),
+              dump: toSectorsHex(ChameleonUltra.mf1GenEmptyDump()),
               toggle: _.times(16, () => true),
             }
             this.$set(this, 'ss', { ...this.ss, ...tmp })
