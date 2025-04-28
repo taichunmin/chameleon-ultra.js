@@ -245,8 +245,8 @@ test.each([
     expected: 'ffffffffffff',
     uid: '877209e1',
     atks: [
-      { nt1: 'b4a08a09', nt2: '8a15bbf2', par: 5 },
-      { nt1: '1613293d', nt2: '912e6760', par: 7 },
+      { nt1: 0xB4A08A09, nt2: 0x8A15BBF2, par: 5 },
+      { nt1: 0x1613293D, nt2: 0x912E6760, par: 7 },
     ],
   },
 ])('.nested()', async ({ uid, atks, dist, expected }) => {

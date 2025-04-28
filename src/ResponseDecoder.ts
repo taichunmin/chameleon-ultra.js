@@ -193,17 +193,17 @@ export class Mf1NtDistanceRes {
 
 /** Answer the random number parameters required for Nested attack */
 export class Mf1NestedRes {
-  nt1: Buffer // Unblocked explicitly random number
-  nt2: Buffer // Random number of nested verification encryption
-  par: number // The puppet test of the communication process of nested verification encryption, only the 'low 3 digits', that is, the right 3
+  nt1: number // Unblocked explicitly random number
+  nt2: number // Random number of nested verification encryption
+  par: number // The 3 parity bit of nested verification encryption
 
-  constructor (nt1: Buffer, nt2: Buffer, par: number) {
+  constructor (nt1: number, nt2: number, par: number) {
     ;[this.nt1, this.nt2, this.par] = [nt1, nt2, par]
   }
 
   static fromCmd2006 (buf: Buffer): Mf1NestedRes[] {
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer.')
-    return _.map(buf.chunk(9), chunk => bufUnpackToClass(chunk, '!4s4sB', Mf1NestedRes))
+    return _.map(buf.chunk(9), chunk => bufUnpackToClass(chunk, '!IIB', Mf1NestedRes))
   }
 }
 
@@ -308,4 +308,20 @@ export interface SlotSettings {
 function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
   if (Buffer.isBuffer(buf) && buf.length === len) return
   throw new TypeError(`${name} must be a ${len} ${['byte', 'bytes'][+(len > 1)]} Buffer.`)
+}
+
+/** Answer the random number parameters required for Hard Nested attack */
+export class Mf1AcquireHardNestedRes {
+  nt: number // tag nonce of nested verification encryption
+  ntEnc: number // encrypted tag nonce of nested verification encryption
+  par: number // The 8 parity bit of nested verification encryption
+
+  constructor (nt: number, ntEnc: number, par: number) {
+    ;[this.nt, this.ntEnc, this.par] = [nt, ntEnc, par]
+  }
+
+  static fromCmd2013 (buf: Buffer): Mf1AcquireHardNestedRes[] {
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer.')
+    return _.map(buf.chunk(9), chunk => bufUnpackToClass(chunk, '!IIB', Mf1AcquireHardNestedRes))
+  }
 }

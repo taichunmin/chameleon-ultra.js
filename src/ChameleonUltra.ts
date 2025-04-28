@@ -1647,7 +1647,7 @@ export class ChameleonUltra {
    * @returns The result of mifare nested attack.
    * - nt1: Unblocked explicitly random number
    * - nt2: Random number of nested verification encryption
-   * - par: The puppet test of the communication process of nested verification encryption, only the 'low 3 digits', that is, the right 3
+   * - par: The 3 parity bit of nested verification encryption
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1663,19 +1663,15 @@ export class ChameleonUltra {
    *   const res = {
    *     uid: res1.uid.toString('hex'),
    *     dist: res1.dist.toString('hex'),
-   *     atks: _.map(res2, item => ({
-   *       nt1: item.nt1.toString('hex'),
-   *       nt2: item.nt2.toString('hex'),
-   *       par: item.par,
-   *     }))
+   *     atks: res2,
    *   }
    *   console.log(res)
    *   // {
    *   //   uid: '877209e1',
    *   //   dist: '00000080',
    *   //   atks: [
-   *   //     { nt1: '35141fcb', nt2: '40430522', par: 7 },
-   *   //     { nt1: 'cff2b3ef', nt2: '825ba8ea', par: 5 },
+   *   //     { nt1: 0x35141FCB, nt2: 0x40430522, par: 7 },
+   *   //     { nt1: 0xCFF2B3EF, nt2: 0x825BA8EA, par: 5 },
    *   //   ]
    *   // }
    * })(vm.ultra)
@@ -1684,7 +1680,7 @@ export class ChameleonUltra {
   async cmdMf1AcquireNested (
     known: { block: number, key: Buffer, keyType: Mf1KeyType },
     target: { block: number, keyType: Mf1KeyType }
-  ): Promise<Array<{ nt1: Buffer, nt2: Buffer, par: number }>> {
+  ): Promise<Array<{ nt1: number, nt2: number, par: number }>> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
     if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
@@ -2092,6 +2088,56 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd, timeout })
     await this.#sendCmd({ cmd, data })
     return Decoder.Mf1CheckKeysOfSectorsRes.fromCmd2012((await readResp()).data)
+  }
+
+  /**
+   * Use a known key to do the mifare hardnested attack.
+   * @param known - The info of known key.
+   * @param known.block - The block of known key.
+   * @param known.key - The known key.
+   * @param known.keyType - The key type of known key.
+   * @param target - The info of target key to be attack.
+   * @param target.block - The block of target key.
+   * @param target.keyType - The key type of target key.
+   * @param target.slow - Is it a low-speed acquisition mode? Low-speed acquisition is suitable for some non-standard cards.
+   * @returns The result of mifare hardnested attack.
+   * - nt: tag nonce of nested verification encryption
+   * - ntEnc: encrypted tag nonce of nested verification encryption
+   * - par: The 8 parity bit of nested verification encryption
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const antiColl = _.first(await ultra.cmdHf14aScan())
+   *   const key = Buffer.from('FFFFFFFFFFFF', 'hex')
+   *   const res = await ultra.cmdMf1AcquireHardNested(
+   *     { block: 0, keyType: Mf1KeyType.KEY_A, key },
+   *     { block: 4, keyType: Mf1KeyType.KEY_A },
+   *   )
+   *   console.log(res)
+   *   // [
+   *   //   { nt: 0xCE178123, ntEnc: 0x37ADDC14, par: 0xB8 },
+   *   //   { nt: 0xD9380BBF, ntEnc: 0x0080795A, par: 0xF3 },
+   *   //   // ...
+   *   // ]
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMf1AcquireHardNested (
+    known: { block: number, key: Buffer, keyType: Mf1KeyType },
+    target: { block: number, keyType: Mf1KeyType, slow?: boolean },
+  ): Promise<Array<{ nt: number, ntEnc: number, par: number }>> {
+    validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
+    if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
+    if (!isMf1KeyType(target.keyType)) throw new TypeError('Invalid target.keyType')
+    target.slow = Boolean(target.slow ?? false)
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.MF1_HARDNESTED_ACQUIRE // cmd = 2013
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!BBB6sBB', target.slow, known.keyType, known.block, known.key, target.keyType, target.block) })
+    return Decoder.Mf1AcquireHardNestedRes.fromCmd2013((await readResp()).data)
   }
 
   /**
