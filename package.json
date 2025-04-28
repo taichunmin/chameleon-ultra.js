@@ -8,7 +8,7 @@
   "module": "./dist/index.mjs",
   "name": "chameleon-ultra.js",
   "type": "commonjs",
-  "version": "0.3.26",
+  "version": "0.3.27",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -37,7 +37,7 @@
     "@types/jest": "^29.5.14",
     "@types/livereload": "^0.9.5",
     "@types/lodash": "^4.17.16",
-    "@types/node": "^22.15.2",
+    "@types/node": "^22.15.3",
     "@types/pug": "^2.0.10",
     "@types/serve-static": "^1.15.7",
     "@types/uglify-js": "^3.17.5",

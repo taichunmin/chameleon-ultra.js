@@ -688,8 +688,8 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(actual).toMatchObject([
-      { nt1: Buffer.from('502e7c41', 'hex'), nt2: Buffer.from('d1b90dab', 'hex'), par: 5 },
-      { nt1: Buffer.from('61d34ecb', 'hex'), nt2: Buffer.from('cd6cef02', 'hex'), par: 7 },
+      { nt1: 0x502E7C41, nt2: 0xD1B90DAB, par: 5 },
+      { nt1: 0x61D34ECB, nt2: 0xCD6CEF02, par: 7 },
     ])
     expect(adapter.recv).toEqual([
       Buffer.from('11ef 03e9 0000 0001 13 01 ff', 'hex'), // DeviceMode.READER
