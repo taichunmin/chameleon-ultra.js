@@ -3987,7 +3987,7 @@ export class ChameleonUltra {
   /**
    * Convert dump to [MifareClassicTool](https://play.google.com/store/apps/details?id=de.syss.MifareClassicTool) compatible MCT string for exporting Mifare Classic.
    * @param opts.body - The body of the tag.
-   * @returns The EML string for exporting Mifare Classic.
+   * @returns The MCT string for exporting Mifare Classic.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -3995,8 +3995,8 @@ export class ChameleonUltra {
    * await (async () => {
    *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const dump = ChameleonUltra.mf1GenEmptyDump({ tagType: TagType.MIFARE_1024 })
-   *   const eml = ChameleonUltra.mf1DumpToMct({ body: dump })
-   *   console.log(eml)
+   *   const mct = ChameleonUltra.mf1DumpToMct({ body: dump })
+   *   console.log(mct)
    * })()
    * ```
    */
@@ -4014,6 +4014,22 @@ export class ChameleonUltra {
     return rows.join('\n')
   }
 
+  /**
+   * Convert [MifareClassicTool](https://play.google.com/store/apps/details?id=de.syss.MifareClassicTool) compatible MCT string to dump for importing Mifare Classic.
+   * @param mct - The MCT string of the Mifare Classic.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const dump = ChameleonUltra.mf1GenEmptyDump({ tagType: TagType.MIFARE_1024 })
+   *   const mct = ChameleonUltra.mf1DumpToMct({ body: dump })
+   *   const buf = ChameleonUltra.mf1DumpFromMct(mct)
+   *   console.log(buf)
+   * })()
+   * ```
+   */
   static mf1DumpFromMct (mct: Buffer | Uint8Array | string): Buffer {
     if (ArrayBuffer.isView(mct)) mct = Buffer.fromView(mct)
     if (Buffer.isBuffer(mct)) mct = mct.toString('utf8')

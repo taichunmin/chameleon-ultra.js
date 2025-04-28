@@ -40,4 +40,4 @@ jobs:
       - uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.REF_NAME }}
-          name: Release ${{ env.REF_NAME }}
+          name: ${{ env.REF_NAME }}
