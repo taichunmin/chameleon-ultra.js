@@ -47,6 +47,20 @@ A tool to update ChameleonUltra firmware.
 
 A ChameleonUltra tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32).
 
+![](https://i.imgur.com/TQC83i4.png)
+
+<h3>Features</h3>
+
+- Emulate a mifare card and enable detect mode
+- Recover the mifare key that reader is authenticating
+- Check the mifare key is correct or not
+
+<details>
+
+<summary>Previous versions: </summary>
+
+## [mfkey32-v1.html](https://taichunmin.idv.tw/chameleon-ultra.js/mfkey32-v1.html)
+
 ![](https://i.imgur.com/OyZ4E3Z.png)
 
 <h3>Features</h3>
@@ -54,6 +68,8 @@ A ChameleonUltra tool to detect the mifare key that reader is authenticating (a.
 - Emulate a mifare card and enable detect mode
 - Recover the mifare key that reader is authenticating
 - Check the mifare key is correct or not
+
+</details>
 
 <h3>Related links</h3>
 

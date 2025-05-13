@@ -1,13 +1,12 @@
-import _ from 'lodash'
 import * as sut from './Debug'
 
 test('errToJson', async () => {
-  const err = _.merge(new Error('test'), { originalError: new Error('test') })
+  const err = new Error('test', { cause: new Error('test') })
   const actual = sut.errToJson(err)
   expect(actual).toMatchObject({
     name: 'Error',
     message: 'test',
-    originalError: {
+    cause: {
       name: 'Error',
       message: 'test',
     },

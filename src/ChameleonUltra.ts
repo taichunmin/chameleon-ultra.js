@@ -66,6 +66,10 @@ function toUpperHex (buf: Buffer): string {
   return _.toUpper(buf.toString('hex'))
 }
 
+function wrapErr (cause: Error): never {
+  throw new Error(cause.message, { cause })
+}
+
 /**
  * The core library of `chameleon-ultra.js`. You need to register exactly one adapter to the `ChameleonUltra` instance.
  *
@@ -163,7 +167,7 @@ export class ChameleonUltra {
   port: ChameleonSerialPort | null = null
 
   constructor () {
-    this.#emitErr = (err: Error): void => { this.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+    this.#emitErr = (cause: Error): void => { this.emitter.emit('error', new Error(cause.message, { cause })) }
   }
 
   #debug (namespace: string, formatter: any, ...args: [] | any[]): void {
@@ -234,7 +238,7 @@ export class ChameleonUltra {
         this.#debug('core', `connected at ${connectedAt.toISOString()}`)
       })
     } catch (err) {
-      const err1 = _.set(new Error(`Failed to connect: ${err.message}`), 'originalError', err)
+      const err1 = new Error(`Failed to connect: ${err.message}`, { cause: err })
       this.#emitErr(err1)
       await this.disconnect(err1)
       throw err1
@@ -249,7 +253,7 @@ export class ChameleonUltra {
       const bufs: Buffer[] = []
       this.emitter.emit('connected', new Date())
       while (true) {
-        const { done, value: chunk } = await reader.read().catch(err => { throw _.set(new Error(err.message), 'originalError', err) })
+        const { done, value: chunk } = await reader.read().catch(wrapErr)
         if (_.isNil(chunk)) break
         bufs.push(Buffer.isBuffer(chunk) ? chunk : Buffer.fromView(chunk))
         let concated = Buffer.concat(bufs.splice(0, bufs.length))
@@ -292,7 +296,7 @@ export class ChameleonUltra {
     try {
       this.emitter.emit('connected', new Date())
       while (true) {
-        const { done, value: chunk } = await reader.read().catch(err => { throw _.set(new Error(err.message), 'originalError', err) })
+        const { done, value: chunk } = await reader.read().catch(wrapErr)
         if (_.isNil(chunk)) break
         this.emitter.emit('resp', new DfuFrame(Buffer.isBuffer(chunk) ? chunk : Buffer.fromView(chunk)))
         if (done) break
@@ -332,7 +336,7 @@ export class ChameleonUltra {
           const [disconnectedAt, reason] = await promiseDisconnected
           this.#debug('core', `disconnected at ${disconnectedAt.toISOString()}, reason = ${reason ?? err.message}`)
         } catch (err) {
-          throw _.merge(new Error(err.message ?? 'Failed to disconnect'), { originalError: err })
+          throw new Error(err.message ?? 'Failed to disconnect', { cause: err })
         }
       })
     } finally {
@@ -2921,7 +2925,7 @@ export class ChameleonUltra {
         throw err
       }
     } catch (err) {
-      throw _.set(new Error(`Auth failed: ${err.message}`), 'originalError', err)
+      throw new Error(`Auth failed: ${err.message}`, { cause: err })
     }
   }
 
@@ -3413,10 +3417,10 @@ export class ChameleonUltra {
       if (_.isNil(cb)) throw new TypeError('cb is required')
       await this.mf1Halt()
       const resp1 = await this.cmdHf14aRaw({ data: Buffer.pack('!B', 0x40), dataBitLength: 7, keepRfField: true }) // 0x40 (7)
-        .catch(err => { throw _.merge(new Error(`Gen1a auth failed 1: ${err.message}`), { originalError: err }) })
+        .catch(err => { throw new Error(`Gen1a auth failed 1: ${err.message}`, { cause: err }) })
       if (resp1[0] !== 0x0A) throw new Error('Gen1a auth failed 1')
       const resp2 = await this.cmdHf14aRaw({ data: Buffer.pack('!B', 0x43), keepRfField: true }) // 0x43
-        .catch(err => { throw _.merge(new Error(`Gen1a auth failed 2: ${err.message}`), { originalError: err }) })
+        .catch(err => { throw new Error(`Gen1a auth failed 2: ${err.message}`, { cause: err }) })
       if (resp2[0] !== 0x0A) throw new Error('Gen1a auth failed 2')
       return await cb()
     } finally {
@@ -3635,14 +3639,15 @@ export class ChameleonUltra {
   async mf1ReadSectorByKeys (sector: number, keys: Buffer[]): Promise<{ data: Buffer, success: boolean[] }> {
     const sectorKey = await this.mf1CheckSectorKeys(sector, keys)
     if (_.isEmpty(sectorKey)) throw new Error('No valid key')
-    const data = new Buffer(64)
-    const success = _.times(4, () => false)
-    for (let i = 0; i < 4; i++) {
+    const [secBlks, secBlkStart, secBytes] = sector < 32 ? [4, sector * 4, 64] : [16, sector * 16 - 384, 256]
+    const data = new Buffer(secBytes)
+    const success = _.times(secBlks, () => false)
+    for (let i = 0; i < secBlks; i++) {
       for (const keyType of [Mf1KeyType.KEY_B, Mf1KeyType.KEY_A]) {
         const key = sectorKey[keyType]
         if (_.isNil(key)) continue
         try {
-          data.set(await this.cmdMf1ReadBlock({ block: sector * 4 + i, keyType, key }), i * 16)
+          data.set(await this.cmdMf1ReadBlock({ block: secBlkStart + i, keyType, key }), i * 16)
           success[i] = true
           break
         } catch (err) {
@@ -3651,8 +3656,8 @@ export class ChameleonUltra {
         }
       }
     }
-    if (!_.isNil(sectorKey[Mf1KeyType.KEY_A])) data.set(sectorKey[Mf1KeyType.KEY_A], 48)
-    if (!_.isNil(sectorKey[Mf1KeyType.KEY_B])) data.set(sectorKey[Mf1KeyType.KEY_B], 58)
+    if (!_.isNil(sectorKey[Mf1KeyType.KEY_A])) data.subarray(-16).set(sectorKey[Mf1KeyType.KEY_A])
+    if (!_.isNil(sectorKey[Mf1KeyType.KEY_B])) data.subarray(-6).set(sectorKey[Mf1KeyType.KEY_B])
     return { data, success }
   }
 
@@ -3889,6 +3894,7 @@ export class ChameleonUltra {
    * @param opts.uid - The UID of the tag.
    * @returns The JSON Object for exporting Mifare Classic.
    * @group Mifare Classic Related
+   * @see [loadFileJSONex | RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/blob/c3a7a11ae78558f1cc187570f40e023dd24f8fb6/client/src/fileutils.c#L1444)
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -3910,6 +3916,7 @@ export class ChameleonUltra {
     ats?: Buffer
     body: Buffer
     sak: Buffer
+    sig?: Buffer
     uid: Buffer
   }): Mf1DumpToPm3JsonResp {
     const { body } = opts
@@ -3920,13 +3927,14 @@ export class ChameleonUltra {
     const blocks = _.fromPairs(_.map(body.chunk(16), (block, blockNo) => [blockNo, toUpperHex(block)]))
     return {
       Created: 'chameleon-ultra.js',
-      FileType: 'mfcard',
+      FileType: 'mfc v3',
       blocks,
       Card: {
         UID: toUpperHex(opts.uid),
         ATQA: toUpperHex(opts.atqa),
         SAK: toUpperHex(opts.sak),
         ATS: toUpperHex(opts.ats ?? new Buffer()),
+        SIGNATURE: toUpperHex(opts.sig ?? new Buffer()),
       },
     }
   }
@@ -3953,11 +3961,7 @@ export class ChameleonUltra {
    * })()
    * ```
    */
-  static mf1DumpFromPm3Json (pm3Json: Buffer | Uint8Array | string | {
-    FileType: string
-    blocks: Record<number, string>
-    Card: { ATQA: string, ATS?: string, SAK: string, UID: string }
-  }): Mf1DumpFromPm3JsonResp {
+  static mf1DumpFromPm3Json (pm3Json: Buffer | Uint8Array | string | Mf1DumpToPm3JsonResp): Mf1DumpFromPm3JsonResp {
     if (ArrayBuffer.isView(pm3Json)) pm3Json = Buffer.fromView(pm3Json)
     if (Buffer.isBuffer(pm3Json)) pm3Json = pm3Json.toString('utf8')
     if (_.isString(pm3Json)) pm3Json = JSON.parse(pm3Json)
@@ -3965,7 +3969,7 @@ export class ChameleonUltra {
     const json: Record<'FileType' | 'blocks' | 'Card', any> = pm3Json as any
     if (!_.includes(['mfcard', 'mfc v2', 'mfc v3'], json.FileType)) throw new Error(`Unsupported FileType: ${json.FileType}`)
 
-    json.blocks ??= []
+    json.blocks ??= {}
     const maxBlkNo = _.max(_.map(json.blocks, (v, k) => _.toInteger(k))) ?? 0
     const tagType = maxBlkNo < 64 ? TagType.MIFARE_1024 : (maxBlkNo < 128 ? TagType.MIFARE_2048 : TagType.MIFARE_4096)
     const body = new Buffer(tagType === TagType.MIFARE_1024 ? 1024 : (tagType === TagType.MIFARE_2048 ? 2048 : 4096))
@@ -3979,6 +3983,7 @@ export class ChameleonUltra {
       uid: Buffer.from(json.Card?.UID ?? '', 'hex'),
       sak: Buffer.from(json.Card?.SAK ?? '', 'hex'),
       ats: Buffer.from(json.Card?.ATS ?? '', 'hex'),
+      sig: Buffer.from(json.Card?.SIGNATURE ?? '', 'hex'),
       tagType,
       body,
     }
@@ -4027,7 +4032,11 @@ export class ChameleonUltra {
     if (ArrayBuffer.isView(eml)) eml = Buffer.fromView(eml)
     if (Buffer.isBuffer(eml)) eml = eml.toString('utf8')
     if (!_.isString(eml)) throw new TypeError('invalid type of eml')
-    return Buffer.from(eml.replaceAll('-', '0'), 'hex')
+
+    const buf1 = Buffer.from(eml.replaceAll('-', '0'), 'hex').subarray(0, 4096)
+    const buf2 = new Buffer(buf1.length <= 1024 ? 1024 : (buf1.length <= 2048 ? 2048 : 4096))
+    buf2.set(buf1)
+    return buf1
   }
 
   /**
@@ -4649,19 +4658,20 @@ function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
 /** @inline */
 interface Mf1DumpToPm3JsonResp {
   blocks: Record<number, string>
-  Card: { ATQA: string, ATS?: string, SAK: string, UID: string }
+  Card: { ATQA: string, ATS?: string, SAK: string, UID: string, SIGNATURE: string }
   Created: string
   FileType: string
 }
 
 /** @inline */
 interface Mf1DumpFromPm3JsonResp {
-  atqa?: Buffer
-  ats?: Buffer
+  atqa: Buffer
+  ats: Buffer
   body: Buffer
-  sak?: Buffer
+  sak: Buffer
+  sig: Buffer
   tagType: TagType
-  uid?: Buffer
+  uid: Buffer
 }
 
 export { Decoder as ResponseDecoder }

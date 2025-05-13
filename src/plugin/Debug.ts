@@ -34,38 +34,67 @@ setObject(globalThis, ['ChameleonUltraJS', 'Debug'], Debug)
 type DebugFilter = (namespace: string, formatter: any, ...args: [] | any[]) => boolean
 
 const ERROR_KEYS = [
-  'address',
-  'args',
-  'code',
-  'data',
-  'dest',
-  'errno',
-  'info',
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/Error
+  'columnNumber',
+  'filename',
+  'lineNumber',
   'message',
   'name',
+  'stack',
+
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AggregateError
+  'errors',
+
+  // https://nodejs.org/api/errors.html
+  'address',
+  'code',
+  'dest',
+  'errno',
+  'function',
+  'info',
+  'library',
+  'opensslErrorStack',
   'path',
   'port',
-  'positions',
   'reason',
+  'syscall',
+
+  // axios: https://github.com/axios/axios/blob/v1.x/lib/core/AxiosError.js
+  'config',
+  'description',
+  'fileName',
+  'number',
+  'request',
   'response.data',
   'response.headers',
   'response.status',
-  'source',
-  'stack',
   'status',
+
+  // http-errors: https://github.com/jshttp/http-errors/blob/master/index.js
   'statusCode',
   'statusMessage',
-  'syscall',
+
+  // GraphQLError: https://www.graphql-js.org/api-v16/error/
+  'args',
+  'originalError',
+  'positions',
+  'source',
+  'locations',
+  'line',
+  'column',
+
+  // custom
+  'data',
 ] as const
 
 /**
  * @group Internal
  * @internal
  */
-export function errToJson<T extends Error & { originalError?: any, stack?: any }> (err: T): Partial<T> {
+export function errToJson<T extends Error & { cause?: any, stack?: any }> (err: T): Partial<T> {
   const tmp: any = {
     ..._.pick(err, ERROR_KEYS),
-    ...(_.isNil(err.originalError) ? {} : { originalError: errToJson(err.originalError) }),
+    ...(_.isNil(err.cause) ? {} : { cause: errToJson(err.cause) }),
   }
   return tmp
 }
