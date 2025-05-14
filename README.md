@@ -181,6 +181,7 @@ await run(ultraUsb)
 
 ## Dependents (projects / website using chameleon-ultra.js)
 
-- Sil's Website: `https://drosi.nl/cu` (link is broken!)
-- [Tech Security Tools's Website](https://chameleon-ultra.com/)
 - [nfctool.cn](https://ultra.nfctool.cn/)
+- [Sil333033/autopwn](https://github.com/Sil333033/Chameleon-Ultra-javascript-autopwn)
+- Sil's Website: `https://drosi.nl/cu` (link is broken!)
+- Tech Security Tools's Website: `https://chameleon-ultra.com/` (link is broken!)
