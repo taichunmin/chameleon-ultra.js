@@ -49,6 +49,18 @@ export async function build (): Promise<void> {
     dist: publicDir,
     urls: _.map(await fg('dist/**/*.html'), filepath => getSiteurl(path.relative(publicDir, filepath))),
   })
+
+  // og:image
+  let ogImageAddedCnt = 0
+  for await (const filepath of await fg('dist/**/*.html')) {
+    const filepath1 = path.relative(__dirname, filepath)
+    let content = await fsPromises.readFile(filepath1, 'utf8')
+    if (content.includes('property="og:image"')) continue
+    content = content.replace('</head>', '<meta property="og:image" content="https://i.imgur.com/bWJGSGq.png"><meta property="og:image:width" content="1280"><meta property="og:image:height" content="640"></head>')
+    await fsPromises.writeFile(filepath1, content, 'utf8')
+    ogImageAddedCnt++
+  }
+  console.log(`Added og:image to ${ogImageAddedCnt} files`)
 }
 
 build().catch(err => {

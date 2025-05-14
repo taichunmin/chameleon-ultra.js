@@ -4119,7 +4119,7 @@ export class ChameleonUltra {
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async () => {
-   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const dict = '#test\r\nFFFFFFFFFFFF\r\n\r\n'
    *   const keys = ChameleonUltra.mf1KeysFromDict(dict)
    *   console.log(keys.map(key => key.toString('hex').toUpperCase()))

@@ -1,13 +1,12 @@
 extends /include/bootstrapV4
 
 block beforehtml
-  - const title = 'Mifare Value Block'
+  -
+    const title = 'Mifare Value Block'
+    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/jJ3pNvn.png']
 
 block style
   meta(property="og:description", content="MIFARE Classic value block commands")
-  meta(property="og:image:height", content="600")
-  meta(property="og:image:width", content="1200")
-  meta(property="og:image", content="https://i.imgur.com/jJ3pNvn.png")
   meta(property="og:locale", content="zh_TW")
   meta(property="og:title", content=title)
   meta(property="og:type", content="website")
