@@ -90,7 +90,7 @@ block content
           h6.text-info.my-3 # Read data from tag
           p.my-2 If you have a tag, the preferred method is using the keys to read the tag via ChameleonUltra. If you already have some keys of the tag, you can click "Edit keys" to edit. Otherwise, you can start from the well-known keys. Then you can click "Read Tag".
           h6.text-info.my-3 # Export dump before closing
-          p.my-2 You can click "Export file" to export the data to file. Then you can click "Import file" to import later. #[span.text-danger When you close the webpage, all data in the webpage will lost.]
+          p.my-2 You can click "Export file" to export the data to file. Then you can click "Import file" to import later. #[span.text-danger Please remember to export the dump before closing the page!]
           h6.text-info.my-3 # Learn more about MFKey32
           p.my-2 If you want to learn more about MFKey32, please refer to the Flipper's #[a(target="_blank" href="https://docs.flipper.net/nfc/mfkey32") Recovering MIFARE Classic keys] Document.
     .card.shadow-sm.mb-3
@@ -120,9 +120,10 @@ block content
             textarea.form-control.form-control-sm.flex-fill(v-model="exportimport.text")
             small.text-muted.form-text Click "Copy" to copy text, or click "Apply" to apply change.
           .modal-footer
+            button.btn.btn-outline-secondary(type="button", @click="exportimport?.cb?.()") Cancel
+            button.btn.btn-outline-danger(type="button", @click="exportimport.text = ''") Clear
             button.btn.btn-outline-success(type="button", @click="btnCopy(exportimport.text, $refs.exportimport)") Copy
-            button.btn.btn-secondary(type="button", @click="exportimport?.cb?.()") Cancel
-            button.btn.btn-primary(type="button", @click="exportimport?.cb?.(exportimport.text)") Apply
+            button.btn.btn-outline-primary(type="button", @click="exportimport?.cb?.(exportimport.text)") Apply
     .modal.fade(tabindex="-1", ref="dumpExport")
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
@@ -168,6 +169,7 @@ block script
     const blockToSector = block => block < 128 ? block >>> 2 : 24 + (block >>> 4)
     const toHex = buf => _.toUpper(buf.toString('hex'))
     const WELL_KNOWN_KEYS = _.map(['FFFFFFFFFFFF', 'A0A1A2A3A4A5', 'D3F7D3F7D3F7'], hex => Buffer.from(hex, 'hex'))
+    const isMf1MagicBlock0 = buf => Buffer.isBuffer(buf) && buf.length >= 16 && _.includes([0x08, 0x88], buf[5]) && toHex(buf.subarray(6, 8)) === '0400' && buf[4] === buf.subarray(0, 4).xor()
 
     window.vm = new Vue({
       el: '#app',
@@ -203,9 +205,7 @@ block script
               if (key === 'ss') {
                 try {
                   saved.dump = Buffer.from(saved.dump, 'base64url')
-                } catch (err) {
-                  saved.dump = this.mf1GenEmptyDump()
-                }
+                } catch (err) {}
               }
               this.$set(this, key, _.merge(this[key], saved))
             }
@@ -216,6 +216,7 @@ block script
             storage.setItem(location.pathname, JSON5.stringify(saved))
           }, { deep: true })
         }
+        if (!Buffer.isBuffer(this.ss.dump)) this.ss.dump = this.mf1GenEmptyDump()
       },
       computed: {
         ultra () {
@@ -387,10 +388,20 @@ block script
               default:
                 throw new Error(`Unsupported file extension: ${ext}`)
             }
-            if (_.isNil(res.dump)) throw new Error('Failed to import dump')
+            if (!Buffer.isBuffer(res.dump)) throw new Error('Failed to import dump')
             if (!_.includes([1024, 4096], res.dump.length)) throw new Error(`dump size invalid: ${res.dump?.length} bytes`)
             res.tagType = res.dump.length === 4096 ? 1 : 0
-            this.$set(this, 'ss', res)
+
+            // try anti-collision
+            if (_.isNil(res.uid) && isMf1MagicBlock0(res.dump)) {
+              _.merge(res, {
+                atqa: toHex(res.dump.subarray(6, 8).toReversed()),
+                sak: toHex(res.dump.subarray(5, 6)),
+                uid: toHex(res.dump.subarray(0, 4)),
+              })
+            }
+
+            this.$set(this, 'ss', { ...this.ss, ...res })
             this.mfGrabKeysFromDump()
 
             await this.swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
@@ -538,7 +549,7 @@ block script
               }
             }
             this.mfMergeKeys(newKeys)
-            await this.swalFire({ icon: 'success', title: `Recovered ${newKeys.length} keys!` })
+            await this.swalFire({ icon: 'success', title: `Recovered ${newKeys.length} keys!`, text: (newKeys.length > 0 ? 'You can repeat whole process to recover more keys.' : 'You can read tag again and then export dump.') })
           } catch (err) {
             ultra.emitter.emit('error', err)
             await this.swalFire({ icon: 'error', title: 'Failed to recover key.', text: err.message })
@@ -604,10 +615,7 @@ block script
         },
         mfGetKeys () {
           try {
-            const keys = _.chain(Buffer.from(this.ss.keys, 'hex').chunk(6))
-              .filter(key => Buffer.isBuffer(key) && key.length === 6)
-              .uniqWith(Buffer.equals)
-              .value()
+            const keys = ChameleonUltra.mf1KeysFromDict(this.ss.keys)
             return keys.length > 0 ? keys : null
           } catch (err) {
             return null

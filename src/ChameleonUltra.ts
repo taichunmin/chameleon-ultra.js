@@ -3942,6 +3942,7 @@ export class ChameleonUltra {
   /**
    * Convert [Proxmark3](https://github.com/RfidResearchGroup/proxmark3) compatible JSON Object to dump for importing Mifare Classic.
    * @param pm3Json - [Proxmark3](https://github.com/RfidResearchGroup/proxmark3) compatible JSON Object. If a string, `Uint8Array`, `Buffer` is provided, it will be parsed using `JSON.parse`.
+   * @returns The tag data imported from Proxmark3 JSON Object.
    * @group Mifare Classic Related
    * @see [loadFileJSONex | RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/blob/c3a7a11ae78558f1cc187570f40e023dd24f8fb6/client/src/fileutils.c#L1444)
    * @example
@@ -4015,6 +4016,7 @@ export class ChameleonUltra {
   /**
    * Convert [Proxmark3](https://github.com/RfidResearchGroup/proxmark3) compatible EML string to dump for importing Mifare Classic.
    * @param eml - The EML string of the Mifare Classic.
+   * @returns The dump data imported from EML.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -4072,6 +4074,7 @@ export class ChameleonUltra {
   /**
    * Convert [MifareClassicTool](https://play.google.com/store/apps/details?id=de.syss.MifareClassicTool) compatible MCT string to dump for importing Mifare Classic.
    * @param mct - The MCT string of the Mifare Classic.
+   * @returns The dump data imported from MCT.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -4105,6 +4108,32 @@ export class ChameleonUltra {
       }
     }
     return buf.subarray(0, maxBlkNo < 64 ? 1024 : (maxBlkNo < 128 ? 2048 : 4096))
+  }
+
+  /**
+   * Convert Mifare Keys `.dic` string to keys.
+   * @param dict - Mifare Keys `.dic` string
+   * @returns The keys imported from Mifare Keys `.dic` string.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const dict = '#test\r\nFFFFFFFFFFFF\r\n\r\n'
+   *   const keys = ChameleonUltra.mf1KeysFromDict(dict)
+   *   console.log(keys.map(key => key.toString('hex').toUpperCase()))
+   *   // ['FFFFFFFFFFFF']
+   * })()
+   * ```
+   */
+  static mf1KeysFromDict (dict: string): Buffer[] {
+    if (!_.isString(dict)) throw new TypeError('dict must be a string')
+    dict = dict.replaceAll(/(\r?\n)+/g, '\n').replaceAll(/#[^\n]*\n?/msg, '')
+    return _.chain(Buffer.from(dict, 'hex').chunk(6))
+      .filter(key => Buffer.isBuffer(key) && key.length === 6)
+      .uniqWith(Buffer.equals)
+      .value()
   }
 
   /**

@@ -295,7 +295,7 @@ block script
           return flexsearch.search(keyword, limit).map(id => mTags.get(id))
         },
         mfkeys () {
-          return Buffer.from(this.idbKeyVal.mfkeys, 'hex').chunk(6)
+          return ChameleonUltra.mf1KeysFromDict(this.idbKeyVal.mfkeys)
         },
       },
       methods: {
