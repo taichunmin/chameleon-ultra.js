@@ -1,13 +1,12 @@
 extends /include/bootstrapV4
 
 block beforehtml
-  - const title = 'MFKey32'
+  -
+    const title = 'MFKey32'
+    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/TQC83i4.png']
 
 block style
   meta(property="og:description", content="A ChameleonUltra tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32).")
-  meta(property="og:image:height", content="600")
-  meta(property="og:image:width", content="1200")
-  meta(property="og:image", content="https://i.imgur.com/TQC83i4.png")
   meta(property="og:locale", content="zh_TW")
   meta(property="og:title", content=title)
   meta(property="og:type", content="website")
@@ -74,25 +73,25 @@ block content
           .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnExportDump") #[i.fa.fa-fw.fa-floppy-o] Export file
         details.text-sm
           summary.text-muted Click to open manual
-          p.my-2 ChameleonUltra is a powerful tool for recovering the keys which the reader use to authenticate the tag. Before starting the recovery process, you need to prepare the anti-collision and dump data.
-          h6.text-info.my-3 # Button's functionality
+          p.my-2 ChameleonUltra is a powerful tool for recovering the keys the reader uses to authenticate the tag. Before starting the recovery process, you must prepare the anti-collision and dump data.
+          h6.text-info.my-3 # Button functionality
           ul.pl-3.mb-0
-            li.mb-2 Edit keys: Edit the known keys which will be used to read the tag in hex format, one key per line. If no keys, the well-known keys will be used.
-            li.mb-2 Read Tag: Read the anti-collision data and blocks of tag via ChameleonUltra. Blocks which can not be read will be filled with pre-defined block data.
-            li.mb-2 New dump: Create a new dump corresponding to current anti-collision data.
+            li.mb-2 Edit keys: Edit the known keys, which will be used to read the tag, in hex format one key per line. If no keys, the well-known keys will be used.
+            li.mb-2 Read Tag: Read the anti-collision data and blocks of tag via ChameleonUltra. Blocks that cannot be read will be filled with pre-defined data.
+            li.mb-2 New dump: Generate a new dump corresponding to current anti-collision data.
             li.mb-2 Edit dump: Edit the dump data in hex format, one block per line.
-            li.mb-2 Import file: Import dump from file then grab the keys of the dump. Anti-collision will also be overwritten if exists in file. Supported file ext.: bin, json, eml, mct.
-            li.mb-2 Export file: Export dump to file. Supported file ext.: bin, json, eml, mct.
+            li.mb-2 Import file: Import dump from file and extract the associated keys. If anti-collision data exists within the file, it will be overwritten. Supported file ext.: bin, json, eml, mct.
+            li.mb-2 Export file: Export dump to a file. Supported file ext.: bin, json, eml, mct.
           h6.text-info.my-3 # What's Anti-Collision data
-          p.my-2 The anti-collision data consists of UID, ATQA, SAK and ATS. Some reader will use different keys corresponding to different anit-collision data. You may not recover the correct keys if you don't have the correct anti-collision data.
-          h6.text-info.my-3 # Create new blank dump
-          p.my-2 If you don't have a tag, you can edit the anti-collision data and click "New dump" to create a new blank dump. Because the dump data is unknown, only partial keys used by the reader can be recoverd.
+          p.my-2 Anti-collision data comprises the UID, ATQA, SAK, and ATS. Some reader will use different keys based on specific anit-collision data. Consequently, without the correct anti-collision data, it may not be possible to recover the appropriate keys.
           h6.text-info.my-3 # Read data from tag
-          p.my-2 If you have a tag, the preferred method is using the keys to read the tag via ChameleonUltra. If you already have some keys of the tag, you can click "Edit keys" to edit. Otherwise, you can start from the well-known keys. Then you can click "Read Tag".
+          p.my-2 If you have a tag, the preferred method is to use the keys to read the tag via ChameleonUltra. If you already have some keys of the tag, you can update them by clicking "Edit keys". Otherwise, you can begin with the well-known keys. Subsequently, you can click "Read Tag".
+          h6.text-info.my-3 # Generate new blank dump
+          p.my-2 If you don't have a tag, you can modify the anti-collision data and click "New dump" to create a new blank dump. Since the actual dump data is unknown, only a subset of the keys that the reader uses to authenticate the tag can be recoverd.
           h6.text-info.my-3 # Export dump before closing
-          p.my-2 You can click "Export file" to export the data to file. Then you can click "Import file" to import later. #[span.text-danger Please remember to export the dump before closing the page!]
+          p.my-2 To preserve your data, click "Export file" to save the data to a file. You may restore dump data later by clicking "Import file". #[span.text-danger Please ensure that you export the dump before closing the page to avoid data loss!]
           h6.text-info.my-3 # Learn more about MFKey32
-          p.my-2 If you want to learn more about MFKey32, please refer to the Flipper's #[a(target="_blank" href="https://docs.flipper.net/nfc/mfkey32") Recovering MIFARE Classic keys] Document.
+          p.my-2 If you want to learn more about MFKey32, please refer to the Flipper documentation "#[a(target="_blank" href="https://docs.flipper.net/nfc/mfkey32") Recovering MIFARE Classic keys]".
     .card.shadow-sm.mb-3
       h6.card-header #[i.fa.fa-fw.fa-lock] Emulate / Recover key
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
@@ -105,13 +104,13 @@ block content
           .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnRecoverKeys") #[i.fa.fa-fw.fa-unlock-alt] Recover
         details.text-sm
           summary.text-muted Click to open manual
-          p.my-2 To Recover the keys, you need to emulate the dump via ChameleonUltra, let the reader to read the ChameleonUltra more than 2 times to collect the logs, and finally read the logs to recover the keys.
-          h6.text-info.my-3 # Button's functionality
+          p.my-2 To recover the keys, emulate the dump through ChameleonUltra, let the reader to read the device at least twice to gather authentication logs, and subsequently read the logs to recover the keys.
+          h6.text-info.my-3 # Button functionality
           ul.pl-3.mb-0
-            li.mb-2 Emulate: Write the dump data to the selected slot of ChameleonUltra and emulate. The original data of the slot will be REPLACED.
-            li.mb-2 Recover: Read the logs from ChameleonUltra and recover the keys. It may take a long time. Recovered keys will be add to the known keys automatically.
+            li.mb-2 Emulate: Write the dump data to a selected ChameleonUltra slot and initiate emulation. Note that this action will overwrite any existing data in the selected slot.
+            li.mb-2 Recover: Read logs from ChameleonUltra to recover the keys. This process may take a long time. Successfully recovered keys will be automatically appended to the known keys list.
           h6.text-info.my-3 # Repeat to recover more keys
-          p.my-2 The more keys you known, the more keys can be recovered. If there are some blocks which can not be read, you can repeat the whole process (read tag, emulate, recover) and try to recover more keys.
+          p.my-2 The more keys you known, the more keys can be recovered. If there are some unreadable blocks, you can repeat the workflow (read tag, emulate, recover) and try to recover more keys of previously inaccessible blocks.
     .modal.fade(data-backdrop="static", data-keyboard="false", tabindex="-1", ref="exportimport")
       .modal-dialog.modal-dialog-centered.modal-xl.align-items-stretch
         .modal-content
