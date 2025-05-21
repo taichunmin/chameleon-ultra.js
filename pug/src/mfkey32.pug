@@ -40,7 +40,7 @@ block content
     .card.shadow-sm.mb-3
       h6.card-header.bg-light #[i.fa.fa-id-card.mr-1] Mifare Dump
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])")
+        input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center TagType
           select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.tagType")
@@ -85,13 +85,11 @@ block content
           h6.text-info.my-3 # Anti-collision data and its necessity
           p.my-2 Anti-collision data comprises UID, ATQA, SAK, and ATS. Some reader will use different keys based on specific anit-collision data. Therefore, it may not be possible to recover the matched keys without the correct anti-collision data.
           h6.text-info.my-3 # Read data from tag
-          p.my-2 If you have a tag, the preferred method is to use the keys to read the tag via ChameleonUltra. If you already have some keys of the tag, you can update them by clicking "Edit keys". Otherwise, you can begin with the well-known keys. Subsequently, you can click "Read Tag".
+          p.my-2 If you have a tag, the preferred method is to use the keys to read the tag via ChameleonUltra. If you already have some keys of the tag, you can update them by clicking "Edit keys". Otherwise, you can leave the keys input empty to begin with the well-known keys. Subsequently, you can click "Read Tag".
           h6.text-info.my-3 # Generate new blank dump
           p.my-2 If you don't have a tag, you can modify the anti-collision data and click "New dump" to create a new blank dump. Since the actual dump data is unknown, only a subset of the keys that the reader uses to authenticate the tag can be recovered.
           h6.text-info.my-3 # Export dump before closing
           p.my-2 To preserve your data, click "Export file" to save the data to a file. You may restore dump data later by clicking "Import file". #[span.text-danger Please ensure that you export the dump before closing the page to avoid data loss!]
-          h6.text-info.my-3 # Learn more about MFKey32
-          p.my-2 If you want to learn more about MFKey32, please refer to the Flipper documentation "#[a(target="_blank" href="https://docs.flipper.net/nfc/mfkey32") Recovering MIFARE Classic keys]".
     .card.shadow-sm.mb-3
       h6.card-header #[i.fa.fa-fw.fa-lock] Emulate / Recover key
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
@@ -110,7 +108,9 @@ block content
             li.mb-2 Emulate: Write the dump data to a selected ChameleonUltra slot and start emulation with detection mode enabled. Note that this action will overwrite any existing data in the selected slot.
             li.mb-2 Recover: Read logs from ChameleonUltra to recover the keys. This process may take a long time. Successfully recovered keys will be automatically appended to the known keys list.
           h6.text-info.my-3 # Repeat to recover more keys
-          p.my-2 The more keys you known, the more keys can be recovered. If there are some unreadable blocks, you can repeat the workflow (read tag, emulate, recover) and try to recover more keys of previously inaccessible blocks.
+          p.my-2 The more similarity between the dump data and the tag, the more keys can be recovered. You can repeat the workflow (read tag, emulate, recover) and try to recover more keys of previously unreadable blocks.
+          h6.text-info.my-3 # Learn more about MFKey32
+          p.my-2 If you want to learn more about MFKey32, please refer to the Flipper documentation "#[a(target="_blank" href="https://docs.flipper.net/nfc/mfkey32") Recovering MIFARE Classic keys]" and MTools Tec documentation "#[a(target="_blank" href="https://shop.mtoolstec.com/how-to-use-mfkey32-on-chameleonultra-devices.html") How to use mfkey32 on ChameleonUltra devices]".
     .modal.fade(data-backdrop="static", data-keyboard="false", tabindex="-1", ref="exportimport")
       .modal-dialog.modal-dialog-centered.modal-xl.align-items-stretch
         .modal-content
@@ -276,17 +276,20 @@ block script
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading sectors:</span><span>${i} / ${tagSectors}</span></div></div>`,
             })
             this.showLoading(genSwalCfg(0))
-            const dump = this.mf1GenEmptyDump()
-            const keys = this.mfGetKeys() ?? WELL_KNOWN_KEYS
             const failed = []
+            const keys = this.mfGetKeys() ?? WELL_KNOWN_KEYS
+            const newDump = this.mf1GenEmptyDump(tag1)
+            const oldDump = this.ss.dump
             for (let i = 0; i < tagSectors; i++) {
-              const [blkStart, secblks] = i < 32 ? [i * 4, 4] : [i * 16 - 384, 16]
+              const [blkStart, secblks] = i < 32 ? [i * 4, 4] : [(i - 24) * 16, 16]
               try {
-                const { data: sectorData, success } = await ultra.mf1ReadSectorByKeys(i, keys)
-                dump.set(sectorData, blkStart * 16)
+                const oldSectorData = oldDump.subarray(blkStart * 16).subarray(0, secblks * 16)
+                const oldSectorKeys = _.map([0, 10], pos => oldSectorData.subarray(pos - 16).subarray(0, 6))
+                const { data: newSectorData, success } = await ultra.mf1ReadSectorByKeys(i, [...oldSectorKeys, ...keys])
+                newDump.set(newSectorData, blkStart * 16)
                 for (let j = 0; j < secblks; j++) {
-                  if (success[j]) dump.set(sectorData.subarray(j * 16, j * 16 + 16), (blkStart + j) * 16)
-                  else failed.push(blkStart + j)
+                  if (!success[j]) failed.push(blkStart + j)
+                  else newDump.set(newSectorData.subarray(j * 16).subarray(0, 16), (blkStart + j) * 16)
                 }
               } catch (err) {
                 if (!ultra.isConnected()) throw err
@@ -295,10 +298,10 @@ block script
               }
               this.showLoading(genSwalCfg(i + 1))
             }
-            res.dump = dump
             await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            _.merge(this.ss, res)
-            this.mfGrabKeysFromDump()
+            res.dump = newDump
+            this.$set(this, 'ss', { ...this.ss, ...res })
+            this.mfGrabKeysFromDump() // must after update this.ss.dump
             await this.swalFire({ icon: 'success', title: 'Read result', text: `${tagBlocks - failed.length}/${tagBlocks} blocks read.` })
           } catch (err) {
             ultra.emitter.emit('error', err)
@@ -335,7 +338,7 @@ block script
 
             const res = {}
             res.dump = ChameleonUltra.mf1DumpFromEml(newVal)
-            if (!Buffer.isBuffer(res.dump)) throw new Error(`Failed to parse input`)
+            if (!Buffer.isBuffer(res.dump)) throw new Error('Failed to parse input')
             if (!_.includes([1024, 4096], res.dump.length)) throw new Error(`input size invalid: ${res.dump?.length} bytes`)
             res.tagType = res.dump.length === 4096 ? 1 : 0
 
@@ -349,7 +352,7 @@ block script
             }
 
             this.$set(this, 'ss', { ...this.ss, ...res })
-            this.mfGrabKeysFromDump()
+            this.mfGrabKeysFromDump() // must after update this.ss.dump
           } catch (err) {
             ultra.emitter.emit('error', err)
             await this.swalFire({ icon: 'error', title: 'Edit failed', text: err.message })
@@ -360,11 +363,12 @@ block script
           try {
             this.showLoading({ text: 'Importing' })
             const file = await new Promise(resolve => {
-              this.$set(this.dumpImport, 'cb', tmpFile => { if (!_.isNil(tmpFile)) resolve(tmpFile) })
+              this.$set(this.dumpImport, 'cb', resolve)
               const $ref = this.$refs.dumpImport
               $ref.value = ''
               $ref.click()
             })
+            if (_.isNil(file)) throw new Error('No file selected')
             if (file.size > 1e6) throw new Error(`File size too large: ${file.size} bytes`)
             const dotIdx = file.name.lastIndexOf('.')
             if (dotIdx === -1) throw new Error('Invalid file name')
@@ -415,7 +419,7 @@ block script
             }
 
             this.$set(this, 'ss', { ...this.ss, ...res })
-            this.mfGrabKeysFromDump()
+            this.mfGrabKeysFromDump() // must after update this.ss.dump
 
             await this.swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
           } catch (err) {
@@ -465,8 +469,8 @@ block script
         async btnWriteEmu () {
           const { ultra } = this
           try {
-            const { atqa, ats, sak, slot, tagType, uid } = this.ss
-            ultra.emitter.emit('debug', 'web', JSON.stringify({ atqa, ats, sak, slot, tagType, uid }))
+            const { atqa, ats, dump, sak, slot, tagType, uid } = this.ss
+            ultra.emitter.emit('debug', 'web', JSON.stringify({ atqa, ats, dump, sak, slot, tagType, uid }))
             const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
@@ -484,7 +488,7 @@ block script
             await ultra.cmdMf1SetAntiCollMode(false)
             await ultra.cmdHf14aSetAntiCollData(tag)
             await ultra.cmdMf1SetDetectionEnable(true) // enable detection
-            for (const [i, chunk] of _.entries(this.ss.dump.chunk(64))) {
+            for (const [i, chunk] of _.entries(dump.chunk(64))) {
               await ultra.cmdMf1EmuWriteBlock(i << 2, chunk)
             }
             await ultra.cmdSlotSaveSettings()
@@ -618,13 +622,14 @@ block script
         async sleep (t) {
           await new Promise(resolve => setTimeout(resolve, t))
         },
-        mf1GenEmptyDump () {
-          return ChameleonUltra.mf1GenEmptyDump({
+        mf1GenEmptyDump (antiColl) {
+          antiColl ??= {
             atqa: Buffer.from(this.ss.atqa, 'hex').toReversed(),
             sak: Buffer.from(this.ss.sak, 'hex'),
             tagType: this.ss.tagType === 1 ? TagType.MIFARE_4096 : TagType.MIFARE_1024,
             uid: Buffer.from(this.ss.uid, 'hex'),
-          })
+          }
+          return ChameleonUltra.mf1GenEmptyDump(antiColl)
         },
         mfGetKeys () {
           try {
@@ -651,9 +656,9 @@ block script
           const tagSectors = tagType === 1 ? 40 : 16
           const newKeys = []
           for (let i = 0; i < tagSectors; i++) {
-            const [sectorStart, sectorSize] = i < 32 ? [i * 16, 64] : [(i - 24) * 64, 256]
-            const sectorData = dump.subarray(sectorStart * 4).subarray(0, sectorSize)
-            newKeys.push(..._.map([0, 10], i => sectorData.subarray(-16).subarray(i, i + 6)))
+            const [blkStart, secblks] = i < 32 ? [i * 4, 4] : [(i - 24) * 16, 16]
+            const sectorData = dump.subarray(blkStart * 16).subarray(0, secblks * 16)
+            newKeys.push(..._.map([0, 10], pos => sectorData.subarray(pos - 16).subarray(0, 6)))
           }
           this.$set(this.ss, 'keys', '')
           this.mfMergeKeys(newKeys)
