@@ -49,7 +49,7 @@ block content
         .form-group.letter-spacing-n1px.mb-3
           label Choose firmware:
           .custom-file.form-control-sm.letter-spacing-n1px
-            input.custom-file-input#zipSelected(type="file", v-model="zipSelected", ref="zipSelected", @change="onZipSelected($event?.target?.files[0])", accept=".zip,application/zip,application/x-zip-compressed")
+            input.custom-file-input#zipSelected(type="file", v-model="zipSelected", ref="zipSelected", @change="onZipSelected($event?.target?.files[0])", @cancel="onZipSelected()", accept=".zip,application/zip,application/x-zip-compressed")
             label.custom-file-label(for="zipSelected", :class="['','text-muted'][+_.isEmpty(zipSelected)]") {{ getZipInfo() || 'Choose firmware...' }}
         button.btn.btn-block.btn-outline-primary.letter-spacing-n1px.mb-2(@click="btnUpdateSelected") #[i.fa.mr-1.fa-puzzle-piece] Update selected
 
@@ -234,7 +234,7 @@ block script
           try {
             this.image = null
             this.imageGitVersion = null
-            if (_.isNil(zip)) throw new Error('zip is nil')
+            if (_.isNil(zip)) throw new Error('no zip file selected')
             const dfuZip = new DfuZip(new Buffer(await zip.arrayBuffer()))
             this.image = await dfuZip.getAppImage()
             this.imageGitVersion = await dfuZip.getGitVersion()

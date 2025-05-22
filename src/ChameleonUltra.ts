@@ -3531,11 +3531,11 @@ export class ChameleonUltra {
     if (!_.isSafeInteger(sector)) throw new TypeError('Invalid sector')
     const mask = Buffer.alloc(10, 0xFF)
     mask[sector >>> 2] ^= 3 << (6 - sector % 4 * 2)
-    const [ka, kb] = (await this.mf1CheckKeysOfSectors({ keys, mask })).slice(sector * 2, sector * 2 + 2)
-    return {
-      ...(_.isNil(ka) ? {} : { [Mf1KeyType.KEY_A]: ka }),
-      ...(_.isNil(kb) ? {} : { [Mf1KeyType.KEY_B]: kb }),
-    }
+    const [ka, kb] = (await this.mf1CheckKeysOfSectors({ keys, mask })).slice(sector * 2).slice(0, 2)
+    return _.omitBy({
+      [Mf1KeyType.KEY_A]: ka,
+      [Mf1KeyType.KEY_B]: kb,
+    }, _.isNil)
   }
 
   /**

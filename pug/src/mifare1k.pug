@@ -98,7 +98,7 @@ block content
     .card.shadow-sm.mb-2
       h6.card-header.bg-light #[i.fa.fa-id-card.mr-1] Mifare Dump
       .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])")
+        input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
         .row.mx-n1.mb-2
           .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnImportDump") #[i.fa.fa-fw.fa-file-code-o] Import
           .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnExportDump") #[i.fa.fa-fw.fa-floppy-o] Export
@@ -365,14 +365,11 @@ block script
             for (let i = 0; i < 16; i++) {
               try {
                 if (!this.ss.toggle[i]) continue
-                const { data: sectorData, success } = await ultra.mf1ReadSectorByKeys(i, keys)
-                this.mfSetSectorDump(i, sectorData)
+                const oldSectorData = Buffer.from(this.ss.dump[i], 'hex')
+                const oldSectorKeys = _.map([0, 10], pos => oldSectorData.subarray(pos - 16).subarray(0, 6))
+                const { data: newSectorData, success } = await ultra.mf1ReadSectorByKeys(i, [...oldSectorKeys, ...keys])
+                this.mfSetSectorDump(i, newSectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
-                // reorder keys: found key will be put to first of keys
-                for (const key1 of _.map([48, 58], i => sectorData.subarray(i, i + 6))) {
-                  const idx = _.findIndex(keys, key2 => key1.equals(key2))
-                  if (idx >= 0) keys.unshift(...keys.splice(idx, 1))
-                }
               } catch (err) {
                 if (!ultra.isConnected()) throw err
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
@@ -403,7 +400,8 @@ block script
               try {
                 if (!this.ss.toggle[i]) continue
                 const sectorData = Buffer.from(this.ss.dump[i], 'hex')
-                const { success } = await ultra.mf1WriteSectorByKeys(i, keys, sectorData)
+                const sectorKeys = _.map([0, 10], pos => sectorData.subarray(pos - 16).subarray(0, 6))
+                const { success } = await ultra.mf1WriteSectorByKeys(i, [...sectorKeys, ...keys], sectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
               } catch (err) {
                 if (!ultra.isConnected()) throw err
@@ -451,11 +449,12 @@ block script
           const { ultra } = this
           try {
             const file = await new Promise(resolve => {
-              this.$set(this.dumpImport, 'cb', tmpFile => { if (!_.isNil(tmpFile)) resolve(tmpFile) })
+              this.$set(this.dumpImport, 'cb', resolve)
               const $ref = this.$refs.dumpImport
               $ref.value = ''
               $ref.click()
             })
+            if (_.isNil(file)) throw new Error('No file selected')
             if (file.size > 1e6) throw new Error(`File size too large: ${file.size} bytes`)
             const dotIdx = file.name.lastIndexOf('.')
             if (dotIdx === -1) throw new Error('Invalid file name')
@@ -585,7 +584,7 @@ block script
           for (const k of ['uid', 'atqa', 'sak', 'ats']) {
             let buf = hf14aAntiColl?.[k] ?? new Buffer()
             if (k === 'atqa') buf = buf.toReversed()
-            this.$set(this.ss, k, buf.toString('hex'))
+            this.$set(this.ss, k, toHex(buf))
           }
         },
         mfSetSectorDump (sectorNo, sectorData) {
