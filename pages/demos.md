@@ -162,3 +162,15 @@ A tool to emulate EM410x tag, scan from EM410x tag and write to T55xx tag.
 - Load/Emulate a EM410x tag
 - Scan from EM410x tag
 - Write to T55xx tag and set as EM410x tag
+
+- - -
+
+## [mifare1k-acls.html](https://taichunmin.idv.tw/chameleon-ultra.js/mifare1k-acls.html)
+
+This tool allows you to calculate access bits and vice versa parse access bits.
+
+![](https://i.imgur.com/hrUXvtO.png)
+
+<h3>Features</h3>
+
+- Decode/Encode the ACLs (Access Bits) of Mifare 1k.

@@ -1,0 +1,302 @@
+extends /include/bootstrapV4
+
+block beforehtml
+  -
+    const title = 'Mifare 1k Access Bits'
+    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/hrUXvtO.png']
+
+block style
+  meta(property="og:description", content="Calculator for Mifare Classic 1k Access Bits.")
+  meta(property="og:locale", content="zh_TW")
+  meta(property="og:title", content=title)
+  meta(property="og:type", content="website")
+  meta(property="og:url", content=`${baseurl}mifare1k-acls.html`)
+  style
+    :sass
+      [v-cloak]
+        display: none
+      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
+        font-family: 'Noto Sans TC', sans-serif
+      .letter-spacing-n1px
+        &, .btn, textarea, select, input
+          letter-spacing: -1px
+      .letter-spacing-n2px
+        &, .btn, textarea, select, input
+          letter-spacing: -2px
+      .text-sm
+        font-size: 0.875rem
+      .tr-striped
+        background-color: rgba(0, 0, 0, .05)
+
+block content
+  #app.my-3.container.text-monospace(v-cloak)
+    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
+    .input-group.mb-3
+      .input-group-prepend: span.input-group-text.justify-content-center ACLs (HEX)
+      input.form-control(maxlength="8", v-model="ss.hexAcls", :class="[isValidAcls() ? 'is-valid' : 'is-invalid']")
+      .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.hexAcls = 'FF078069'") #[i.fa.fa-fw.fa-repeat]
+      .input-group-append: button.btn.btn-outline-secondary(type="button", @click="btnCopy(ss.hexAcls)") #[i.fa.fa-fw.fa-clipboard]
+    table.table.table-sm.mb-2.table-bordered.text-center.text-sm.letter-spacing-n1px
+      thead
+        tr
+          th.align-middle(scope="col" rowspan="2") Data#[br]Block
+          th(scope="col") Bits
+          th(scope="col") Read
+          th(scope="col") Write
+          th(scope="col") Incr.
+          th(scope="col") D./T./R.
+        tr
+          th(scope="col" colspan="5") Remarks
+      tbody
+        template(v-for="acl, blk in acls.slice(0, 3)")
+          tr(:class="{'tr-striped': !(blk % 2)}" @click="btnDataAclPicker(blk)")
+            td.align-middle(scope="col" rowspan="2") {{ blk }}
+            td(scope="col") {{ acl >= 0 ? `00${acl.toString(2)}`.slice(-3) : '?' }}
+            td(scope="col") {{ toPrivStr(DATA_BLK_READ, acl) }}
+            td(scope="col") {{ toPrivStr(DATA_BLK_WRITE, acl) }}
+            td(scope="col") {{ toPrivStr(DATA_BLK_INCR, acl) }}
+            td(scope="col") {{ toPrivStr(DATA_BLK_DTR, acl) }}
+          tr.letter-spacing-n2px(:class="{'tr-striped': !(blk % 2)}" @click="btnDataAclPicker(blk)")
+            td(scope="col" colspan="5") {{ DATA_BLK_REMARKS[acl] ?? '?' }}
+    ul.pl-4.text-muted.text-sm.letter-spacing-n1px
+      li Click table row to edit the Access Bits
+      li Incr.: Increment
+      li D./T./R.: Decrement/Transfer/Restore
+    hr
+    table.table.table-sm.mb-2.table-bordered.text-center.text-sm.letter-spacing-n1px
+      thead
+        tr
+          th.align-middle(scope="col" rowspan="2") Trailer#[br]Block#[br]Bits
+          th(scope="col") Key A#[br]Read
+          th(scope="col") Key A#[br]Write
+          th(scope="col") ACLs#[br]Read
+          th(scope="col") ACLs#[br]Write
+          th(scope="col") Key B#[br]Read
+          th(scope="col") Key B#[br]Write
+        tr.letter-spacing-n2px
+          th(scope="col" colspan="6") Remarks
+      tbody.tr-striped(v-for="acl in acls.slice(3)")
+        tr(@click="btnTrailerAclPicker")
+          td.align-middle(rowspan="2") {{ acl >= 0 ? `00${acl.toString(2)}`.slice(-3) : '?' }}
+          td {{ toPrivStr(TRAILER_BLK_A_READ, acl) }}
+          td {{ toPrivStr(TRAILER_BLK_AB_WRITE, acl) }}
+          td {{ toPrivStr(TRAILER_BLK_ACLS_READ, acl) }}
+          td {{ toPrivStr(TRAILER_BLK_ACLS_WRITE, acl) }}
+          td {{ toPrivStr(TRAILER_BLK_B_READ, acl) }}
+          td {{ toPrivStr(TRAILER_BLK_AB_WRITE, acl) }}
+        tr.letter-spacing-n2px(@click="btnTrailerAclPicker")
+          td(colspan="6") {{ TRAILER_BLK_REMARKS[acl] ?? '?' }}
+    ul.pl-4.text-muted.text-sm.letter-spacing-n1px
+      li If key B is readable data, it cannot serve for authentication. Please refer to NXP #[a(target="_blank" href="https://www.nxp.com/docs/en/data-sheet/MF1S50YYX_V1.pdf") MF1S50YYX_V1.pdf] for more information.
+    .alert.alert-warning.mb-3.text-sm.letter-spacing-n1px
+      h6.alert-heading #[i.fa.fa-fw.fa-exclamation-triangle] Warning
+      | Writing an incorrect value to the access condition bits can make the sector inaccessible.
+    .modal.fade(data-backdrop="static", data-keyboard="false", tabindex="-1", ref="dataAclPicker")
+      .modal-dialog.modal-dialog-centered.modal-xl
+        .modal-content
+          .modal-header
+            h5.modal-title.letter-spacing-n1px #[i.fa.fa-fw.fa-floppy-o] New ACLs for Block {{ dataAclPicker.block }}
+            button.close(type="button", data-dismiss="modal") #[span &times;]
+          .modal-body
+            table.table.table-sm.mb-2.table-bordered.text-center.text-sm.letter-spacing-n1px
+              thead
+                tr
+                  th.align-middle(scope="col" rowspan="2") Bits
+                  th(scope="col") Read
+                  th(scope="col") Write
+                  th(scope="col") Incr.
+                  th(scope="col") D./T./R.
+                tr
+                  th(scope="col" colspan="4") Remarks
+              tbody
+                template(v-for="acl in _.times(8)")
+                  tr(:class="{'tr-striped': !(acl % 2), 'table-success': acl === dataAclPicker.acl}" @click="dataAclPicker.cb?.(acl)")
+                    td.align-middle(scope="col" rowspan="2") {{ acl >= 0 ? `00${acl.toString(2)}`.slice(-3) : '?' }}
+                    td(scope="col") {{ toPrivStr(DATA_BLK_READ, acl) }}
+                    td(scope="col") {{ toPrivStr(DATA_BLK_WRITE, acl) }}
+                    td(scope="col") {{ toPrivStr(DATA_BLK_INCR, acl) }}
+                    td(scope="col") {{ toPrivStr(DATA_BLK_DTR, acl) }}
+                  tr.letter-spacing-n2px(:class="{'tr-striped': !(acl % 2), 'table-success': acl === dataAclPicker.acl}" @click="dataAclPicker.cb?.(acl)")
+                    td(scope="col" colspan="4") {{ DATA_BLK_REMARKS[acl] ?? '?' }}
+            small.text-muted.form-text Click table row to pick new ACL. If key B is readable data, it cannot serve for authentication.
+    .modal.fade(data-backdrop="static", data-keyboard="false", tabindex="-1", ref="trailerAclPicker")
+      .modal-dialog.modal-dialog-centered.modal-xl
+        .modal-content
+          .modal-header
+            h5.modal-title.letter-spacing-n1px #[i.fa.fa-fw.fa-floppy-o] New ACLs for Trailer Block
+            button.close(type="button", data-dismiss="modal") #[span &times;]
+          .modal-body
+            table.table.table-sm.mb-2.table-bordered.text-center.text-sm.letter-spacing-n1px
+              thead
+                tr
+                  th.align-middle(scope="col" rowspan="2") Trailer#[br]Block#[br]Bits
+                  th(scope="col") Key A#[br]Read
+                  th(scope="col") Key A#[br]Write
+                  th(scope="col") ACLs#[br]Read
+                  th(scope="col") ACLs#[br]Write
+                  th(scope="col") Key B#[br]Read
+                  th(scope="col") Key B#[br]Write
+                tr.letter-spacing-n2px
+                  th(scope="col" colspan="6") Remarks
+              tbody
+                template(v-for="acl in _.times(8)")
+                  tr(:class="{'tr-striped': !(acl % 2), 'table-success': acl === trailerAclPicker.acl}" @click="trailerAclPicker.cb?.(acl)")
+                    td.align-middle(rowspan="2") {{ acl >= 0 ? `00${acl.toString(2)}`.slice(-3) : '?' }}
+                    td {{ toPrivStr(TRAILER_BLK_A_READ, acl, acl) }}
+                    td {{ toPrivStr(TRAILER_BLK_AB_WRITE, acl, acl) }}
+                    td {{ toPrivStr(TRAILER_BLK_ACLS_READ, acl, acl) }}
+                    td {{ toPrivStr(TRAILER_BLK_ACLS_WRITE, acl, acl) }}
+                    td {{ toPrivStr(TRAILER_BLK_B_READ, acl, acl) }}
+                    td {{ toPrivStr(TRAILER_BLK_AB_WRITE, acl, acl) }}
+                  tr.letter-spacing-n2px(:class="{'tr-striped': !(acl % 2), 'table-success': acl === trailerAclPicker.acl}" @click="trailerAclPicker.cb?.(acl)")
+                    td(scope="col" colspan="6") {{ TRAILER_BLK_REMARKS[acl] ?? '?' }}
+            small.text-muted.form-text Click table row to pick new ACL. If key B is readable data, it cannot serve for authentication.
+
+block script
+  script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/joi@17/dist/joi-browser.min.js")
+  script.
+    const { Buffer, ChameleonUltra } = window.ChameleonUltraJS
+    const toHex = buf => _.toUpper(buf.toString('hex'))
+    const ACLS_BIT_OFFSET = [
+      [15, 19], // !C0, C0
+      [3, 23], // !B0, B0
+      [7, 11], // !A0, A0
+    ]
+
+    window.vm = new Vue({
+      el: '#app',
+      data: {
+        ls: {},
+        ss: {
+          hexAcls: 'FF078069',
+        },
+        dataAclPicker: { block: 0, cb: null, acl: -1 },
+        trailerAclPicker: { cb: null, acl: -1 },
+        DATA_BLK_READ: [3, 3, 3, 1, 3, 1, 3, 0],
+        DATA_BLK_WRITE: [3, 0, 0, 1, 1, 0, 1, 0],
+        DATA_BLK_INCR: [3, 0, 0, 0, 0, 0, 1, 0],
+        DATA_BLK_DTR: [3, 3, 0, 0, 0, 0, 3, 0],
+        DATA_BLK_REMARKS: [
+          'Value block. Factory default.',
+          'Value block.',
+          '　',
+          '　',
+          '　',
+          '　',
+          'Value block.',
+          'No privileges.',
+        ],
+        TRAILER_BLK_A_READ: [0, 0, 0, 0, 0, 0, 0, 0],
+        TRAILER_BLK_AB_WRITE: [2, 2, 0, 1, 1, 0, 0, 0],
+        TRAILER_BLK_ACLS_READ: [2, 2, 2, 3, 3, 3, 3, 3],
+        TRAILER_BLK_ACLS_WRITE: [0, 2, 0, 1, 0, 1, 0, 0],
+        TRAILER_BLK_B_READ: [2, 2, 2, 0, 0, 0, 0, 0],
+        TRAILER_BLK_REMARKS: [
+          'Key B is readable data.',
+          'Key B is readable data. Factory default.',
+          'Key B is readable data.',
+          '　',
+          '　',
+          '　',
+          '　',
+          '　',
+        ],
+      },
+      async mounted () {
+        // 自動儲存功能
+        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+          try {
+            const saved = JSON5.parse(storage.getItem(location.pathname))
+            if (saved) this.$set(this, key, _.merge(this[key], saved))
+          } catch (err) {}
+          this.$watch(key, () => {
+            storage.setItem(location.pathname, JSON5.stringify(this[key]))
+          }, { deep: true })
+        }
+      },
+      computed: {
+        acls () {
+          try {
+            const buf = Buffer.from(this.ss.hexAcls, 'hex')
+            if (buf.length < 3) throw new Error('invalid length')
+            return _.times(4, blk => _.sum(_.times(3, i => buf.readBitMSB(ACLS_BIT_OFFSET[i][1] - blk) << i)))
+          } catch (err) {
+            // console.error(err)
+            return [-1, -1, -1, -1]
+          }
+        },
+      },
+      methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
+        async btnCopy (text, container = null) {
+          if (!container) container = document.body
+          const dom = document.createElement('textarea')
+          dom.value = text = `${text}`
+          container.appendChild(dom)
+          dom.select()
+          dom.setSelectionRange(0, 1e6) // For mobile devices
+          document.execCommand('copy')
+          container.removeChild(dom)
+          await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
+        },
+        async btnDataAclPicker (block) {
+          const $ref = window.jQuery(this.$refs.dataAclPicker)
+          const newVal = await new Promise(resolve => {
+            this.$set(this, 'dataAclPicker', {
+              block,
+              cb: resolve,
+              acl: this.acls?.[block] ?? -1,
+            })
+            $ref.one('hide.bs.modal', () => resolve()).modal('show')
+          })
+          $ref.modal('hide')
+          this.$set(this.dataAclPicker, 'cb', null)
+          if (_.isNil(newVal)) return
+          this.setNewBlkAcl(block, newVal)
+        },
+        async btnTrailerAclPicker () {
+          const $ref = window.jQuery(this.$refs.trailerAclPicker)
+          const newVal = await new Promise(resolve => {
+            this.$set(this, 'trailerAclPicker', {
+              cb: resolve,
+              acl: this.acls?.[3] ?? -1,
+            })
+            $ref.one('hide.bs.modal', () => resolve()).modal('show')
+          })
+          $ref.modal('hide')
+          this.$set(this.trailerAclPicker, 'cb', null)
+          if (_.isNil(newVal)) return
+          this.setNewBlkAcl(3, newVal)
+        },
+        toPrivStr (tbl, acl, trailerAcl) {
+          trailerAcl ??= this.acls?.[3] ?? -1
+          if (trailerAcl < 0 || acl < 0) return '?'
+          return ['　', 'Ⓑ', 'Ⓐ', 'Ⓐ Ⓑ'][tbl[acl] & (trailerAcl < 3 ? 0b10 : 0b11)]
+        },
+        setNewBlkAcl (blk1, newAcl) {
+          const acls = [...this.acls]
+          acls[blk1] = newAcl // set new ACL
+          for (const [i, acl] of _.entries([0, 0, 0, 1])) {
+            if (!_.inRange(acls[i], 8)) acls[i] = acl
+          }
+
+          const buf1 = Buffer.from(this.ss.hexAcls, 'hex')
+          const buf2 = Buffer.alloc(4)
+          if (buf1.length === 4) buf2[3] = buf1[3] // copy user data
+          for (let blk = 0; blk < 4; blk++) {
+            const acl = acls[blk]
+            for (let i = 0; i < 3; i++) buf2.writeBitMSB(1, ACLS_BIT_OFFSET[i][(acl >>> i) & 1] - blk)
+          }
+          this.$set(this.ss, 'hexAcls', toHex(buf2))
+        },
+        isValidAcls (hexAcls) {
+          hexAcls ??= this.ss.hexAcls
+          const buf = Buffer.from(hexAcls, 'hex')
+          if (!_.includes([3, 4], buf.length)) return false
+          return ChameleonUltra.mf1IsValidAcl(buf)
+        },
+      },
+    })
