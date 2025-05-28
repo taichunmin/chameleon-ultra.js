@@ -1,4 +1,4 @@
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 const captureRejectionSymbol = Symbol.for('nodejs.rejection')
 
 export class EventEmitter implements NodeJS.EventEmitter, EventTarget {

@@ -1,5 +1,6 @@
 import { Buffer } from '@taichunmin/buffer'
-import _ from 'lodash'
+import * as _ from 'lodash-es'
+import { expect, test, vi } from 'vitest'
 import Crypto1 from './Crypto1'
 
 test('#reset()', async () => {
@@ -263,7 +264,7 @@ test.each([
     ],
   },
 ])('.darkside()', async opts => {
-  const fnAcquire = jest.fn().mockRejectedValue(new Error('No record can be acqured'))
+  const fnAcquire = vi.fn().mockRejectedValue(new Error('No record can be acquired'))
   for (const acquired of opts.acquires) fnAcquire.mockResolvedValueOnce(_.mapValues(acquired, Buffer.fromHexString))
   const expected = Buffer.from(opts.expected, 'hex')
   const fnCheckKey = async (key: Buffer): Promise<boolean> => { return key.equals(expected) }

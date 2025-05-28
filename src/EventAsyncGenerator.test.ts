@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events'
+import { describe, expect, test, vi } from 'vitest'
 import { EventAsyncGenerator } from './EventAsyncGenerator'
 import { sleep } from './helper'
 
@@ -68,7 +69,7 @@ describe('EventIterable', () => {
 
   test('should call remove handler once with no arguments on immediate end', async () => {
     const it = new EventAsyncGenerator()
-    it.removeCallback = jest.fn()
+    it.removeCallback = vi.fn()
     it.onClose()
     expect(it.removeCallback).toHaveBeenCalledTimes(1)
     expect(it.removeCallback).toHaveBeenCalledWith()
@@ -76,7 +77,7 @@ describe('EventIterable', () => {
 
   test('should call remove handler once with no arguments on delayed end', async () => {
     const it = new EventAsyncGenerator()
-    it.removeCallback = jest.fn()
+    it.removeCallback = vi.fn()
     void sleep(10).then(() => { it.onClose() }) // no wait
     await sleep(20)
     expect(it.removeCallback).toHaveBeenCalledTimes(1)
@@ -85,7 +86,7 @@ describe('EventIterable', () => {
 
   test('should call remove handler on immediate return', async () => {
     const it = new EventAsyncGenerator()
-    it.removeCallback = jest.fn()
+    it.removeCallback = vi.fn()
     await it.return(undefined)
     expect(it.removeCallback).toHaveBeenCalledTimes(1)
     expect(it.removeCallback).toHaveBeenCalledWith()
@@ -93,7 +94,7 @@ describe('EventIterable', () => {
 
   test('should call remove handler on delayed return', async () => {
     const it = new EventAsyncGenerator()
-    it.removeCallback = jest.fn()
+    it.removeCallback = vi.fn()
     void sleep(10).then(async () => { await it.return(undefined) }) // no wait
     await sleep(20)
     expect(it.removeCallback).toHaveBeenCalledTimes(1)
@@ -104,7 +105,7 @@ describe('EventIterable', () => {
     expect.hasAssertions()
     const it = new EventAsyncGenerator()
     try {
-      it.removeCallback = jest.fn()
+      it.removeCallback = vi.fn()
       it.onError(new Error())
       await it.next()
     } catch (err) {
@@ -118,7 +119,7 @@ describe('EventIterable', () => {
     expect.hasAssertions()
     const it = new EventAsyncGenerator()
     try {
-      it.removeCallback = jest.fn()
+      it.removeCallback = vi.fn()
       void sleep(10).then(() => { it.onError(new Error()) }) // no wait
       await it.next()
     } catch (err) {

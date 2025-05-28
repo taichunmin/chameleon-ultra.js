@@ -1,6 +1,6 @@
 import { getenv, getSiteurl } from './dotenv'
 
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 import { errToJson } from './utils'
 import { fileURLToPath } from 'url'
 import { inspect } from 'util'

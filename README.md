@@ -179,6 +179,16 @@ await run(ultraUsb)
 - [Chameleon Ultra Guide](https://chameleonultra.com/docs)
 - [Chameleon Ultra GUI Documentation](https://docs.chameleonultragui.dev/)
 
+## Star History
+
+<a href="https://www.star-history.com/#taichunmin/chameleon-ultra.js&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=Date" />
+ </picture>
+</a>
+
 ## Dependents (projects / website using chameleon-ultra.js)
 
 - [nfctool.cn](https://ultra.nfctool.cn/)

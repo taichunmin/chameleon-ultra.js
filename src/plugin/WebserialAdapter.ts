@@ -1,5 +1,5 @@
 import { type Buffer } from '@taichunmin/buffer'
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 import { TransformStream, WritableStream, type Transformer, type TransformStreamDefaultController } from 'stream/web'
 import { serial, type SerialPort } from 'web-serial-polyfill'
 import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'

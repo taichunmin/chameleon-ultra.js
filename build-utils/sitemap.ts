@@ -1,6 +1,6 @@
-import { getSiteurl } from './pug/dotenv'
+import { getSiteurl } from '../pug/dotenv'
 
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 import { fileURLToPath } from 'url'
 import { promises as fsPromises } from 'fs'
 import dayjs from 'dayjs'
@@ -43,17 +43,18 @@ interface GenSitemapArgs {
 }
 
 export async function build (): Promise<void> {
-  const publicDir = path.resolve(__dirname, './dist')
-  await writeSitemapByUrls({
-    baseurl: getSiteurl(),
-    dist: publicDir,
-    urls: _.map(await fg('dist/**/*.html'), filepath => getSiteurl(path.relative(publicDir, filepath))),
-  })
+  const publicDir = path.resolve(__dirname, '../dist')
+  const urls = _.chain(await fg('../dist/**/*.html', { cwd: __dirname }))
+    .map(filepath => path.resolve(__dirname, filepath))
+    .map(filepath => path.relative(publicDir, filepath))
+    .map(getSiteurl)
+    .value()
+  await writeSitemapByUrls({ baseurl: getSiteurl(), dist: publicDir, urls })
 
   // og:image
   let ogImageAddedCnt = 0
-  for await (const filepath of await fg('dist/**/*.html')) {
-    const filepath1 = path.relative(__dirname, filepath)
+  for (const filepath of await fg('../dist/**/*.html', { cwd: __dirname })) {
+    const filepath1 = path.resolve(__dirname, filepath)
     let content = await fsPromises.readFile(filepath1, 'utf8')
     if (content.includes('property="og:image"')) continue
     content = content.replace('</head>', '<meta property="og:image" content="https://i.imgur.com/bWJGSGq.png"><meta property="og:image:width" content="1280"><meta property="og:image:height" content="640"></head>')

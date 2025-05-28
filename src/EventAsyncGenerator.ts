@@ -73,6 +73,10 @@ export class EventAsyncGenerator<T = unknown, TReturn = unknown, TNext = unknown
   [Symbol.asyncIterator] (): this {
     return this
   }
+
+  async [Symbol.asyncDispose] (): Promise<void> {
+    await this.finally()
+  }
 }
 
 type Resolvable<T> = Promise<T> & {

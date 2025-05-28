@@ -1,5 +1,5 @@
 import { Buffer } from '@taichunmin/buffer'
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 import { ReadableStream, WritableStream, type ReadableStreamController } from 'node:stream/web'
 import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
 import { setObject } from '../iifeExportHelper'

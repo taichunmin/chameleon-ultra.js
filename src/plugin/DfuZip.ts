@@ -1,6 +1,6 @@
 import { Buffer } from '@taichunmin/buffer'
 import JSZip from 'jszip'
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 import { setObject } from '../iifeExportHelper'
 
 export default class DfuZip {

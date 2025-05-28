@@ -1,3 +1,4 @@
+import { describe, expect, test, vi } from 'vitest'
 import { EventEmitter } from './EventEmitter'
 // import { EventEmitter } from 'node:events'
 
@@ -144,7 +145,7 @@ describe('#getMaxListeners, #setMaxListeners', () => {
 describe('#listenerCount', () => {
   test('should return the number of listeners for the eventName', () => {
     const emitter = new EventEmitter()
-    const [listener1, listener2, listener3] = [jest.fn(), jest.fn(), jest.fn()]
+    const [listener1, listener2, listener3] = [vi.fn(), vi.fn(), vi.fn()]
     emitter.on('test', listener1)
     expect(emitter.listenerCount('test')).toEqual(1)
     emitter.on('test', listener2)
@@ -155,7 +156,7 @@ describe('#listenerCount', () => {
 
   test('should return 0 when there are no listeners', () => {
     const emitter = new EventEmitter()
-    const [listener1, listener2, listener3] = [jest.fn(), jest.fn(), jest.fn()]
+    const [listener1, listener2, listener3] = [vi.fn(), vi.fn(), vi.fn()]
     emitter.on('test', listener1)
     expect(emitter.listenerCount('test', listener1)).toEqual(1)
     emitter.on('test', listener2)
@@ -174,7 +175,7 @@ describe('#listenerCount', () => {
 describe('#listeners', () => {
   test('should return all listeners for the eventName', () => {
     const emitter = new EventEmitter()
-    const [listener1, listener2, listener3] = [jest.fn(), jest.fn(), jest.fn()]
+    const [listener1, listener2, listener3] = [vi.fn(), vi.fn(), vi.fn()]
     emitter.on('test1', listener1)
     emitter.on('test2', listener2)
     emitter.on('test1', listener3)
@@ -186,7 +187,7 @@ describe('#listeners', () => {
 describe('#on', () => {
   test('should trigger the listener 2 times', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     emitter.on('test', actual)
     emitter.emit('test')
     emitter.emit('test')
@@ -221,7 +222,7 @@ describe('#on', () => {
 describe('#once', () => {
   test('should trigger the listener once', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     emitter.once('test', actual)
     emitter.emit('test')
     emitter.emit('test')
@@ -243,7 +244,7 @@ describe('#once', () => {
 describe('#prependOnceListener', () => {
   test('should trigger the listener once', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     emitter.prependOnceListener('test', actual)
     emitter.emit('test')
     emitter.emit('test')
@@ -289,7 +290,7 @@ describe('#removeAllListeners', () => {
 describe('#removeListener', () => {
   test('should remove one listener', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     emitter.on('test', actual)
     emitter.on('test', actual)
     emitter.emit('test')
@@ -315,7 +316,7 @@ describe('#removeListener', () => {
 
   test('should remove listener added by #once', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     emitter.once('test', actual)
     emitter.removeListener('test', actual)
     emitter.emit('test')
@@ -338,7 +339,7 @@ describe('#removeListener', () => {
 
   test('#removeEventListener', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     emitter.on('test', actual)
     emitter.on('test', actual)
     emitter.emit('test')
@@ -378,7 +379,7 @@ describe('#rawListeners', () => {
 describe('#dispatchEvent', () => {
   test('should emit the event', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     emitter.on('test', actual)
     ;(emitter as any).dispatchEvent({ type: 'test' })
     expect(actual).toHaveBeenCalledTimes(1)
@@ -388,7 +389,7 @@ describe('#dispatchEvent', () => {
 describe('#addEventListener', () => {
   test('should add an event listener that can be trigger multiple times', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     ;(emitter as any).addEventListener('test', actual)
     emitter.emit('test')
     ;(emitter as any).dispatchEvent({ type: 'test' })
@@ -397,7 +398,7 @@ describe('#addEventListener', () => {
 
   test('should add an event listener that can be trigger once', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     ;(emitter as any).addEventListener('test', actual, { once: true })
     emitter.emit('test')
     emitter.emit('test')
@@ -406,7 +407,7 @@ describe('#addEventListener', () => {
 
   test('should add an event listener and ignore capture boolean', () => {
     const emitter = new EventEmitter()
-    const actual = jest.fn()
+    const actual = vi.fn()
     ;(emitter as any).addEventListener('test', actual, false)
     emitter.emit('test')
     emitter.emit('test')

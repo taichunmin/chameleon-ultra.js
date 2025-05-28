@@ -1,5 +1,6 @@
 import { Buffer } from '@taichunmin/buffer'
-import _ from 'lodash'
+import * as _ from 'lodash-es'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { ChameleonUltra } from './ChameleonUltra'
 import {
   AnimationMode,
@@ -111,7 +112,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
   test('#cmdDfuEnter()', async () => {
     // arrange
-    jest.spyOn(ultra, 'isConnected').mockReturnValue(false).mockReturnValueOnce(false).mockReturnValueOnce(true)
+    vi.spyOn(ultra, 'isConnected').mockReturnValue(false).mockReturnValueOnce(false).mockReturnValueOnce(true)
 
     // act
     await ultra.cmdDfuEnter()

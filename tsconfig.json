@@ -1,11 +1,13 @@
 {
-  "exclude": ["dist/**/*", "node_modules/**/*", "**/*.d.ts"],
   "extends": "@tsconfig/node-lts/tsconfig.json",
   "include": ["**/*.js", "**/*.cjs", "**/*.mjs", "**/*.ts"],
+  "exclude": ["dist/**/*", "node_modules/**/*", "**/*.d.ts"],
   "compilerOptions": {
-    "esModuleInterop": true,
-    "module": "ESNext",
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["es2023"],
+    "module": "esnext",
     "moduleResolution": "bundler",
+    "outDir": "./dist",
     "useUnknownInCatchVariables": false
   }
 }
