@@ -104,9 +104,14 @@ jobs:
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.global.js
 
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/Crypto1/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.mjs/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.mjs/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/DfuZip.mjs/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/SerialPortAdapter.mjs/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.mjs/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.mjs/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/DfuZip/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/SerialPortAdapter/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/WebbleAdapter/+esm
+            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/WebserialAdapter/+esm
