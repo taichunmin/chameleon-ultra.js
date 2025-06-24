@@ -19,8 +19,9 @@ block style
         font-family: 'Noto Sans TC', sans-serif
       .input-group-prepend > .input-group-text
         width: 140px
-      .letter-spacing-n1px, .letter-spacing-n1px .btn
-        letter-spacing: -1px
+      .letter-spacing-n1px
+        &, .btn, textarea, select, input
+          letter-spacing: -1px
       .text-sm
         font-size: 0.875rem
 
@@ -160,7 +161,7 @@ block script
         for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
           try {
             const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge(this[key], saved))
+            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
           } catch (err) {}
           this.$watch(key, () => {
             storage.setItem(location.pathname, JSON5.stringify(this[key]))

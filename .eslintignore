@@ -130,5 +130,5 @@ dist
 .pnp.*
 
 # eslint
-.eslintrc.cjs
+*.cjs
 rollup.config.mjs

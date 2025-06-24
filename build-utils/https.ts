@@ -1,6 +1,6 @@
-import { getPort, getSiteurl } from './pug/dotenv'
+import { getPort, getSiteurl } from '../pug/dotenv'
 
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 import { fileURLToPath } from 'url'
 import { promises as fsPromises } from 'fs'
 import finalhandler from 'finalhandler'
@@ -15,8 +15,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable
 async function readMkcert (): Promise<{ cert: Buffer, key: Buffer }> {
   try {
     const [cert, key] = await Promise.all([
-      fsPromises.readFile(path.resolve(__dirname, './mkcert/cert.pem')),
-      fsPromises.readFile(path.resolve(__dirname, './mkcert/key.pem')),
+      fsPromises.readFile(path.resolve(__dirname, '../mkcert/cert.pem')),
+      fsPromises.readFile(path.resolve(__dirname, '../mkcert/key.pem')),
     ])
     return { cert, key }
   } catch (err) {
@@ -25,7 +25,7 @@ async function readMkcert (): Promise<{ cert: Buffer, key: Buffer }> {
 }
 
 async function main (): Promise<void> {
-  const publicDir = path.resolve(__dirname, './dist')
+  const publicDir = path.resolve(__dirname, '../dist')
 
   const httpsServer = https.createServer(await readMkcert(), (req, res) => {
     serveStatic(publicDir, {

@@ -5,7 +5,7 @@
  * ```
  */
 import { Buffer } from '@taichunmin/buffer'
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 import { setObject } from './iifeExportHelper'
 
 const LF_POLY_ODD = 0x29CE5C

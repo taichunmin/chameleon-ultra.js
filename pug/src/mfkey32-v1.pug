@@ -18,7 +18,8 @@ block style
       body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
         font-family: 'Noto Sans TC', sans-serif
       .letter-spacing-n1px
-        letter-spacing: -1px
+        &, .btn, textarea, select, input
+          letter-spacing: -1px
       .input-group-prepend > .input-group-text
         width: 85px
 
@@ -142,7 +143,7 @@ block script
         for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
           try {
             const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge(this[key], saved))
+            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
           } catch (err) {}
           this.$watch(key, () => {
             storage.setItem(location.pathname, JSON5.stringify(this[key]))
@@ -260,7 +261,7 @@ block script
                 for (let j = i + 1; j < grp.length; j++) {
                   this.showLoading(_.merge(swalCfg, {
                     currentProgressStep: 2,
-                    text: `Recover key: ${recoverCnt++} / ${recoverMax}`,
+                    text: `Recover log pairs: ${recoverCnt++} / ${recoverMax}`,
                   }))
                   await this.sleep(0) // 等待 UI 更新
                   const r1 = grp[j]

@@ -1,6 +1,3 @@
-// https://github.com/microsoft/tsdoc/issues/220#issuecomment-1629947425
-// eslint-disable-file
-const _ = require('lodash')
 const eslintPluginTsdoc = require('eslint-plugin-tsdoc')
 const fs = require('fs')
 

@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 
 export function getenv<T extends string | undefined> (key: string, defaultVal: T): string | T {
   return process.env?.[key] ?? defaultVal

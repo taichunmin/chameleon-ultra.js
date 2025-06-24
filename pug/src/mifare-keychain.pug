@@ -255,7 +255,7 @@ block script
         for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
           try {
             const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge(this[key], saved))
+            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
           } catch (err) {}
           this.$watch(key, () => {
             storage.setItem(location.pathname, JSON5.stringify(this[key]))

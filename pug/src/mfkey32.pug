@@ -17,8 +17,6 @@ block style
         display: none
       body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
         font-family: 'Noto Sans TC', sans-serif
-      .letter-spacing-n1px
-        letter-spacing: -1px
       .input-group-prepend > .input-group-text
         width: 85px
       .letter-spacing-n1px
@@ -539,7 +537,7 @@ block script
                 for (let j = i + 1; j < grp.length; j++) {
                   this.showLoading(_.merge(swalCfg, {
                     currentProgressStep: 2,
-                    text: `Recover key: ${recoverCnt++} / ${recoverMax}`,
+                    text: `Recover log pairs: ${recoverCnt++} / ${recoverMax}`,
                   }))
                   await this.sleep(0) // 等待 UI 更新
                   const r1 = grp[j]

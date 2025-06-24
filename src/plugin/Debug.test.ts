@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest'
 import * as sut from './Debug'
 
 test('errToJson', async () => {

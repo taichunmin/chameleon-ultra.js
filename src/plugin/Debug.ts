@@ -1,6 +1,6 @@
 import { type Buffer } from '@taichunmin/buffer'
 import createDebugger, { type Debugger } from 'debug'
-import _ from 'lodash'
+import * as _ from 'lodash-es'
 import { type PluginInstallContext as ChameleonCtx, type ChameleonPlugin } from '../ChameleonUltra'
 import { setObject } from '../iifeExportHelper'
 

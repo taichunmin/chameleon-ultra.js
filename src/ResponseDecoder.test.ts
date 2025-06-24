@@ -1,4 +1,5 @@
 import { Buffer } from '@taichunmin/buffer'
+import { describe, expect, test } from 'vitest'
 import * as sut from './ResponseDecoder'
 
 describe('is not buffer', () => {
