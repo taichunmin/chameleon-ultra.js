@@ -133,7 +133,7 @@
     "build:pug": "tsx ./pug/build.ts",
     "build:sitemap": "tsx ./build-utils/sitemap.ts",
     "build": "yarn build:js && yarn build:cjsInterop && yarn build:docs && yarn build:pug && yarn build:sitemap",
-    "dev:docs": "nodemon --watch src --watch pages --ext ts,md --exec \"yarn build:docs\"",
+    "dev:docs": "nodemon --watch src --watch documents --ext ts,md --exec \"yarn build:docs\"",
     "dev:https": "tsx ./build-utils/https.ts",
     "dev:js": "yarn build:js --watch",
     "dev:pug": "nodemon --watch pug --ext pug --exec \"yarn build:pug\"",

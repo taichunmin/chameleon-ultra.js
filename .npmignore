@@ -150,7 +150,7 @@ out
 /*.ts
 /build-utils
 /dist/assets
-/pages
+/documents
 /pug
 /src/example
 /tsconfig.*.json
