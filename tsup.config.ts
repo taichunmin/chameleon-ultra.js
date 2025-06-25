@@ -11,12 +11,13 @@ const sharedConfig: Options = {
   splitting: false,
   esbuildPlugins: [
     nodeModulesPolyfillPlugin({
+      fallback: 'error',
       globals: {
         Buffer: false,
       },
       modules: {
         'stream/web': 'empty',
-        fallback: 'empty',
+        stream: 'empty',
       },
     }),
   ],
