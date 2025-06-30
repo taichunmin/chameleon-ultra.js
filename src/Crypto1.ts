@@ -920,11 +920,7 @@ export default class Crypto1 {
         keyCnt.set(key, (keyCnt.get(key) ?? 0) + 1)
       }
     }
-    return _.chain([...keyCnt.entries()])
-      .orderBy([1], ['desc'])
-      .take(50)
-      .map(key => new Buffer(6).writeUIntBE(key[0], 0, 6))
-      .value()
+    return _.map(_.take(_.orderBy([...keyCnt.entries()], [1], ['desc']), 50), key => new Buffer(6).writeUIntBE(key[0], 0, 6))
   }
 
   /**

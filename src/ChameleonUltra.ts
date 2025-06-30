@@ -3556,10 +3556,7 @@ export class ChameleonUltra {
     onChunkKeys?: (opts: { keys: Buffer[], mask: Buffer }) => Promise<unknown>
   }): Promise<Array<Buffer | null>> {
     let { chunkSize = 20, keys, mask = new Buffer(10), maxSectors = 40, onChunkKeys } = opts
-    keys = _.chain(keys)
-      .filter(key => Buffer.isBuffer(key) && key.length === 6)
-      .uniqWith(Buffer.equals)
-      .value()
+    keys = _.uniqWith(_.filter(keys, key => Buffer.isBuffer(key) && key.length === 6), Buffer.equals)
     if (keys.length === 0) throw new TypeError('Invalid keys')
     if (!Buffer.isBuffer(mask)) mask = new Buffer(10)
     else if (mask.length !== 10) {
@@ -4130,10 +4127,7 @@ export class ChameleonUltra {
   static mf1KeysFromDict (dict: string): Buffer[] {
     if (!_.isString(dict)) throw new TypeError('dict must be a string')
     dict = dict.replaceAll(/(\r?\n)+/g, '\n').replaceAll(/#[^\n]*\n?/msg, '')
-    return _.chain(Buffer.from(dict, 'hex').chunk(6))
-      .filter(key => Buffer.isBuffer(key) && key.length === 6)
-      .uniqWith(Buffer.equals)
-      .value()
+    return _.uniqWith(_.filter(Buffer.from(dict, 'hex').chunk(6), key => Buffer.isBuffer(key) && key.length === 6), Buffer.equals)
   }
 
   /**
