@@ -1,6 +1,6 @@
 import { type Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
-import { TransformStream, type UnderlyingSink, WritableStream } from 'node:stream/web'
+import { TransformStream, type UnderlyingSink, WritableStream } from 'stream/web'
 import { type bluetooth } from 'webbluetooth'
 import { type ChameleonPlugin, type ChameleonSerialPort, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
 import { sleep } from '../helper'

@@ -2,7 +2,7 @@ import { Buffer } from '@taichunmin/buffer'
 import crc16a from '@taichunmin/crc/crc16a'
 import crc32 from '@taichunmin/crc/crc32'
 import * as _ from 'lodash-es'
-import { type ReadableStream, type WritableStream } from 'node:stream/web'
+import { type ReadableStream, type WritableStream } from 'stream/web'
 import {
   type AnimationMode,
   type ButtonAction,
