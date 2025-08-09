@@ -1,19 +1,11 @@
 {
+  "$schema": "https://typedoc.org/schema.json",
   "cleanOutputDir": false,
   "customCss": "./build-utils/typedoc-custom.css",
   "darkHighlightTheme": "dark-plus",
-  "exclude": ["**/*.spec.ts", "**/*.test.ts", "**/node_modules/**"],
+  "gaID": "G-KB8ZL6LPH5",
   "includeVersion": true,
   "out": "dist",
-  "plugin": ["typedoc-plugin-mdn-links", "typedoc-plugin-missing-exports", "typedoc-plugin-rename-defaults", "typedoc-plugin-ga"],
-  "projectDocuments": ["documents/*.md"],
-  "gaID": "G-KB8ZL6LPH5",
-  "navigationLinks": {
-    "Demos": "https://taichunmin.idv.tw/chameleon-ultra.js/documents/Demos.html",
-    "GitHub": "https://github.com/taichunmin/chameleon-ultra.js",
-    "NPM": "https://www.npmjs.com/package/chameleon-ultra.js",
-    "jsDelivr": "https://www.jsdelivr.com/package/npm/chameleon-ultra.js"
-  },
   "entryPoints": [
     "src/index.ts",
     "src/Crypto1.ts",
@@ -22,6 +14,11 @@
     "src/plugin/SerialPortAdapter.ts",
     "src/plugin/WebbleAdapter.ts",
     "src/plugin/WebserialAdapter.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/node_modules/**"
   ],
   "groupOrder": [
     "Constructors",
@@ -37,5 +34,52 @@
     "Plugin Related",
     "Methods",
     "*"
+  ],
+  "kindSortOrder": [
+    "Reference",
+    "Project",
+    "Module",
+    "Namespace",
+    "Class",
+    "Enum",
+    "EnumMember",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Variable",
+    "Function",
+    "Accessor",
+    "Method",
+    "Parameter",
+    "TypeParameter",
+    "TypeLiteral",
+    "CallSignature",
+    "ConstructorSignature",
+    "IndexSignature",
+    "GetSignature",
+    "SetSignature"
+  ],
+  "navigationLinks": {
+    "Demos": "https://taichunmin.idv.tw/chameleon-ultra.js/documents/Demos.html",
+    "GitHub": "https://github.com/taichunmin/chameleon-ultra.js",
+    "NPM": "https://www.npmjs.com/package/chameleon-ultra.js",
+    "jsDelivr": "https://www.jsdelivr.com/package/npm/chameleon-ultra.js"
+  },
+  "plugin": [
+    "typedoc-plugin-mdn-links",
+    "typedoc-plugin-missing-exports",
+    "typedoc-plugin-rename-defaults",
+    "typedoc-plugin-ga"
+  ],
+  "projectDocuments": [
+    "documents/*.md"
+  ],
+  "sort": [
+    "kind",
+    "visibility",
+    "instance-first",
+    "enum-value-ascending",
+    "alphabetical-ignoring-documents"
   ]
 }
