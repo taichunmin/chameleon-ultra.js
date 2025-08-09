@@ -1,6 +1,6 @@
 import { Buffer } from '@taichunmin/buffer'
 import { describe, expect, test } from 'vitest'
-import * as sut from './ResponseDecoder'
+import * as sut from './decoder'
 
 describe('is not buffer', () => {
   test.each([

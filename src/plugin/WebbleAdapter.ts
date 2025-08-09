@@ -2,9 +2,10 @@ import { type Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
 import { TransformStream, type UnderlyingSink, WritableStream } from 'stream/web'
 import { type bluetooth } from 'webbluetooth'
-import { type ChameleonPlugin, type ChameleonSerialPort, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
+import { type ChameleonUltra } from '../ChameleonUltra'
 import { sleep } from '../helper'
 import { setObject } from '../iifeExportHelper'
+import { type AdapterInstallResp, type UltraPlugin, type UltraSerialPort, type PluginInstallContext } from '../types'
 
 const DFU_CTRL_CHAR_UUID = toCanonicalUUID('8ec90001-f315-4f60-9fb8-838830daea50')
 const DFU_PACKT_CHAR_UUID = toCanonicalUUID('8ec90002-f315-4f60-9fb8-838830daea50')
@@ -20,7 +21,7 @@ const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
   { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
 ]
 
-export default class WebbleAdapter implements ChameleonPlugin {
+export default class WebbleAdapter implements UltraPlugin {
   #isOpen: boolean = false
   bluetooth?: typeof bluetooth
   Buffer?: typeof Buffer
@@ -29,7 +30,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
   emitErr: (err: Error) => void
   name = 'adapter'
   packtChar: BluetoothRemoteGATTCharacteristic | null = null
-  port: ChameleonSerialPort | null = null
+  port: UltraSerialPort | null = null
   rxChar: BluetoothRemoteGATTCharacteristic | null = null
   TransformStream: typeof TransformStream
   ultra?: ChameleonUltra
@@ -47,7 +48,7 @@ export default class WebbleAdapter implements ChameleonPlugin {
     this.ultra?.emitter.emit('debug', 'webble', formatter, ...args)
   }
 
-  async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
+  async install (context: PluginInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
     const { ultra, Buffer } = context
     ;[this.ultra, this.Buffer] = [ultra, Buffer]
 
@@ -170,16 +171,6 @@ export default class WebbleAdapter implements ChameleonPlugin {
 
 setObject(globalThis, ['ChameleonUltraJS', 'WebbleAdapter'], WebbleAdapter)
 
-/** @inline */
-type AdapterInstallContext = PluginInstallContext & {
-  ultra: PluginInstallContext['ultra'] & { $adapter?: any }
-}
-
-/** @inline */
-interface AdapterInstallResp {
-  isSupported: () => boolean
-}
-
 class UltraRxSink implements UnderlyingSink<Buffer> {
   readonly #adapter: WebbleAdapter
   Buffer: typeof Buffer
@@ -240,29 +231,6 @@ class DfuRxSink implements UnderlyingSink<Buffer> {
       throw err
     }
   }
-}
-
-type BluetoothServiceUUID = number | string
-
-interface BluetoothManufacturerDataFilter<T = Buffer> extends BluetoothDataFilter<T> {
-  companyIdentifier: number
-}
-
-interface BluetoothServiceDataFilter<T = Buffer> extends BluetoothDataFilter<T> {
-  service: BluetoothServiceUUID
-}
-
-interface BluetoothDataFilter<T = Buffer> {
-  readonly dataPrefix?: T | undefined
-  readonly mask?: T | undefined
-}
-
-interface BluetoothLEScanFilter<T = Buffer> {
-  readonly name?: string | undefined
-  readonly namePrefix?: string | undefined
-  readonly services?: BluetoothServiceUUID[] | undefined
-  readonly manufacturerData?: Array<BluetoothManufacturerDataFilter<T>> | undefined
-  readonly serviceData?: Array<BluetoothServiceDataFilter<T>> | undefined
 }
 
 function toCanonicalUUID (uuid: any): string {

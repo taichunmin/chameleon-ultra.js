@@ -1,8 +1,8 @@
 import { Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
 import { ReadableStream, WritableStream, type ReadableStreamController } from 'stream/web'
-import { type ChameleonPlugin, type ChameleonSerialPort, type PluginInstallContext } from '../ChameleonUltra'
 import { setObject } from '../iifeExportHelper'
+import { type UltraPlugin, type UltraSerialPort, type PluginInstallContext } from '../types'
 
 const ReadableStream1: typeof ReadableStream = (globalThis as any)?.ReadableStream ?? ReadableStream
 const WritableStream1: typeof WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
@@ -11,10 +11,10 @@ type AdapterInstallContext = PluginInstallContext & {
   ultra: PluginInstallContext['ultra'] & { $adapter?: any }
 }
 
-export default class BufferMockAdapter implements ChameleonPlugin {
+export default class BufferMockAdapter implements UltraPlugin {
   name = 'adapter'
   controller?: ReadableStreamController<Buffer>
-  port?: ChameleonSerialPort
+  port?: UltraSerialPort
   recv: Buffer[] = []
   send: Buffer[] = []
   sendIdx = 0

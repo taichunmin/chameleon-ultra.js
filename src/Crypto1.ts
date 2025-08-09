@@ -1,12 +1,8 @@
-/**
- * @example
- * ```js
- * import Crypto1 from 'chameleon-ultra.js/Crypto1'
- * ```
- */
 import { Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
+import { Mf1KeyType } from './enums'
 import { setObject } from './iifeExportHelper'
+import { type RecoverContextUint32Array, type UInt32Like } from './types'
 
 const LF_POLY_ODD = 0x29CE5C
 const LF_POLY_EVEN = 0x870804
@@ -56,6 +52,10 @@ const fastfwd = [
 /**
  * JavaScript implementation of the Crypto1 cipher.
  * @see [crypto1.c | RfidResearchGroup/proxmark3](https://github.com/RfidResearchGroup/proxmark3/blob/master/common/crapto1/crypto1.c)
+ * @example
+ * ```js
+ * import Crypto1 from 'chameleon-ultra.js/Crypto1'
+ * ```
  */
 export default class Crypto1 {
   /**
@@ -1182,17 +1182,3 @@ export default class Crypto1 {
 }
 
 setObject(globalThis, ['Crypto1'], Crypto1)
-
-/** @inline */
-type UInt32Like = Buffer | number | string
-
-/** @inline */
-interface RecoverContextUint32Array {
-  s: number
-  d: Uint32Array
-}
-
-enum Mf1KeyType {
-  KEY_A = 0x60,
-  KEY_B = 0x61,
-}

@@ -1,12 +1,12 @@
 import { type Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
 import { TransformStream, WritableStream, type Transformer, type TransformStreamDefaultController } from 'stream/web'
-import { serial, type SerialPort } from 'web-serial-polyfill'
-import { type ChameleonPlugin, type ChameleonUltra, type PluginInstallContext } from '../ChameleonUltra'
-import { type EventEmitter } from '../EventEmitter'
+import { serial } from 'web-serial-polyfill'
+import { type ChameleonUltra } from '../ChameleonUltra'
+import { DfuOp } from '../enums'
 import { sleep } from '../helper'
 import { setObject } from '../iifeExportHelper'
-import { DfuOp } from '../enums'
+import { type AdapterInstallResp, type UltraPlugin, type PluginInstallContext, type SerialPort } from '../types'
 
 // https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/resource/tools/enter_dfu.py
 const WEBSERIAL_FILTERS = [
@@ -24,11 +24,11 @@ function u16ToHex (num: number): string {
  * - [Getting started with the Web Serial API | codelabs](https://codelabs.developers.google.com/codelabs/web-serial#0)
  * - [Read from and write to a serial port | Chrome for Developers](https://developer.chrome.com/docs/capabilities/serial)
  */
-export default class WebserialAdapter implements ChameleonPlugin {
+export default class WebserialAdapter implements UltraPlugin {
   #isDfu: boolean = false
   #isOpen: boolean = false
   name = 'adapter'
-  port: SerialPort1 | null = null
+  port: SerialPort | null = null
   readonly #emitErr: (err: Error) => void
   readonly #serial: typeof serial
   readonly #TransformStream: typeof TransformStream
@@ -47,7 +47,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
     this.ultra?.emitter.emit('debug', 'webserial', formatter, ...args)
   }
 
-  async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
+  async install (context: PluginInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
     const ultra = this.ultra = context.ultra
     const Buffer1 = context.Buffer
 
@@ -61,7 +61,7 @@ export default class WebserialAdapter implements ChameleonPlugin {
 
       try {
         if (!adapter.isSupported()) throw new Error('WebSerial not supported')
-        this.port = await this.#serial.requestPort({ filters: WEBSERIAL_FILTERS }) as SerialPort1
+        this.port = await this.#serial.requestPort({ filters: WEBSERIAL_FILTERS }) as SerialPort
         if (_.isNil(this.port)) throw new Error('user canceled')
 
         const info = await this.port.getInfo()
@@ -205,17 +205,4 @@ function slipDecode (buf: Buffer): Buffer {
     else buf[len1++] = buf[i]
   }
   return buf.slice(0, len1)
-}
-
-/** @inline */
-type SerialPort1 = SerialPort & EventEmitter
-
-/** @inline */
-type AdapterInstallContext = PluginInstallContext & {
-  ultra: PluginInstallContext['ultra'] & { $adapter?: any }
-}
-
-/** @inline */
-interface AdapterInstallResp {
-  isSupported: () => boolean
 }

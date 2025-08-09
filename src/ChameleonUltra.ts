@@ -2,7 +2,12 @@ import { Buffer } from '@taichunmin/buffer'
 import crc16a from '@taichunmin/crc/crc16a'
 import crc32 from '@taichunmin/crc/crc32'
 import * as _ from 'lodash-es'
-import { type ReadableStream, type WritableStream } from 'stream/web'
+import * as Decoder from './decoder'
+import { bufIsLenOrFail } from './decoder'
+import { EventAsyncGenerator } from './EventAsyncGenerator'
+import { EventEmitter } from './EventEmitter'
+import { type MiddlewareComposeFn, middlewareCompose, sleep, versionCompare } from './helper'
+
 import {
   type AnimationMode,
   type ButtonAction,
@@ -14,23 +19,29 @@ import {
   type Mf1EmuWriteMode,
   type Mf1PrngType,
   type Mf1VblockOperator,
+  type MfuEmuWriteMode,
   type Slot,
+  BYTES_PER_MF1_KEY,
   Cmd,
   DeviceMode,
+  DfuErrMsg,
   DfuObjType,
   DfuOp,
   DfuResCode,
   FreqType,
+  HidProxFormat,
+  HidProxFormatLimit,
   isAnimationMode,
   isButtonAction,
   isButtonType,
   isDeviceMode,
   isDfuFwId,
-  isFailedRespStatus,
+  isFailedUltraResCode,
   isMf1EmuWriteMode,
   isMf1KeyType,
   isMf1VblockOperator,
   isMfuEmuTagType,
+  isMfuEmuWriteMode,
   isSlot,
   isTagType,
   isValidDfuObjType,
@@ -39,14 +50,24 @@ import {
   MfuCmd,
   MfuVerToNxpMfuType,
   NxpMfuType,
-  RespStatus,
+  NxpTypeBySak,
   TagType,
+  UltraErrMsg,
+  UltraResCode,
 } from './enums'
-import { EventAsyncGenerator } from './EventAsyncGenerator'
-import { EventEmitter } from './EventEmitter'
-import { type MiddlewareComposeFn, middlewareCompose, sleep, versionCompare } from './helper'
-import { type DfuImage } from './plugin/DfuZip'
-import * as Decoder from './ResponseDecoder'
+import {
+  type DfuImage,
+  type Hf14aTagInfo,
+  type HidProxTag,
+  type Mf1AcquireStaticEncryptedNestedRes,
+  type Mf1DumpFromPm3JsonResp,
+  type Mf1DumpToPm3JsonResp,
+  type Mf1KnownBlockKey,
+  type OptionalHidProxTag,
+  type PartialRecord,
+  type UltraPlugin,
+  type UltraSerialPort,
+} from './types'
 
 const READ_DEFAULT_TIMEOUT = 5e3
 const START_OF_FRAME = new Buffer(2).writeUInt16BE(0x11EF)
@@ -59,7 +80,7 @@ function isMf1BlockNo (block: any): boolean {
 function validateMf1BlockKey (block: any, keyType: any, key: any, prefix: string = ''): void {
   if (!isMf1BlockNo(block)) throw new TypeError(`${prefix}block should be a integer`)
   if (!isMf1KeyType(keyType)) throw new TypeError(`${prefix}keyType should be a Mf1KeyType`)
-  bufIsLenOrFail(key, 6, `${prefix}key`)
+  bufIsLenOrFail(key, BYTES_PER_MF1_KEY, `${prefix}key`)
 }
 
 function toUpperHex (buf: Buffer): string {
@@ -141,6 +162,9 @@ export class ChameleonUltra {
   readonly #hooks = new Map<string, ReturnType<typeof middlewareCompose>>()
   readonly #middlewares = new Map<string, MiddlewareComposeFn[]>()
 
+  /** @hidden */
+  $adapter?: any
+
   /**
    * The supported version of SDK.
    * @group Device Related
@@ -164,7 +188,7 @@ export class ChameleonUltra {
   /**
    * @hidden
    */
-  port: ChameleonSerialPort | null = null
+  port: UltraSerialPort | null = null
 
   constructor () {
     this.#emitErr = (cause: Error): void => { this.emitter.emit('error', new Error(cause.message, { cause })) }
@@ -181,7 +205,7 @@ export class ChameleonUltra {
    * @internal
    * @group Internal
    */
-  async use (plugin: ChameleonPlugin, option?: any): Promise<this> {
+  async use (plugin: UltraPlugin, option?: any): Promise<this> {
     const pluginId = `$${plugin.name}`
     const installResp = await plugin.install({ Buffer, ultra: this }, option)
     if (!_.isNil(installResp)) (this as Record<string, any>)[pluginId] = installResp
@@ -387,7 +411,7 @@ export class ChameleonUltra {
    */
   async #sendCmd (opts: {
     cmd: Cmd
-    status?: RespStatus
+    status?: UltraResCode
     data?: Buffer
   }): Promise<void> {
     const { cmd, status = 0, data = Buffer.allocUnsafe(0) } = opts
@@ -471,7 +495,7 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn<UltraFrame>({ cmd })
     await this.#sendCmd({ cmd })
     const { status, data } = await readResp()
-    if (status === RespStatus.HF_TAG_OK && data.readUInt16BE(0) === 0x0001) throw new Error('Unsupported protocol. Firmware update is required.')
+    if (status === UltraResCode.HF_TAG_OK && data.readUInt16BE(0) === 0x0001) throw new Error('Unsupported protocol. Firmware update is required.')
     return `${data[0]}.${data[1]}`
   }
 
@@ -708,7 +732,7 @@ export class ChameleonUltra {
       await this.#sendCmd({ cmd, data: Buffer.pack('!BB', slot, freq) })
       return (await readResp()).data.toString('utf8')
     } catch (err) {
-      if (err.status === RespStatus.FLASH_READ_FAIL) return // slot name is empty
+      if (err.status === UltraResCode.FLASH_READ_FAIL) return // slot name is empty
       throw err
     }
   }
@@ -999,7 +1023,7 @@ export class ChameleonUltra {
       await readResp()
       return true
     } catch (err) {
-      if (err.status === RespStatus.FLASH_WRITE_FAIL) return false // slot name is empty
+      if (err.status === UltraResCode.FLASH_WRITE_FAIL) return false // slot name is empty
       throw err
     }
   }
@@ -1370,6 +1394,40 @@ export class ChameleonUltra {
   }
 
   /**
+   * Retrieves the nicknames for all frequency types (HF and LF) across all slots.
+   * @group Slot Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Slot, FreqType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const resp = await ultra.cmdSlotGetFreqNames()
+   *   console.log(resp[Slot.SLOT_1][FreqType.HF]) // 'My Tag'
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdSlotGetFreqNames (): Promise<Array<Record<FreqType.HF | FreqType.LF, string | undefined>>> {
+    const cmd = Cmd.GET_ALL_SLOT_NICKS // cmd = 1038
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    let data = (await readResp())?.data
+    const resp: any[] = []
+    for (let slot = 0; slot < 8; slot++) {
+      const freqNames: PartialRecord<FreqType.HF | FreqType.LF, string> = {}
+      for (const freq of [FreqType.HF, FreqType.LF] as const) {
+        let name: string | undefined
+        if (data.length >= 1) {
+          if (data[0] > 0) name = data.subarray(1, 1 + data[0]).toString('utf8')
+          data = data.subarray(1 + data[0])
+        }
+        freqNames[freq] = name
+      }
+      resp.push(freqNames)
+    }
+    return resp
+  }
+
+  /**
    * Scan 14a tag, and return basic information. The device mode must be set to READER before using this command.
    * @returns The basic infomation of scanned tag.
    * @throws This command will throw an error if tag not scanned or any error occured.
@@ -1418,7 +1476,7 @@ export class ChameleonUltra {
       await readResp()
       return true
     } catch (err) {
-      if (err.status === RespStatus.HF_ERR_STAT) return false
+      if (err.status === UltraResCode.HF_ERR_STAT) return false
       throw err
     }
   }
@@ -1446,10 +1504,7 @@ export class ChameleonUltra {
 
   /**
    * Use a known key to do the mifare static nested attack.
-   * @param known - The info of known key.
-   * @param known.block - The block of known key.
-   * @param known.key - The known key.
-   * @param known.keyType - The key type of known key.
+   * @param known - The known `block`, `keyType` and `key`.
    * @param target - The info of target key to be attack.
    * @param target.block - The block of target key.
    * @param target.keyType - The key type of target key.
@@ -1485,7 +1540,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1AcquireStaticNested (
-    known: { block: number, key: Buffer, keyType: Mf1KeyType },
+    known: Mf1KnownBlockKey,
     target: { block: number, keyType: Mf1KeyType }
   ): Promise<{ uid: Buffer, atks: Array<{ nt1: Buffer, nt2: Buffer }> }> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
@@ -1641,10 +1696,7 @@ export class ChameleonUltra {
 
   /**
    * Use a known key to do the mifare nested attack.
-   * @param known - The info of known key.
-   * @param known.block - The block of known key.
-   * @param known.key - The known key.
-   * @param known.keyType - The key type of known key.
+   * @param known - The known `block`, `keyType` and `key`.
    * @param target - The info of target key to be attack.
    * @param target.block - The block of target key.
    * @param target.keyType - The key type of target key.
@@ -1682,7 +1734,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1AcquireNested (
-    known: { block: number, key: Buffer, keyType: Mf1KeyType },
+    known: Mf1KnownBlockKey,
     target: { block: number, keyType: Mf1KeyType }
   ): Promise<Array<{ nt1: number, nt2: number, par: number }>> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
@@ -1697,10 +1749,7 @@ export class ChameleonUltra {
 
   /**
    * Check if the key is valid for specified block and key type.
-   * @param opts - The info of key to be checked.
-   * @param opts.block - The block of key to be checked.
-   * @param opts.keyType - The type of key to be checked.
-   * @param opts.key - The key to be checked.
+   * @param known - The known `block`, `keyType` and `key`.
    * @returns `true` if the key is valid for specified block and key type.
    * @group Mifare Classic Related
    * @example
@@ -1717,8 +1766,8 @@ export class ChameleonUltra {
    * })(vm.ultra)
    * ```
    */
-  async cmdMf1CheckBlockKey (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<boolean> {
-    const { block, keyType, key } = opts
+  async cmdMf1CheckBlockKey (known: Mf1KnownBlockKey): Promise<boolean> {
+    const { block, keyType, key } = known
     try {
       validateMf1BlockKey(block, keyType, key)
       await this.assureDeviceMode(DeviceMode.READER)
@@ -1728,17 +1777,14 @@ export class ChameleonUltra {
       await readResp()
       return true
     } catch (err) {
-      if (err.status === RespStatus.MF_ERR_AUTH) return false
+      if (err.status === UltraResCode.MF_ERR_AUTH) return false
       throw err
     }
   }
 
   /**
    * Read block data from a mifare tag.
-   * @param opts - The block to be read and the key info of the block.
-   * @param opts.block - The block to be read.
-   * @param opts.keyType - The key type of the block.
-   * @param opts.key - The key of the block.
+   * @param known - The known `block`, `keyType` and `key`.
    * @returns The block data read from a mifare tag.
    * @group Mifare Classic Related
    * @example
@@ -1756,8 +1802,8 @@ export class ChameleonUltra {
    * })(vm.ultra)
    * ```
    */
-  async cmdMf1ReadBlock (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<Buffer> {
-    const { block, keyType, key } = opts
+  async cmdMf1ReadBlock (known: Mf1KnownBlockKey): Promise<Buffer> {
+    const { block, keyType, key } = known
     validateMf1BlockKey(block, keyType, key)
     await this.assureDeviceMode(DeviceMode.READER)
     const cmd = Cmd.MF1_READ_ONE_BLOCK // cmd = 2008
@@ -1831,7 +1877,7 @@ export class ChameleonUltra {
     const items = []
     const antiColls = await this.cmdHf14aScan()
     for (const antiColl of antiColls) {
-      const item: Decoder.Hf14aTagInfo = { antiColl, nxpTypeBySak: NxpTypeBySak.get(antiColl.sak[0]) }
+      const item: Hf14aTagInfo = { antiColl, nxpTypeBySak: NxpTypeBySak.get(antiColl.sak[0]) }
       items.push(item)
     }
     if (antiColls.length === 1 && await this.cmdMf1IsSupport()) {
@@ -1909,16 +1955,10 @@ export class ChameleonUltra {
    * - Increment: increment value by `X` (`0` ~ `2147483647`) from src to dst
    * - Restore: copy value from src to dst (Restore and Transfer)
    *
-   * @param src - The key info of src block.
-   * @param src.key - The key of src block.
-   * @param src.keyType - The key type of src block.
-   * @param src.block - The block of src block.
+   * @param src - The source `block`, `keyType` and `key`.
    * @param operator - The operator of value block.
    * @param operand - The operand of value block.
-   * @param dst - The key info of dst block.
-   * @param dst.key - The key of dst block.
-   * @param dst.keyType - The key type of dst block.
-   * @param dst.block - The block of dst block.
+   * @param dst - The destination `block`, `keyType` and `key`.
    * @group Mifare Classic Related
    * @example
    * ```js
@@ -1939,10 +1979,10 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1VblockManipulate (
-    src: { block: number, key: Buffer, keyType: Mf1KeyType },
+    src: Mf1KnownBlockKey,
     operator: Mf1VblockOperator,
     operand: number,
-    dst: { block: number, key: Buffer, keyType: Mf1KeyType },
+    dst: Mf1KnownBlockKey,
   ): Promise<void> {
     validateMf1BlockKey(src.block, src.keyType, src.key, 'src.')
     validateMf1BlockKey(dst.block, dst.keyType, dst.key, 'dst.')
@@ -1958,10 +1998,6 @@ export class ChameleonUltra {
 
   /**
    * Get value from `opts` block (MIFARE Classic value block)
-   * @param opts - The key info of `opts` block.
-   * @param opts.block - The block of `opts` block.
-   * @param opts.keyType - The key type of `opts` block.
-   * @param opts.key - The key of `opts` block.
    * @returns The value and address of `opts` block.
    * @group Mifare Classic Related
    * @example
@@ -1976,8 +2012,8 @@ export class ChameleonUltra {
    * })(vm.ultra)
    * ```
    */
-  async mf1VblockGetValue (opts: { block: number, key: Buffer, keyType: Mf1KeyType }): Promise<{ value: number, adr: number }> {
-    const blkDt = await this.cmdMf1ReadBlock(opts)
+  async mf1VblockGetValue (known: Mf1KnownBlockKey): Promise<{ value: number, adr: number }> {
+    const blkDt = await this.cmdMf1ReadBlock(known)
     const [val1, val2, val3] = _.times(3, i => blkDt.readInt32LE(i * 4))
     if (val1 !== val3 || val1 + val2 !== -1) throw new Error(`Invalid value of value block: ${blkDt.toString('hex')}`)
     const [adr1, adr2, adr3, adr4] = blkDt.subarray(12, 16) as unknown as number[]
@@ -1987,10 +2023,7 @@ export class ChameleonUltra {
 
   /**
    * Set value X (-2147483647 ~ 2147483647) to `dst` block (MIFARE Classic value block)
-   * @param dst - The key info of `dst` block.
-   * @param dst.block - The block of `dst` block.
-   * @param dst.keyType - The key type of `dst` block.
-   * @param dst.key - The key of `dst` block.
+   * @param dst - The destination `block`, `keyType` and `key`.
    * @param val - The value and address to be set.
    * @param val.value - The value to be set. Default is `0`.
    * @param val.adr - The address to be set. Default is `dst.block`.
@@ -2008,7 +2041,7 @@ export class ChameleonUltra {
    * ```
    */
   async mf1VblockSetValue (
-    dst: { block: number, key: Buffer, keyType: Mf1KeyType },
+    dst: Mf1KnownBlockKey,
     val: { adr?: number, value?: number }
   ): Promise<void> {
     const blkDt = new Buffer(16)
@@ -2073,13 +2106,10 @@ export class ChameleonUltra {
     found: Buffer
     sectorKeys: Array<Buffer | null>
   }> {
+    opts.keys = ChameleonUltra.mf1UniqueKeys(opts.keys)
     const { keys, mask } = opts
     bufIsLenOrFail(mask, 10, 'mask')
-    if (keys.length < 1 || keys.length > 83) throw new TypeError('Invalid keys.length')
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i]
-      bufIsLenOrFail(key, 6, `keys[${i}]`)
-    }
+    if (keys.length < 1 || keys.length > calcUltraMaxItemSize(BYTES_PER_MF1_KEY, 10)) throw new TypeError(`Invalid keys.length = ${keys.length}`)
 
     let bitsCnt = 80
     for (let b of mask) while (b > 0) [bitsCnt, b] = [bitsCnt - (b & 0b1), b >>> 1]
@@ -2096,10 +2126,7 @@ export class ChameleonUltra {
 
   /**
    * Use a known key to do the mifare hardnested attack.
-   * @param known - The info of known key.
-   * @param known.block - The block of known key.
-   * @param known.key - The known key.
-   * @param known.keyType - The key type of known key.
+   * @param known - The known `block`, `keyType` and `key`.
    * @param target - The info of target key to be attack.
    * @param target.block - The block of target key.
    * @param target.keyType - The key type of target key.
@@ -2130,7 +2157,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1AcquireHardNested (
-    known: { block: number, key: Buffer, keyType: Mf1KeyType },
+    known: Mf1KnownBlockKey,
     target: { block: number, keyType: Mf1KeyType, slow?: boolean },
   ): Promise<Array<{ nt: number, ntEnc: number, par: number }>> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
@@ -2145,7 +2172,63 @@ export class ChameleonUltra {
   }
 
   /**
-   * Scan em410x tag and print id
+   * Execute nested attack against FUDAN static encrypted nonce cards (FM11RF08/FM11RF08S).
+   * @param opts.key - FUDAN backdoor key, currently known: `A396EFA4E24F` (default), `A31667A8CEC1`, `518B3354E760`. See [MIFARE Classic: exposing the static encrypted nonce variant](https://eprint.iacr.org/2024/1275)
+   * @group Mifare Classic Related
+   */
+  async cmdMf1AcquireStaticEncryptedNested (opts: {
+    key?: Buffer
+    startSector?: number
+    maxSectors?: number
+  }): Promise<Mf1AcquireStaticEncryptedNestedRes> {
+    const { key = Buffer.from('A396EFA4E24F', 'hex'), startSector = 0, maxSectors = 16 } = opts
+    bufIsLenOrFail(key, BYTES_PER_MF1_KEY, 'key')
+    const data = Buffer.pack('!6sBB', key, maxSectors, startSector)
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.MF1_ENC_NESTED_ACQUIRE // cmd = 2014
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data })
+    return Decoder.Mf1AcquireStaticEncryptedNestedDecoder.fromCmd2014(startSector, (await readResp()).data)
+  }
+
+  /**
+   * Check keys for specified block and key type.
+   * @param opts.block - The block number to check.
+   * @param opts.keyType - The key type to check.
+   * @param opts.keys - The keys to check.
+   * @returns The found key.
+   * @group Mifare Classic Related
+   * @example
+   * ```
+   * await (async ultra => {
+   *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const keys = Buffer.from('A0A1A2A3A4A5\nD3F7D3F7D3F7\nFFFFFFFFFFFF', 'hex').chunk(6)
+   *   const tsStart = Date.now()
+   *   const key = await ultra.cmdMf1CheckKeysOfBlock({ block: 3, keyType: Mf1KeyType.KEY_A, keys })
+   *   console.log(`elapsed time: ${Date.now() - tsStart}ms, found key: ${key.toString('hex')}`)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMf1CheckKeysOfBlock (opts: {
+    block: number
+    keyType: Mf1KeyType
+    keys: Buffer[]
+  }): Promise<Buffer> {
+    opts.keys = ChameleonUltra.mf1UniqueKeys(opts.keys)
+    const { block, keyType, keys } = opts
+    if (!isMf1BlockNo(block)) throw new TypeError('opts.block should be a integer')
+    if (!isMf1KeyType(keyType)) throw new TypeError('opts.keyType should be a Mf1KeyType')
+    if (keys.length < 1 || keys.length > calcUltraMaxItemSize(BYTES_PER_MF1_KEY, 3)) throw new TypeError('Invalid opts.keys.length')
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.MF1_CHECK_KEYS_ON_BLOCK // cmd = 2015
+    const readResp = await this.#createReadRespFn({ cmd })
+    const data = Buffer.concat([Buffer.pack('!BBB', block, keyType, keys.length), ...keys])
+    await this.#sendCmd({ cmd, data })
+    return (await readResp())?.data.subarray(1)
+  }
+
+  /**
+   * Scan em410x tag and read tag id
    * @returns The id of em410x tag.
    * @group Reader Related
    * @example
@@ -2169,7 +2252,7 @@ export class ChameleonUltra {
    * Write id of em410x tag to t55xx tag.
    * @param id - The id of em410x tag.
    * @param newKey - The new key of t55xx tag.
-   * @param oldKeys - The keys to be checked. Maximum length is `125`.
+   * @param oldKeys - The keys to be checked.
    * @group Reader Related
    * @example
    * ```js
@@ -2187,11 +2270,70 @@ export class ChameleonUltra {
   async cmdEm410xWriteToT55xx (id: Buffer, newKey: Buffer, oldKeys: Buffer[]): Promise<void> {
     bufIsLenOrFail(id, 5, 'id')
     bufIsLenOrFail(newKey, 4, 'newKey')
-    if (oldKeys.length < 1 || oldKeys.length > 125) throw new TypeError('Invalid oldKeys.length')
+    // 5 bytes id + 4 bytes newKey = 9
+    if (oldKeys.length < 1 || oldKeys.length > calcUltraMaxItemSize(4, 9)) throw new TypeError(`Invalid oldKeys.length = ${oldKeys.length}`)
     for (let i = 0; i < oldKeys.length; i++) bufIsLenOrFail(oldKeys[i], 4, `oldKeys[${i}]`)
     await this.assureDeviceMode(DeviceMode.READER)
     const cmd = Cmd.EM410X_WRITE_TO_T55XX // cmd = 3001
     const data = Buffer.concat([id, newKey, ...oldKeys])
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data })
+    await readResp()
+  }
+
+  /**
+   * Scan HID Prox tag and read tag information.
+   * @returns
+   * - `format`: The format of HID Prox tag.
+   * - `fc`: The facility code of HID Prox tag.
+   * - `cn`: The card number of HID Prox tag.
+   * - `il`: The issue level of HID Prox tag.
+   * - `oem`: The OEM code of HID Prox tag.
+   * @group Reader Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { HidProxFormat } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const tag = await ultra.cmdHidProxScan()
+   *   console.log(JSON.stringify({ ...tag, format: HidProxFormat[tag.format] }))
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdHidProxScan (): Promise<HidProxTag> {
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.HIDPROX_SCAN // cmd = 3002
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return Decoder.HidProxScanRes.fromCmd3002((await readResp()).data)
+  }
+
+  /**
+   * Write HID Prox tag to t55xx tag.
+   * @param newKey - The new key of t55xx tag.
+   * @param oldKeys - The keys to be checked.
+   * @group Reader Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Buffer, HidProxFormat } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   // https://github.com/RfidResearchGroup/proxmark3/blob/master/client/dictionaries/t55xx_default_pwds.dic
+   *   const newKey = Buffer.from('20206666', 'hex')
+   *   const oldKeys = Buffer.from('5124364819920427', 'hex').chunk(4)
+   *   await ultra.cmdHidProxWriteToT55xx({ format: HidProxFormat.H10301, fc: 118, cn: 1603 }, newKey, oldKeys)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdHidProxWriteToT55xx (tag: OptionalHidProxTag, newKey: Buffer, oldKeys: Buffer[]): Promise<void> {
+    const bufTag = hidProxTagToBuf(tag)
+    bufIsLenOrFail(newKey, 4, 'newKey')
+    // 1 byte format + 4 bytes facility + 5 bytes id + 1 byte issueLevel + 2 bytes oem + 4 bytes newKey = 17
+    if (oldKeys.length < 1 || oldKeys.length > calcUltraMaxItemSize(4, 17)) throw new TypeError(`Invalid oldKeys.length = ${oldKeys.length}`)
+    for (let i = 0; i < oldKeys.length; i++) bufIsLenOrFail(oldKeys[i], 4, `oldKeys[${i}]`)
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.HIDPROX_WRITE_TO_T55XX // cmd = 3003
+    const data = Buffer.concat([bufTag, newKey, ...oldKeys])
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data })
     await readResp()
@@ -2538,7 +2680,8 @@ export class ChameleonUltra {
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async ultra => {
-   *   console.log(await ultra.cmdMf1GetWriteMode()) // 0
+   *   const { Mf1EmuWriteMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   console.log(Mf1EmuWriteMode[await ultra.cmdMf1GetWriteMode()]) // NORMAL
    * })(vm.ultra)
    * ```
    */
@@ -2891,6 +3034,47 @@ export class ChameleonUltra {
   }
 
   /**
+   * Get the emulator write mode in the actived slot.
+   * @group Mifare Ultralight Related
+   * @returns The emulator write mode in the actived slot.
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { MfuEmuWriteMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   console.log(MfuEmuWriteMode[await ultra.cmdMfuGetEmuWriteMode()]) // 135
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMfuGetEmuWriteMode (): Promise<MfuEmuWriteMode> {
+    const cmd = Cmd.MF0_NTAG_GET_WRITE_MODE // cmd = 4031
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data[0]
+  }
+
+  /**
+   * Set the emulator write mode of actived slot.
+   * @param mode - The emulator write mode of actived slot.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { MfuEmuWriteMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.cmdMfuSetWriteMode(MfuEmuWriteMode.NORMAL)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMfuSetWriteMode (mode: MfuEmuWriteMode): Promise<void> {
+    if (!isMfuEmuWriteMode(mode)) throw new TypeError('Invalid mode')
+    const cmd = Cmd.MF0_NTAG_SET_WRITE_MODE // cmd = 4032
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!B', mode) })
+    await readResp()
+  }
+
+  /**
    * A protected memory area can be accessed only after a successful password verification using the PWD_AUTH command. The AUTH0 configuration byte defines the protected area. It specifies the first page that the password mechanism protects. The level of protection can be configured using the PROT bit either for write protection or read/write protection. The PWD_AUTH command takes the password as parameter and, if successful, returns the password authentication acknowledge, PACK. By setting the AUTHLIM configuration bits to a value larger than 000b, the number of unsuccessful password verifications can be limited. Each unsuccessful authentication is then counted in a counter featuring anti-tearing support. After reaching the limit of unsuccessful attempts, the memory access specified in PROT, is no longer possible.
    * @param opts.autoSelect - `true` to enable auto-select, `false` to disable auto-select.
    * @param opts.keepRfField - `true` to keep RF field after auth, `false` to disable RF field.
@@ -2921,7 +3105,7 @@ export class ChameleonUltra {
         return mfuCheckRespNakCrc16a(resp)
       } catch (err) {
         const resp = err?.data?.resp
-        if (resp.length === 1 && resp[0] === 0x04) err.status = RespStatus.MF_ERR_AUTH
+        if (resp.length === 1 && resp[0] === 0x04) err.status = UltraResCode.MF_ERR_AUTH
         throw err
       }
     } catch (err) {
@@ -3341,7 +3525,8 @@ export class ChameleonUltra {
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async ultra => {
-   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const { Buffer, Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.slotChangeTagTypeAndActive(Slot.SLOT_1, null, TagType.EM410X)
    *   await ultra.cmdEm410xSetEmuId(Buffer.from('deadbeef88', 'hex'))
    * })(vm.ultra)
    * ```
@@ -3362,6 +3547,8 @@ export class ChameleonUltra {
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async ultra => {
+   *   const { Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.slotChangeTagTypeAndActive(Slot.SLOT_1, null, TagType.EM410X)
    *   const id = await ultra.cmdEm410xGetEmuId()
    *   console.log(id.toString('hex')) // 'deadbeef88'
    * })(vm.ultra)
@@ -3372,6 +3559,61 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
     return (await readResp()).data
+  }
+
+  /**
+   * Set the HID Prox emulated tag of active slot.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { HidProxFormat, Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.slotChangeTagTypeAndActive(Slot.SLOT_1, null, TagType.HIDProx)
+   *   await ultra.cmdHidProxSetEmu({ format: HidProxFormat.H10301, fc: 118, cn: 1603 })
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdHidProxSetEmu (tag: OptionalHidProxTag): Promise<void> {
+    const bufTag = hidProxTagToBuf(tag)
+    const cmd = Cmd.HIDPROX_SET_EMU_ID // cmd = 5002
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: bufTag })
+    await readResp()
+  }
+
+  /**
+   * Get the HID Prox emulated tag of active slot.
+   * @returns
+   * - `format`: The format of HID Prox tag.
+   * - `fc`: The facility code of HID Prox tag.
+   * - `cn`: The card number of HID Prox tag.
+   * - `il`: The issue level of HID Prox tag.
+   * - `oem`: The OEM code of HID Prox tag.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { HidProxFormat, Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.slotChangeTagTypeAndActive(Slot.SLOT_1, null, TagType.HIDProx)
+   *   const tag = await ultra.cmdHidProxGetEmu()
+   *   console.log(JSON.stringify({ ...tag, format: HidProxFormat[tag.format] }))
+   *   // {
+   *   //   "format": "H10301",
+   *   //   "fc": 118,
+   *   //   "cn": 1603,
+   *   //   "il": 0,
+   *   //   "oem": 0
+   *   // }
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdHidProxGetEmu (): Promise<HidProxTag> {
+    const cmd = Cmd.HIDPROX_GET_EMU_ID // cmd = 5003
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return Decoder.HidProxScanRes.fromCmd3002((await readResp()).data)
   }
 
   /**
@@ -3387,8 +3629,9 @@ export class ChameleonUltra {
    * ```
    */
   async isSupportedAppVersion (): Promise<boolean> {
+    const { gte, lt } = VERSION_SUPPORTED
     const version = await this.cmdGetAppVersion()
-    return versionCompare(version, VERSION_SUPPORTED.gte) >= 0 && versionCompare(version, VERSION_SUPPORTED.lt) < 0
+    return versionCompare(version, gte) >= 0 && versionCompare(version, lt) < 0
   }
 
   /**
@@ -3524,10 +3767,7 @@ export class ChameleonUltra {
    * })(vm.ultra)
    * ```
    */
-  async mf1CheckSectorKeys (sector: number, keys: Buffer[]): Promise<{
-    [Mf1KeyType.KEY_A]?: Buffer
-    [Mf1KeyType.KEY_B]?: Buffer
-  }> {
+  async mf1CheckSectorKeys (sector: number, keys: Buffer[]): Promise<PartialRecord<Mf1KeyType, Buffer>> {
     if (!_.isSafeInteger(sector)) throw new TypeError('Invalid sector')
     const mask = Buffer.alloc(10, 0xFF)
     mask[sector >>> 2] ^= 3 << (6 - sector % 4 * 2)
@@ -3556,7 +3796,7 @@ export class ChameleonUltra {
     onChunkKeys?: (opts: { keys: Buffer[], mask: Buffer }) => Promise<unknown>
   }): Promise<Array<Buffer | null>> {
     let { chunkSize = 20, keys, mask = new Buffer(10), maxSectors = 40, onChunkKeys } = opts
-    keys = _.uniqWith(_.filter(keys, key => Buffer.isBuffer(key) && key.length === 6), Buffer.equals)
+    keys = ChameleonUltra.mf1UniqueKeys(keys)
     if (keys.length === 0) throw new TypeError('Invalid keys')
     if (!Buffer.isBuffer(mask)) mask = new Buffer(10)
     else if (mask.length !== 10) {
@@ -3766,6 +4006,25 @@ export class ChameleonUltra {
     const acl: number[] = []
     for (let i = 0; i < 3; i++) acl.push((data[i] & 0xF0) >>> 4, data[i] & 0x0F)
     return _.every([[1, 2], [0, 5], [3, 4]], ([a, b]: [number, number]) => (acl[a] ^ acl[b]) === 0xF)
+  }
+
+  /**
+   * Remove duplicated and invalid Mifare Classic keys.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   let keys = Buffer.from('FFFFFFFFFFFF\nFFFFFFFFFFFF\nA0A1A2A3A4A5\nD3F7D3F7D3F7', 'hex').chunk(6)
+   *   console.log(`keys.length = ${keys.length}`)
+   *   keys = ChameleonUltra.mf1UniqueKeys(keys)
+   *   console.log(`keys.length = ${keys.length}`)
+   * })()
+   * ```
+   */
+  static mf1UniqueKeys (keys: Buffer[]): Buffer[] {
+    return _.uniqWith(_.filter(keys, key => Buffer.isBuffer(key) && key.length === BYTES_PER_MF1_KEY), Buffer.equals)
   }
 
   /**
@@ -4127,7 +4386,7 @@ export class ChameleonUltra {
   static mf1KeysFromDict (dict: string): Buffer[] {
     if (!_.isString(dict)) throw new TypeError('dict must be a string')
     dict = dict.replaceAll(/(\r?\n)+/g, '\n').replaceAll(/#[^\n]*\n?/msg, '')
-    return _.uniqWith(_.filter(Buffer.from(dict, 'hex').chunk(6), key => Buffer.isBuffer(key) && key.length === 6), Buffer.equals)
+    return ChameleonUltra.mf1UniqueKeys(Buffer.from(dict, 'hex').chunk(BYTES_PER_MF1_KEY))
   }
 
   /**
@@ -4506,82 +4765,8 @@ export class ChameleonUltra {
   }
 }
 
-const RespStatusMsg = new Map([
-  [RespStatus.HF_TAG_OK, 'HF tag operation succeeded'],
-  [RespStatus.HF_TAG_NOT_FOUND, 'HF tag not found error'],
-  [RespStatus.HF_ERR_STAT, 'HF tag status error'],
-  [RespStatus.HF_ERR_CRC, 'HF tag data crc error'],
-  [RespStatus.HF_COLLISION, 'HF tag collision'],
-  [RespStatus.HF_ERR_BCC, 'HF tag uid bcc error'],
-  [RespStatus.MF_ERR_AUTH, 'HF tag auth failed'],
-  [RespStatus.HF_ERR_PARITY, 'HF tag data parity error'],
-  [RespStatus.HF_ERR_ATS, 'HF tag was supposed to send ATS but didn\'t'],
-
-  [RespStatus.LF_TAG_OK, 'LF tag operation succeeded'],
-  [RespStatus.EM410X_TAG_NOT_FOUND, 'EM410x tag not found error'],
-
-  [RespStatus.PAR_ERR, 'invalid param error'],
-  [RespStatus.DEVICE_MODE_ERROR, 'wrong device mode error'],
-  [RespStatus.INVALID_CMD, 'invalid cmd error'],
-  [RespStatus.DEVICE_SUCCESS, 'Device operation succeeded'],
-  [RespStatus.NOT_IMPLEMENTED, 'Not implemented error'],
-  [RespStatus.FLASH_WRITE_FAIL, 'Flash write failed'],
-  [RespStatus.FLASH_READ_FAIL, 'Flash read failed'],
-  [RespStatus.INVALID_SLOT_TYPE, 'Invalid slot tagType'],
-])
-
-const DfuErrMsg = new Map<number, string>([
-  // DFU operation result code.
-  [DfuResCode.INVALID, 'Invalid opcode'],
-  [DfuResCode.SUCCESS, 'Operation successful'],
-  [DfuResCode.OP_CODE_NOT_SUPPORTED, 'Opcode not supported'],
-  [DfuResCode.INVALID_PARAMETER, 'Missing or invalid parameter value'],
-  [DfuResCode.INSUFFICIENT_RESOURCES, 'Not enough memory for the data object'],
-  [DfuResCode.INVALID_OBJECT, 'Data object does not match the firmware and hardware requirements, the signature is wrong, or parsing the command failed'],
-  [DfuResCode.UNSUPPORTED_TYPE, 'Not a valid object type for a Create request'],
-  [DfuResCode.OPERATION_NOT_PERMITTED, 'The state of the DFU process does not allow this operation'],
-  [DfuResCode.OPERATION_FAILED, 'Operation failed'],
-  [DfuResCode.EXT_ERROR, 'Extended error'],
-
-  // DFU extended error code.
-  [DfuResCode.NO_ERROR, 'No extended error code has been set. This error indicates an implementation problem'],
-  [DfuResCode.INVALID_ERROR_CODE, 'Invalid error code. This error code should never be used outside of development'],
-  [DfuResCode.WRONG_COMMAND_FORMAT, 'The format of the command was incorrect. This error code is not used in the current implementation, because NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED and NRF_DFU_RES_CODE_INVALID_PARAMETER cover all possible format errors'],
-  [DfuResCode.UNKNOWN_COMMAND, 'The command was successfully parsed, but it is not supported or unknown'],
-  [DfuResCode.INIT_COMMAND_INVALID, 'The init command is invalid. The init packet either has an invalid update type or it is missing required fields for the update type (for example, the init packet for a SoftDevice update is missing the SoftDevice size field)'],
-  [DfuResCode.FW_VERSION_FAILURE, 'The firmware version is too low. For an application or SoftDevice, the version must be greater than or equal to the current version. For a bootloader, it must be greater than the current version. to the current version. This requirement prevents downgrade attacks'],
-  [DfuResCode.HW_VERSION_FAILURE, 'The hardware version of the device does not match the required hardware version for the update'],
-  [DfuResCode.SD_VERSION_FAILURE, 'The array of supported SoftDevices for the update does not contain the FWID of the current SoftDevice or the first FWID is "0" on a bootloader which requires the SoftDevice to be present'],
-  [DfuResCode.SIGNATURE_MISSING, 'The init packet does not contain a signature. This error code is not used in the current implementation, because init packets without a signature are regarded as invalid'],
-  [DfuResCode.WRONG_HASH_TYPE, 'The hash type that is specified by the init packet is not supported by the DFU bootloader'],
-  [DfuResCode.HASH_FAILED, 'The hash of the firmware image cannot be calculated'],
-  [DfuResCode.WRONG_SIGNATURE_TYPE, 'The type of the signature is unknown or not supported by the DFU bootloader'],
-  [DfuResCode.VERIFICATION_FAILED, 'The hash of the received firmware image does not match the hash in the init packet'],
-  [DfuResCode.INSUFFICIENT_SPACE, 'The available space on the device is insufficient to hold the firmware'],
-])
-
-/** @inline */
-export interface ChameleonSerialPort<I extends Buffer = Buffer, O extends Buffer = Buffer> {
-  dfuWriteObject?: (buf: Buffer, mtu?: number) => Promise<void>
-  isDfu?: () => boolean
-  isOpen?: () => boolean
-  readable: ReadableStream<I> | null
-  writable: WritableStream<O> | null
-}
-
-/** @inline */
-export type PluginInstallContext = { // eslint-disable-line @typescript-eslint/consistent-type-definitions
-  Buffer: typeof Buffer
-  ultra: ChameleonUltra
-}
-
-/** @inline */
-export interface ChameleonPlugin {
-  name: string
-  install: <T extends PluginInstallContext>(context: T, pluginOption: any) => Promise<unknown>
-}
-
 class UltraFrame {
+  static MAX_DATA_LEN = 512
   buf: Buffer
 
   constructor (buf: Buffer | Uint8Array) {
@@ -4605,11 +4790,11 @@ class UltraFrame {
   get cmd (): Cmd { return this.buf.readUInt16BE(2) }
   get data (): Buffer { return this.buf.subarray(9, -1) }
   get inspect (): string { return UltraFrame.inspect(this) }
-  get status (): RespStatus { return this.buf.readUInt16BE(4) }
+  get status (): UltraResCode { return this.buf.readUInt16BE(4) }
   get errMsg (): string | undefined {
     const status = this.status
-    if (!isFailedRespStatus(status)) return
-    return RespStatusMsg.get(status) ?? `Unknown status code: ${status}`
+    if (!isFailedUltraResCode(status)) return
+    return UltraErrMsg.get(status) ?? `Unknown status code: ${status}`
   }
 }
 
@@ -4642,59 +4827,39 @@ export class DfuFrame {
   }
 }
 
-/**
- * @see [MIFARE type identification procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
- */
-const NxpTypeBySak = new Map([
-  [0x00, 'MIFARE Ultralight Classic/C/EV1/Nano | NTAG 2xx'],
-  [0x08, 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'],
-  [0x09, 'MIFARE Mini 0.3k'],
-  [0x10, 'MIFARE Plus 2K'],
-  [0x11, 'MIFARE Plus 4K'],
-  [0x18, 'MIFARE Classic 4K | Plus S 4K | Plus X 4K'],
-  [0x19, 'MIFARE Classic 2K'],
-  [0x20, 'MIFARE Plus EV1/EV2 | DESFire EV1/EV2/EV3 | DESFire Light | NTAG 4xx | MIFARE Plus S 2/4K | MIFARE Plus X 2/4K | MIFARE Plus SE 1K'],
-  [0x28, 'SmartMX with MIFARE Classic 1K'],
-  [0x38, 'SmartMX with MIFARE Classic 4K'],
-])
-
 function bufLrc (buf: Buffer): number {
   let sum = 0
   for (const u8 of buf) sum += u8
   return 0x100 - sum & 0xFF
 }
 
-function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
-  if (Buffer.isBuffer(buf) && buf.length === len) return
-  throw new TypeError(`${name} must be a ${len} ${['byte', 'bytes'][+(len > 1)]} Buffer.`)
-}
-
 function mfuCheckRespNakCrc16a (resp: Buffer): Buffer {
-  const createErr = (status: RespStatus, msg: string): Error => _.merge(new Error(msg), { status, data: { resp } })
-  if (resp.length === 1 && resp[0] !== 0x0A) throw createErr(RespStatus.HF_ERR_STAT, `received NAK 0x${toUpperHex(resp)}`)
-  if (resp.length < 3) throw createErr(RespStatus.HF_ERR_CRC, 'unexpected resp')
+  const createErr = (status: UltraResCode, msg: string): Error => _.merge(new Error(msg), { status, data: { resp } })
+  if (resp.length === 1 && resp[0] !== 0x0A) throw createErr(UltraResCode.HF_ERR_STAT, `received NAK 0x${toUpperHex(resp)}`)
+  if (resp.length < 3) throw createErr(UltraResCode.HF_ERR_CRC, 'unexpected resp')
   const data = resp.subarray(0, -2)
-  if (crc16a(data) !== resp.readUInt16LE(data.length)) throw createErr(RespStatus.HF_ERR_CRC, 'invalid crc16a of resp')
+  if (crc16a(data) !== resp.readUInt16LE(data.length)) throw createErr(UltraResCode.HF_ERR_CRC, 'invalid crc16a of resp')
   return data
 }
 
-/** @inline */
-interface Mf1DumpToPm3JsonResp {
-  blocks: Record<number, string>
-  Card: { ATQA: string, ATS?: string, SAK: string, UID: string, SIGNATURE: string }
-  Created: string
-  FileType: string
+export function calcUltraMaxItemSize (bytesPerItem = 1, bytesUsed: number = 0): number {
+  const remain = Math.trunc((UltraFrame.MAX_DATA_LEN - bytesUsed) / bytesPerItem)
+  return Math.max(0, remain)
 }
 
-/** @inline */
-interface Mf1DumpFromPm3JsonResp {
-  atqa: Buffer
-  ats: Buffer
-  body: Buffer
-  sak: Buffer
-  sig: Buffer
-  tagType: TagType
-  uid: Buffer
+export function isValidHidProxOrFail (tag: OptionalHidProxTag): HidProxTag {
+  const tag1 = { format: HidProxFormat.H10301, fc: 0, il: 0, oem: 0, ...tag }
+
+  const fmtlimit = HidProxFormatLimit.get(tag1.format)
+  if (_.isNil(fmtlimit)) return tag1
+  if (tag1.fc < 0 || tag1.fc > fmtlimit[0]) throw new RangeError(`Facility must between 0 and ${fmtlimit[0]}`)
+  if (tag1.cn < 0 || tag1.cn > fmtlimit[1]) throw new RangeError(`Card Number must between 0 and ${fmtlimit[1]}`)
+  if (tag1.il < 0 || tag1.il > fmtlimit[2]) throw new RangeError(`Issue Level must between 0 and ${fmtlimit[2]}`)
+  if (tag1.oem < 0 || tag1.oem > fmtlimit[3]) throw new RangeError(`OEM must between 0 and ${fmtlimit[3]}`)
+  return tag1
 }
 
-export { Decoder as ResponseDecoder }
+export function hidProxTagToBuf (tag: OptionalHidProxTag): Buffer {
+  const { format, fc, cn, il, oem } = isValidHidProxOrFail(tag)
+  return Buffer.pack('!BIBIBH', format, fc, Math.trunc(cn / 0x100000000), cn & 0xFFFFFFFF, il, oem)
+}

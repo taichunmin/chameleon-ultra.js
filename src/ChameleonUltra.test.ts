@@ -1,7 +1,7 @@
 import { Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { ChameleonUltra } from './ChameleonUltra'
+import { calcUltraMaxItemSize, ChameleonUltra } from './ChameleonUltra'
 import {
   AnimationMode,
   ButtonAction,
@@ -1334,4 +1334,12 @@ test('.mf1TrailerBlockNoOfSector()', async () => {
     // mifare classic 4k
     143, 159, 175, 191, 207, 223, 239, 255,
   ])
+})
+
+test('calcUltraMaxItemSize()', async () => {
+  expect(calcUltraMaxItemSize()).toBe(512)
+  expect(calcUltraMaxItemSize(6)).toBe(85)
+  expect(calcUltraMaxItemSize(6, 10)).toBe(83)
+  expect(calcUltraMaxItemSize(6, 1024)).toBe(0)
+  expect(calcUltraMaxItemSize(undefined, 10)).toBe(502)
 })
