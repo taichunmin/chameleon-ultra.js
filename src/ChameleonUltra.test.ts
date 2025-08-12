@@ -508,13 +508,13 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
   test('#cmdEm410xScan()', async () => {
     // arrange
     adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // DeviceMode.READER
-    adapter.send.push(Buffer.from('11ef 0bb8 0040 0005 f8 0000002076 6a', 'hex'))
+    adapter.send.push(Buffer.from('11ef 0bb8 0040 0010 ed 0067deadbeef88000000000000000000 d9', 'hex'))
 
     // act
     const actual = await ultra.cmdEm410xScan()
 
     // assert
-    expect(actual).toEqual(Buffer.from('0000002076', 'hex'))
+    expect(actual.id).toEqual(Buffer.from('deadbeef88', 'hex'))
     expect(adapter.recv).toEqual([
       Buffer.from('11ef 03e9 0000 0001 13 01 ff', 'hex'), // DeviceMode.READER
       Buffer.from('11ef 0bb8 0000 0000 3d 00', 'hex'),
@@ -529,14 +529,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
       adapter.send.push(Buffer.from('11ef 0bb8 0041 0000 fc 00', 'hex'))
 
       // act
-      const actual = await ultra.cmdEm410xScan()
-
-      // assert
-      expect(actual).toEqual(Buffer.from('0000002076'))
-      expect(adapter.recv).toEqual([
-        Buffer.from('11ef 03e9 0000 0001 13 01 ff', 'hex'), // DeviceMode.READER
-        Buffer.from('11ef 0bb8 0000 0000 3d 00', 'hex'),
-      ])
+      await ultra.cmdEm410xScan()
     } catch (err) {
       expect(err.message).toMatch(/tag not found/)
     }

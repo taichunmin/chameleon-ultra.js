@@ -599,6 +599,13 @@ export const isValidFreqType = createIsValueOfArr([
   FreqType.LF,
 ] as const)
 
+export const TagTypeLfIdLen = new Map<TagType, number>([
+  [TagType.EM410X, 5],
+  [TagType.EM410X_16, 5],
+  [TagType.EM410X_32, 5],
+  [TagType.EM410X_64, 5],
+])
+
 // facility, id, issueLevel, oem
 export const HidProxFormatLimit = new Map<HidProxFormat, [number, number, number, number]>([
   [HidProxFormat.H10301, [0xFF, 0xFFFF, 0, 0]],

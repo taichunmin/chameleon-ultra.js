@@ -52,6 +52,7 @@ import {
   NxpMfuType,
   NxpTypeBySak,
   TagType,
+  TagTypeLfIdLen,
   UltraErrMsg,
   UltraResCode,
 } from './enums'
@@ -2235,17 +2236,26 @@ export class ChameleonUltra {
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async ultra => {
-   *   const id = await ultra.cmdEm410xScan()
-   *   console.log(id.toString('hex')) // 'deadbeef88'
+   *   const { TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const tag = await ultra.cmdEm410xScan()
+   *   console.log({ tagType: TagType[tag.tagType], id: tag.id.toString('hex') }) // 'deadbeef88'
    * })(vm.ultra)
    * ```
    */
-  async cmdEm410xScan (): Promise<Buffer> {
+  async cmdEm410xScan (): Promise<{ tagType: TagType, id: Buffer }> {
     await this.assureDeviceMode(DeviceMode.READER)
     const cmd = Cmd.EM410X_SCAN // cmd = 3000
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
-    return (await readResp()).data
+    const data = (await readResp()).data
+    if (data.length === 5) return { tagType: TagType.EM410X_64, id: data }
+    const tagType = data.readUint16BE(0)
+    const lfIdLen = TagTypeLfIdLen.get(tagType)
+    if (_.isNil(lfIdLen)) throw new Error(`lfIdLen not defined, tagType = ${TagType[tagType]}`)
+    return {
+      tagType,
+      id: data.subarray(2).subarray(0, lfIdLen),
+    }
   }
 
   /**
