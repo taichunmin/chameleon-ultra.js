@@ -1,18 +1,25 @@
 import { Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
-import { type Class } from 'utility-types'
+import { type Class } from 'type-fest'
 
 import {
+  Mf1KeyType,
   type AnimationMode,
   type ButtonAction,
   type DarksideStatus,
+  type HidProxFormat,
   type Mf1EmuWriteMode,
-  type Mf1PrngType,
   type TagType,
 } from './enums'
+import { type HidProxTag, type Mf1AcquireStaticEncryptedNestedRes } from './types'
 
 function bufUnpackToClass <T> (buf: Buffer, format: string, Type: Class<T>): T {
   return new Type(...buf.unpack<ConstructorParameters<typeof Type>>(format))
+}
+
+export function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
+  if (Buffer.isBuffer(buf) && buf.length === len) return
+  throw new TypeError(`${name} must be a ${len} ${['byte', 'bytes'][+(len > 1)]} Buffer.`)
 }
 
 export class SlotInfo {
@@ -225,12 +232,6 @@ export class Mf1CheckKeysOfSectorsRes {
   }
 }
 
-export interface Hf14aTagInfo {
-  antiColl: Hf14aAntiColl
-  nxpTypeBySak?: string
-  prngType?: Mf1PrngType
-}
-
 export class Mf1DetectionLog {
   block: number
   isKeyB: boolean
@@ -289,27 +290,6 @@ export class Mf1EmuSettings {
   }
 }
 
-export interface Mf1EmuData {
-  antiColl: Hf14aAntiColl
-  settings: Mf1EmuSettings
-  body: Buffer
-}
-
-export interface SlotSettings {
-  config: { activated: number }
-  group: Array<{
-    hfIsEnable: boolean
-    hfTagType: TagType
-    lfIsEnable: boolean
-    lfTagType: TagType
-  }>
-}
-
-function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
-  if (Buffer.isBuffer(buf) && buf.length === len) return
-  throw new TypeError(`${name} must be a ${len} ${['byte', 'bytes'][+(len > 1)]} Buffer.`)
-}
-
 /** Answer the random number parameters required for Hard Nested attack */
 export class Mf1AcquireHardNestedRes {
   nt: number // tag nonce of nested verification encryption
@@ -323,5 +303,54 @@ export class Mf1AcquireHardNestedRes {
   static fromCmd2013 (buf: Buffer): Mf1AcquireHardNestedRes[] {
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer.')
     return _.map(buf.chunk(9), chunk => bufUnpackToClass(chunk, '!IIB', Mf1AcquireHardNestedRes))
+  }
+}
+
+export class HidProxScanRes implements HidProxTag {
+  format: HidProxFormat
+  fc: number
+  cn: number
+  il: number
+  oem: number
+
+  constructor (format: HidProxFormat, fc: number, cn1: number, cn2: number, il: number, oem: number) {
+    ;[this.format, this.fc, this.cn, this.il, this.oem] = [format, fc, cn1 * 0x100000000 + cn2, il, oem]
+  }
+
+  static fromCmd3002 (buf: Buffer): HidProxScanRes {
+    bufIsLenOrFail(buf, 13, 'buf')
+    return bufUnpackToClass(buf, '!BIBIBH', HidProxScanRes)
+  }
+}
+
+export class Mf1AcquireStaticEncryptedNestedDecoder implements Mf1AcquireStaticEncryptedNestedRes {
+  uid: number
+  atks: Mf1AcquireStaticEncryptedNestedRes['atks']
+
+  constructor (uid: number, atks: Mf1AcquireStaticEncryptedNestedRes['atks']) {
+    ;[this.uid, this.atks] = [uid, atks]
+  }
+
+  static fromCmd2014 (startSector: number, buf: Buffer): Mf1AcquireStaticEncryptedNestedDecoder {
+    if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer')
+    return new Mf1AcquireStaticEncryptedNestedDecoder(
+      buf.readUint32BE(0), // uid
+      _.flatMap(buf.subarray(4).chunk(18), (chunk, i) => [
+        { // key A
+          sector: startSector + i,
+          keyType: Mf1KeyType.KEY_A,
+          nt: chunk.readUint32BE(0),
+          ntEnc: chunk.readUint32BE(4),
+          par: chunk[8],
+        },
+        { // key B
+          sector: startSector + i,
+          keyType: Mf1KeyType.KEY_B,
+          nt: chunk.readUint32BE(9),
+          ntEnc: chunk.readUint32BE(13),
+          par: chunk[17],
+        },
+      ])
+    )
   }
 }

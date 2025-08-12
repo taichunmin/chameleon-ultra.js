@@ -1,12 +1,12 @@
 import { type Buffer } from '@taichunmin/buffer'
 import createDebugger, { type Debugger } from 'debug'
 import * as _ from 'lodash-es'
-import { type PluginInstallContext as ChameleonCtx, type ChameleonPlugin } from '../ChameleonUltra'
 import { setObject } from '../iifeExportHelper'
+import { type PluginInstallContext as ChameleonCtx, type UltraPlugin, type DebugFilter } from '../types'
 
 let Buffer1: typeof Buffer
 
-export default class Debug implements ChameleonPlugin {
+export default class Debug implements UltraPlugin {
   debugers = new Map<string, Debugger>()
   filter?: DebugFilter
   name = 'debug'
@@ -30,8 +30,6 @@ export default class Debug implements ChameleonPlugin {
 }
 
 setObject(globalThis, ['ChameleonUltraJS', 'Debug'], Debug)
-
-type DebugFilter = (namespace: string, formatter: any, ...args: [] | any[]) => boolean
 
 const ERROR_KEYS = [
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/Error

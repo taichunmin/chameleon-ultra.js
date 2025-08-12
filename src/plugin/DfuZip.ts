@@ -2,27 +2,31 @@ import { Buffer } from '@taichunmin/buffer'
 import JSZip from 'jszip'
 import * as _ from 'lodash-es'
 import { setObject } from '../iifeExportHelper'
+import { type DfuImage, type DfuImageType, type DfuManifest } from '../types'
 
 export default class DfuZip {
-  readonly #buf: Buffer
-  #zip: JSZip | null = null
+  #appImage?: DfuImage | null
+  #baseImage?: DfuImage | null
+  #gitVersion?: string | null
   #manifest: DfuManifest | null = null
+  #zip: JSZip | null = null
+  readonly #buf: Buffer
 
   constructor (buf: Buffer) {
     this.#buf = buf
   }
 
   async getManifest (): Promise<DfuManifest> {
-    if (_.isNil(this.#zip)) this.#zip = await JSZip.loadAsync(this.#buf)
-    if (_.isNil(this.#manifest)) {
-      const manifestJson = await this.#zip.file('manifest.json')?.async('string')
+    this.#zip ??= await JSZip.loadAsync(this.#buf)
+    this.#manifest ??= await (async () => {
+      const manifestJson = await this.#zip?.file('manifest.json')?.async('string')
       if (_.isNil(manifestJson)) throw new Error('Unable to find manifest, is this a proper DFU package?')
-      this.#manifest = JSON.parse(manifestJson).manifest
-    }
+      return JSON.parse(manifestJson).manifest
+    })()
     return this.#manifest as DfuManifest
   }
 
-  async getImage (types: DfuImageType[]): Promise<DfuImage | null> {
+  async getFirstImageFile (types: DfuImageType[]): Promise<DfuImage | null> {
     const manifest = await this.getManifest()
     for (const type of types) {
       const image = manifest[type]
@@ -38,31 +42,23 @@ export default class DfuZip {
   }
 
   async getBaseImage (): Promise<DfuImage | null> {
-    return await this.getImage(['softdevice', 'bootloader', 'softdevice_bootloader'])
+    if (this.#baseImage === undefined) this.#baseImage = await this.getFirstImageFile(['softdevice', 'bootloader', 'softdevice_bootloader'])
+    return this.#baseImage
   }
 
   async getAppImage (): Promise<DfuImage | null> {
-    return await this.getImage(['application'])
+    if (this.#appImage === undefined) this.#appImage = await this.getFirstImageFile(['application'])
+    return this.#appImage
   }
 
   async getGitVersion (): Promise<string | null> {
-    const image = await this.getAppImage()
-    if (_.isNil(image)) return null
-    // eslint-disable-next-line no-control-regex
-    return image.body.toString('utf8').match(/\x00(v\d+(?:\.\d+)*[\w-]*)\x00/)?.[1] ?? null
+    if (this.#gitVersion === undefined) {
+      const image = await this.getAppImage()
+      // eslint-disable-next-line no-control-regex
+      this.#gitVersion = image?.body.toString('utf8').match(/\x00(v\d+(?:\.\d+)*[\w-]*)\x00/)?.[1] ?? null
+    }
+    return this.#gitVersion
   }
 }
 
 setObject(globalThis, ['ChameleonUltraJS', 'DfuZip'], DfuZip)
-
-/** @inline */
-export interface DfuImage {
-  type: DfuImageType
-  header: Buffer
-  body: Buffer
-}
-
-/** @inline */
-type DfuManifest = Record<DfuImageType, { bin_file: string, dat_file: string }>
-
-type DfuImageType = 'application' | 'softdevice' | 'bootloader' | 'softdevice_bootloader'

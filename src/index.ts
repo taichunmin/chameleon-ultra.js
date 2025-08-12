@@ -15,6 +15,8 @@ export {
   DfuFwType,
   DfuObjType,
   FreqType,
+  HidProxFormat,
+  HidProxFormatName,
   Mf1EmuWriteMode,
   Mf1KeyType,
   Mf1PrngType,
