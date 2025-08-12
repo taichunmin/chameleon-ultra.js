@@ -185,7 +185,7 @@ block script
           const { ultra } = this
           try {
             this.showLoading({ text: 'Scanning tag...' })
-            this.ss.uid = toHex(await ultra.cmdEm410xScan())
+            this.ss.uid = toHex((await ultra.cmdEm410xScan())?.id)
             Swal.close()
           } catch (err) {
             ultra.emitter.emit('error', err)
@@ -202,7 +202,7 @@ block script
             const newKey = Buffer.from('20206666', 'hex')
             const oldKeys = this.t55xxGetKeys()
             await ultra.cmdEm410xWriteToT55xx(uid, newKey, oldKeys)
-            const uid2 = await ultra.cmdEm410xScan()
+            const uid2 = (await ultra.cmdEm410xScan())?.id
             if (!uid.equals(uid2)) throw new Error(`ID mismatch after write, scanned = ${toHex(uid2)}`)
             await this.swalFire({ icon: 'success', title: 'Write success' })
           } catch (err) {

@@ -8,7 +8,7 @@
   "module": "./dist/index.mjs",
   "name": "chameleon-ultra.js",
   "type": "commonjs",
-  "version": "0.3.34",
+  "version": "0.4.0",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
