@@ -529,9 +529,26 @@ block script
             logs = _.values(_.groupBy(logs, log => `${toHex(log.uid)}-${blockToSector(log.block)}-${'AB'[+log.isKeyB]}`))
             console.log(logs)
             const recoverMax = _.sumBy(logs, arr => arr.length * (arr.length - 1) / 2)
+
+            const skipRecordsByKnownKey = (recs, key) => {
+              for (let rec of recs) {
+                if (rec.skip) continue
+                const isReaderHasKey = Crypto1.mfkey32IsReaderHasKey({
+                  uid: rec.uid,
+                  nt: rec.nt,
+                  nr: rec.nr,
+                  ar: rec.ar,
+                  key,
+                })
+                if (isReaderHasKey) rec.skip = true
+              }
+            }
+
+            const knownKeys = this.mfGetKeys() ?? []
             const newKeys = []
             let recoverCnt = 0
             for (const grp of logs) {
+              for (let knownKey of knownKeys) skipRecordsByKnownKey(grp, knownKey)
               for (let i = 0; i < grp.length; i++) {
                 const r0 = grp[i]
                 for (let j = i + 1; j < grp.length; j++) {
@@ -546,17 +563,7 @@ block script
                     const key1 = this.mfkey32v2(r0.uid, r0, r1)
                     newKeys.push(key1)
                     r0.skip = r1.skip = true
-                    for (let k = 0; k < grp.length; k++) {
-                      if (grp[k].skip) continue
-                      const isReaderHasKey = Crypto1.mfkey32IsReaderHasKey({
-                        uid: grp[k].uid,
-                        nt: grp[k].nt,
-                        nr: grp[k].nr,
-                        ar: grp[k].ar,
-                        key: key1,
-                      })
-                      if (isReaderHasKey) grp[k].skip = true
-                    }
+                    skipRecordsByKnownKey(grp, key1)
                   } catch (err) {
                     ultra.emitter.emit('error', err)
                   }
@@ -564,7 +571,12 @@ block script
               }
             }
             this.mfMergeKeys(newKeys)
-            await this.swalFire({ icon: 'success', title: `Recovered ${newKeys.length} keys!`, text: (newKeys.length > 0 ? 'You can repeat whole process to recover more keys.' : 'You can read tag again and then export dump.') })
+            if (newKeys.length > 0) {
+              await this.swalFire({ icon: 'success', title: `Recovered ${newKeys.length} keys!`, text: 'You can repeat whole process to recover more keys.' })
+              this.btnEditKeys()
+            } else {
+              await this.swalFire({ icon: 'success', title: `No new keys recovered`, text: 'You can read tag and then export dump.' })
+            }
           } catch (err) {
             ultra.emitter.emit('error', err)
             await this.swalFire({ icon: 'error', title: 'Failed to recover key.', text: err.message })
@@ -627,7 +639,18 @@ block script
             tagType: this.ss.tagType === 1 ? TagType.MIFARE_4096 : TagType.MIFARE_1024,
             uid: Buffer.from(this.ss.uid, 'hex'),
           }
-          return ChameleonUltra.mf1GenEmptyDump(antiColl)
+          const dump = ChameleonUltra.mf1GenEmptyDump(antiColl)
+          // empty dump in mfkey32 should not use default key FFFFFFFFFFFF
+          const keyUnknown = new Buffer(6)
+          const endOfSectors = [
+            ..._.times(32, i => (i + 1) * 64), // sector 0~31: 64 bytes
+            ..._.times(8, i => i * 256 + 2304), // sector 32~39: 256 bytes
+          ]
+          for (const i of endOfSectors) {
+            if (i > dump.length) break
+            for (const j of [-16, -6]) dump.set(keyUnknown, i + j)
+          }
+          return dump
         },
         mfGetKeys () {
           try {
@@ -638,15 +661,11 @@ block script
           }
         },
         mfMergeKeys (newKeys) {
-          const keys = _.chain([
+          const keys = ChameleonUltra.mf1UniqueKeys([
             ...Buffer.from(this.ss.keys, 'hex').chunk(6),
             ...newKeys,
           ])
-            .uniqWith(Buffer.equals)
-            .map(toHex)
-            .join('\n')
-            .value()
-          this.$set(this.ss, 'keys', keys)
+          this.$set(this.ss, 'keys', _.map(keys, toHex).join('\n'))
         },
         mfGrabKeysFromDump () {
           // merge keys
