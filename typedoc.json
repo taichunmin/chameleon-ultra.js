@@ -6,6 +6,8 @@
   "gaID": "G-KB8ZL6LPH5",
   "includeVersion": true,
   "out": "dist",
+  "searchInComments": true,
+  "searchInDocuments": true,
   "entryPoints": [
     "src/index.ts",
     "src/Crypto1.ts",

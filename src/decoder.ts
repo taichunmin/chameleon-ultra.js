@@ -9,6 +9,7 @@ import {
   type DarksideStatus,
   type HidProxFormat,
   type Mf1EmuWriteMode,
+  type MfuEmuWriteMode,
   type TagType,
 } from './enums'
 import { type HidProxTag, type Mf1AcquireStaticEncryptedNestedRes } from './types'
@@ -292,9 +293,9 @@ export class Mf1EmuSettings {
 
 /** Answer the random number parameters required for Hard Nested attack */
 export class Mf1AcquireHardNestedRes {
-  nt: number // tag nonce of nested verification encryption
-  ntEnc: number // encrypted tag nonce of nested verification encryption
-  par: number // The 8 parity bit of nested verification encryption
+  nt: number // tag nonce of nested authentication
+  ntEnc: number // encrypted tag nonce of nested authentication
+  par: number // The 8 parity bit of nested authentication
 
   constructor (nt: number, ntEnc: number, par: number) {
     ;[this.nt, this.ntEnc, this.par] = [nt, ntEnc, par]
@@ -352,5 +353,22 @@ export class Mf1AcquireStaticEncryptedNestedDecoder implements Mf1AcquireStaticE
         },
       ])
     )
+  }
+}
+
+export class MfuEmuSettings {
+  detection: boolean
+  uid: boolean
+  write: MfuEmuWriteMode
+
+  constructor (detection: boolean, uid: boolean, write: MfuEmuWriteMode) {
+    this.detection = detection
+    this.uid = uid
+    this.write = write
+  }
+
+  static fromCmd4037 (buf: Buffer): MfuEmuSettings {
+    bufIsLenOrFail(buf, 3, 'buf')
+    return bufUnpackToClass(buf, '!2?B', MfuEmuSettings)
   }
 }

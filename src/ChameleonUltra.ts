@@ -1286,7 +1286,7 @@ export class ChameleonUltra {
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async ultra => {
    *   const settings = await ultra.cmdGetDeviceSettings()
-   *   console.log(JSON.stringify(settings)
+   *   console.log(JSON.stringify(settings))
    *   /**
    *    * {
    *    *   "version": 5,
@@ -1562,6 +1562,7 @@ export class ChameleonUltra {
    * @param syncMax - The max sync count of darkside attack.
    * @returns The data from mifare darkside attack.
    * @group Mifare Classic Related
+   * @see [THE DARK SIDE OF SECURITY BY OBSCURITY and Cloning MiFare Classic Rail and Building Passes, Anywhere, Anytime](https://eprint.iacr.org/2009/137)
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -1706,6 +1707,7 @@ export class ChameleonUltra {
    * - nt2: Random number of nested verification encryption
    * - par: The 3 parity bit of nested verification encryption
    * @group Mifare Classic Related
+   * @see [Wirelessly Pickpocketing a Mifare Classic Card](http://proxmark.org/files/Documents/13.56%20MHz%20-%20MIFARE%20Classic/Wirelessly.Pickpocketing.a.Mifare.Classic.Card-IEEE.2009.pdf)
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2133,10 +2135,11 @@ export class ChameleonUltra {
    * @param target.keyType - The key type of target key.
    * @param target.slow - Is it a low-speed acquisition mode? Low-speed acquisition is suitable for some non-standard cards.
    * @returns The result of mifare hardnested attack.
-   * - nt: tag nonce of nested verification encryption
-   * - ntEnc: encrypted tag nonce of nested verification encryption
-   * - par: The 8 parity bit of nested verification encryption
+   * - nt: tag nonce of nested authentication
+   * - ntEnc: encrypted tag nonce of nested authentication
+   * - par: The 8 parity bit of nested authentication
    * @group Mifare Classic Related
+   * @see [Ciphertext-only Cryptanalysis on Hardened Mifare Classic Cards](http://proxmark.org/files/Documents/13.56%20MHz%20-%20MIFARE%20Classic/Ciphertext_only_cryptanalysis_on_hardened_mfc_cards_Carlos_Meijer.pdf)
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2174,8 +2177,9 @@ export class ChameleonUltra {
 
   /**
    * Execute nested attack against FUDAN static encrypted nonce cards (FM11RF08/FM11RF08S).
-   * @param opts.key - FUDAN backdoor key, currently known: `A396EFA4E24F` (default), `A31667A8CEC1`, `518B3354E760`. See [MIFARE Classic: exposing the static encrypted nonce variant](https://eprint.iacr.org/2024/1275)
+   * @param opts.key - FUDAN backdoor key, currently known: `A396EFA4E24F` (default), `A31667A8CEC1`, `518B3354E760`.
    * @group Mifare Classic Related
+   * @see [MIFARE Classic: exposing the static encrypted nonce variant](https://eprint.iacr.org/2024/1275)
    */
   async cmdMf1AcquireStaticEncryptedNested (opts: {
     key?: Buffer
@@ -2201,6 +2205,7 @@ export class ChameleonUltra {
    * @group Mifare Classic Related
    * @example
    * ```
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async ultra => {
    *   const { Buffer, Mf1KeyType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
    *   const keys = Buffer.from('A0A1A2A3A4A5\nD3F7D3F7D3F7\nFFFFFFFFFFFF', 'hex').chunk(6)
@@ -2350,6 +2355,61 @@ export class ChameleonUltra {
   }
 
   /**
+   * Scan ID of Viking tags.
+   * @returns The Viking tag ID be scanned.
+   * @group Reader Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const tagId = await ultra.cmdVikingScan()
+   *   console.log(tagId.toString('hex')) // 'deadbeef'
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdVikingScan (): Promise<Buffer> {
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.VIKING_SCAN // cmd = 3004
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data
+  }
+
+  /**
+   * Write id of viking tag to t55xx tag.
+   * @param id - The id of viking tag.
+   * @param newKey - The new key of t55xx tag.
+   * @param oldKeys - The keys to be checked.
+   * @group Reader Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const id = Buffer.from('deadbeef', 'hex')
+   *   // https://github.com/RfidResearchGroup/proxmark3/blob/master/client/dictionaries/t55xx_default_pwds.dic
+   *   const newKey = Buffer.from('20206666', 'hex')
+   *   const oldKeys = Buffer.from('5124364819920427', 'hex').chunk(4)
+   *   await ultra.cmdVikingWriteToT55xx(id, newKey, oldKeys)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdVikingWriteToT55xx (id: Buffer, newKey: Buffer, oldKeys: Buffer[]): Promise<void> {
+    bufIsLenOrFail(id, 4, 'id')
+    bufIsLenOrFail(newKey, 4, 'newKey')
+    // 4 bytes id + 4 bytes newKey = 8
+    if (oldKeys.length < 1 || oldKeys.length > calcUltraMaxItemSize(4, 8)) throw new TypeError(`Invalid oldKeys.length = ${oldKeys.length}`)
+    for (let i = 0; i < oldKeys.length; i++) bufIsLenOrFail(oldKeys[i], 4, `oldKeys[${i}]`)
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.VIKING_WRITE_TO_T55XX // cmd = 3005
+    const data = Buffer.concat([id, newKey, ...oldKeys])
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data })
+    await readResp()
+  }
+
+  /**
    * Set the mifare block data of actived slot.
    * @param offset - The start block of actived slot.
    * @param data - The data to be set. the length of data should be multiples of 16.
@@ -2453,6 +2513,9 @@ export class ChameleonUltra {
    * @param offset - The start log of detections to be get.
    * @returns The mifare MFKey32 detections.
    * @group Mifare Classic Related
+   * @see
+   * 1. [Dismantling MIFARE Classic](http://proxmark.org/files/Documents/13.56%20MHz%20-%20MIFARE%20Classic/Dismantling.MIFARE.Classic-ESORICS.2008.pdf)
+   * 2. [Recovering MIFARE Classic keys](https://docs.flipper.net/nfc/mfkey32)
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2540,15 +2603,15 @@ export class ChameleonUltra {
    * await (async ultra => {
    *   const mf1Settings = await ultra.cmdMf1GetEmuSettings()
    *   console.log(JSON.stringify(mf1Settings))
-   *   /**
-   *    * {
-   *    *   "detection": false,
-   *    *   "gen1a": false,
-   *    *   "gen2": false,
-   *    *   "antiColl": false,
-   *    *   "write": 0
-   *    *  }
-   *    *\/
+   *   /*
+   *   {
+   *     "detection": false,
+   *     "gen1a": false,
+   *     "gen2": false,
+   *     "antiColl": false,
+   *     "write": 0
+   *   }
+   *   *\/
    * })(vm.ultra)
    * ```
    */
@@ -3082,6 +3145,116 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data: Buffer.pack('!B', mode) })
     await readResp()
+  }
+
+  /**
+   * Enable/disable the AUTH logger of NTAG emulator.
+   * @param enable - `true` to enable the detection, `false` to disable the detection.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   await ultra.cmdMfuSetDetectionEnable(true)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMfuSetDetectionEnable (enable: boolean | number): Promise<void> {
+    if (_.isNil(enable)) throw new TypeError('enable is required')
+    const cmd = Cmd.MF0_NTAG_SET_DETECTION_ENABLE // cmd = 4033
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!?', enable) })
+    await readResp()
+  }
+
+  /**
+   * Get the AUTH log count of NTAG emulator.
+   * @returns The count of AUTH logs.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   console.log(await ultra.cmdMfuGetDetectionCount()) // 0
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMfuGetDetectionCount (): Promise<number> {
+    const cmd = Cmd.MF0_NTAG_GET_DETECTION_COUNT // cmd = 4034
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data.readUInt32BE()
+  }
+
+  /**
+   * Get the AUTH log of NTAG emulator.
+   * @param offset - The start log of detections to be get.
+   * @returns The AUTH logs.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const pwds = await ultra.cmdMfuGetDetectionLogs(0)
+   *   console.log(pwds[0]?.toString('hex')) // 'AA55AA55'
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMfuGetDetectionLogs (offset: number = 0): Promise<Buffer[]> {
+    if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
+    const cmd = Cmd.MF0_NTAG_GET_DETECTION_LOG // cmd = 4035
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!I', offset) })
+    return (await readResp()).data.chunk(4)
+  }
+
+  /**
+   * Get the AUTH logger of NTAG emulator is enabled or not.
+   * @returns `true` if the feature of mifare MFKey32 detections is enabled, otherwise return `false`.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   console.log(await ultra.cmdMfuGetDetectionEnable()) // false
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMfuGetDetectionEnable (): Promise<boolean> {
+    const cmd = Cmd.MF0_NTAG_GET_DETECTION_ENABLE // cmd = 4036
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data[0] === 1
+  }
+
+  /**
+   * Get configuration of NTAG emulator.
+   * @returns The configuration of NTAG emulator.
+   * @group Mifare Ultralight Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   console.log(await ultra.cmdMfuGetEmuSettings())
+   *   /*
+   *   {
+   *     "detection": false,
+   *     "uid": true,
+   *     "write": 0
+   *   }
+   *   *\/
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMfuGetEmuSettings (): Promise<{
+    detection: boolean
+    uid: boolean
+    write: MfuEmuWriteMode
+  }> {
+    const cmd = Cmd.MF0_NTAG_GET_EMULATOR_CONFIG // cmd = 4037
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return Decoder.MfuEmuSettings.fromCmd4037((await readResp()).data)
   }
 
   /**
@@ -3624,6 +3797,50 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
     return Decoder.HidProxScanRes.fromCmd3002((await readResp()).data)
+  }
+
+  /**
+   * Set the viking id of actived slot.
+   * @param id - The viking id of actived slot.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Buffer, Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.slotChangeTagTypeAndActive(Slot.SLOT_1, null, TagType.Viking)
+   *   await ultra.cmdVikingSetEmuId(Buffer.from('deadbeef', 'hex'))
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdVikingSetEmuId (id: Buffer): Promise<void> {
+    bufIsLenOrFail(id, 4, 'id')
+    const cmd = Cmd.VIKING_SET_EMU_ID // cmd = 5004
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: id })
+    await readResp()
+  }
+
+  /**
+   * Get the viking id of actived slot.
+   * @returns The viking id of actived slot.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Slot, TagType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.slotChangeTagTypeAndActive(Slot.SLOT_1, null, TagType.Viking)
+   *   const id = await ultra.cmdVikingGetEmuId()
+   *   console.log(id.toString('hex')) // 'deadbeef'
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdVikingGetEmuId (): Promise<Buffer> {
+    const cmd = Cmd.VIKING_GET_EMU_ID // cmd = 5005
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data
   }
 
   /**
