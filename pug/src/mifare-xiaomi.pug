@@ -122,7 +122,7 @@ block script
     ultraBle.use(new WebbleAdapter())
 
     const toHex = buf => _.toUpper(buf.toString('hex'))
-    const WELL_KNOWN_KEYS = Buffer.from(['FFFFFFFFFFFF'].join(''), 'hex').chunk(6)
+    const WELL_KNOWN_KEYS = [Buffer.from('FFFFFFFFFFFF', 'hex')]
     const isMf1MagicBlock0 = buf => Buffer.isBuffer(buf) && buf.length >= 16 && _.includes([0x08, 0x88], buf[5]) && toHex(buf.subarray(6, 8)) === '0400' && buf[4] === buf.subarray(0, 4).xor()
 
     window.vm = new Vue({

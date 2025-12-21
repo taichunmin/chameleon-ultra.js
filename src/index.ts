@@ -21,6 +21,7 @@ export {
   Mf1KeyType,
   Mf1PrngType,
   Mf1VblockOperator,
+  MfuEmuWriteMode,
   MfuMaxPage,
   NxpMfuType,
   NxpMfuTypeName,

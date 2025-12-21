@@ -193,5 +193,6 @@ await run(ultraUsb)
 
 - [nfctool.cn](https://ultra.nfctool.cn/)
 - [Sil333033/autopwn](https://github.com/Sil333033/Chameleon-Ultra-javascript-autopwn)
+- [chameleon-ultra.cn](https://chameleon-ultra.cn/)
 - Sil's Website: `https://drosi.nl/cu` (link is broken!)
 - Tech Security Tools's Website: `https://chameleon-ultra.com/` (link is broken!)

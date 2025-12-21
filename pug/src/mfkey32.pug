@@ -531,7 +531,7 @@ block script
             const recoverMax = _.sumBy(logs, arr => arr.length * (arr.length - 1) / 2)
 
             const skipRecordsByKnownKey = (recs, key) => {
-              for (let rec of recs) {
+              for (const rec of recs) {
                 if (rec.skip) continue
                 const isReaderHasKey = Crypto1.mfkey32IsReaderHasKey({
                   uid: rec.uid,
@@ -548,7 +548,7 @@ block script
             const newKeys = []
             let recoverCnt = 0
             for (const grp of logs) {
-              for (let knownKey of knownKeys) skipRecordsByKnownKey(grp, knownKey)
+              for (const knownKey of knownKeys) skipRecordsByKnownKey(grp, knownKey)
               for (let i = 0; i < grp.length; i++) {
                 const r0 = grp[i]
                 for (let j = i + 1; j < grp.length; j++) {
@@ -575,7 +575,7 @@ block script
               await this.swalFire({ icon: 'success', title: `Recovered ${newKeys.length} keys!`, text: 'You can repeat whole process to recover more keys.' })
               this.btnEditKeys()
             } else {
-              await this.swalFire({ icon: 'success', title: `No new keys recovered`, text: 'You can read tag and then export dump.' })
+              await this.swalFire({ icon: 'success', title: 'No new keys recovered', text: 'You can read tag and then export dump.' })
             }
           } catch (err) {
             ultra.emitter.emit('error', err)
@@ -662,7 +662,7 @@ block script
         },
         mfMergeKeys (newKeys) {
           const keys = ChameleonUltra.mf1UniqueKeys([
-            ...Buffer.from(this.ss.keys, 'hex').chunk(6),
+            ...ChameleonUltra.mf1KeysFromDict(this.ss.keys),
             ...newKeys,
           ])
           this.$set(this.ss, 'keys', _.map(keys, toHex).join('\n'))
