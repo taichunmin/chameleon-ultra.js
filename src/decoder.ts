@@ -7,6 +7,9 @@ import {
   type AnimationMode,
   type ButtonAction,
   type DarksideStatus,
+  type Hf14aBccMode,
+  type Hf14aCascadeLevelMode,
+  type Hf14aRatsMode,
   type HidProxFormat,
   type Mf1EmuWriteMode,
   type MfuEmuWriteMode,
@@ -18,9 +21,14 @@ function bufUnpackToClass <T> (buf: Buffer, format: string, Type: Class<T>): T {
   return new Type(...buf.unpack<ConstructorParameters<typeof Type>>(format))
 }
 
-export function bufIsLenOrFail (buf: Buffer, len: number, name: string): void {
-  if (Buffer.isBuffer(buf) && buf.length === len) return
-  throw new TypeError(`${name} must be a ${len} ${['byte', 'bytes'][+(len > 1)]} Buffer.`)
+export function bufIsLenOrFail (buf: Buffer, len: number | number[], name: string): void {
+  if (!_.isArray(len)) {
+    if (Buffer.isBuffer(buf) && buf.length === len) return
+    throw new TypeError(`${name} must be a Buffer with length of ${len}.`)
+  } else {
+    if (Buffer.isBuffer(buf) && _.includes(len, buf.length)) return
+    throw new TypeError(`${name} must be a Buffer with length of ${_.join(len, ' or ')}.`)
+  }
 }
 
 export class SlotInfo {
@@ -129,6 +137,22 @@ export class Hf14aAntiColl {
       tags.push(tag)
     }
     return tags
+  }
+}
+
+export class Hf14aSettings {
+  bcc: Hf14aBccMode
+  cl2: Hf14aCascadeLevelMode
+  cl3: Hf14aCascadeLevelMode
+  rats: Hf14aRatsMode
+
+  constructor (bcc: Hf14aBccMode, cl2: Hf14aCascadeLevelMode, cl3: Hf14aCascadeLevelMode, rats: Hf14aRatsMode) {
+    ;[this.bcc, this.cl2, this.cl3, this.rats] = [bcc, cl2, cl3, rats]
+  }
+
+  static fromCmd2200 (buf: Buffer): Hf14aSettings {
+    bufIsLenOrFail(buf, 4, 'buf')
+    return bufUnpackToClass(buf, '!BBBB', Hf14aSettings)
   }
 }
 

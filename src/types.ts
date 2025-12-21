@@ -2,9 +2,9 @@ import { type Buffer } from '@taichunmin/buffer'
 import { type SetOptional } from 'type-fest'
 import { type SerialPort as SerialPortPolyfill } from 'web-serial-polyfill'
 import { type ChameleonUltra } from './ChameleonUltra'
+import type CustomEventTarget from './CustomEventTarget'
 import { type Hf14aAntiColl, type Mf1EmuSettings } from './decoder'
 import { type HidProxFormat, type Mf1KeyType, type Mf1PrngType, type TagType } from './enums'
-import { type EventEmitter } from './EventEmitter'
 
 /** @inline @expand */
 export interface AdapterInstallResp {
@@ -149,7 +149,7 @@ export interface RecoverContextUint32Array {
 }
 
 /** @inline @expand */
-export type SerialPort = SerialPortPolyfill & EventEmitter
+export type SerialPort = SerialPortPolyfill & CustomEventTarget
 
 /** @inline @expand */
 export interface SerialPortOption {

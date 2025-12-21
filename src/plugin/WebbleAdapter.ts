@@ -41,7 +41,7 @@ export default class WebbleAdapter implements UltraPlugin {
     this.bluetooth = navigator?.bluetooth
     this.WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
     this.TransformStream = (globalThis as any)?.TransformStream ?? TransformStream
-    this.emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+    this.emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'cause', err)) }
   }
 
   #debug (formatter: any, ...args: [] | any[]): void {
@@ -69,7 +69,7 @@ export default class WebbleAdapter implements UltraPlugin {
         this.device = await this.bluetooth?.requestDevice({
           filters: BLE_SCAN_FILTERS,
           optionalServices: [DFU_SERV_UUID, ULTRA_SERV_UUID],
-        }).catch(err => { throw _.set(new Error(err.message), 'originalError', err) }) ?? null
+        }).catch(err => { throw _.set(new Error(err.message), 'cause', err) }) ?? null
         if (_.isNil(this.device)) throw new Error('no device')
         this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect(new Error('WebBLE gattserverdisconnected')) })
         this.#debug(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)

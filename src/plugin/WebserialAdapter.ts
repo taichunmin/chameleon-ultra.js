@@ -40,7 +40,7 @@ export default class WebserialAdapter implements UltraPlugin {
     this.#TransformStream = (globalThis as any)?.TransformStream ?? TransformStream
     this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
     this.#serial = navigator.serial ?? ('usb' in navigator ? serial : null)
-    this.#emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+    this.#emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'cause', err)) }
   }
 
   #debug (formatter: any, ...args: [] | any[]): void {

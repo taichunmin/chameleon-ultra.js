@@ -8,6 +8,8 @@ export enum AnimationMode {
   FULL = 0,
   SHORT = 1,
   NONE = 2,
+  SYMMETRIC = 3,
+  MAX = 4,
 }
 
 export enum ButtonAction {
@@ -70,7 +72,7 @@ export enum Cmd {
 
   HF14A_SCAN = 2000,
   MF1_DETECT_SUPPORT = 2001,
-  MF1_DETECT_NT_LEVEL = 2002,
+  MF1_DETECT_PRNG = 2002,
   MF1_STATIC_NESTED_ACQUIRE = 2003,
   MF1_DARKSIDE_ACQUIRE = 2004,
   MF1_DETECT_NT_DIST = 2005,
@@ -84,18 +86,20 @@ export enum Cmd {
   MF1_HARDNESTED_ACQUIRE = 2013,
   MF1_ENC_NESTED_ACQUIRE = 2014,
   MF1_CHECK_KEYS_ON_BLOCK = 2015,
+  HF14A_GET_CONFIG = 2200,
+  HF14A_SET_CONFIG = 2201,
 
   EM410X_SCAN = 3000,
   EM410X_WRITE_TO_T55XX = 3001,
+  EM410X_ELECTRA_WRITE_TO_T55XX = 3006,
   HIDPROX_SCAN = 3002,
   HIDPROX_WRITE_TO_T55XX = 3003,
   VIKING_SCAN = 3004,
   VIKING_WRITE_TO_T55XX = 3005,
+  ADC_GENERIC_READ = 3009,
 
   MF1_WRITE_EMU_BLOCK_DATA = 4000,
   HF14A_SET_ANTI_COLL_DATA = 4001,
-  MF1_SET_ANTI_COLLISION_INFO = 4002,
-  MF1_SET_ATS_RESOURCE = 4003,
   MF1_SET_DETECTION_ENABLE = 4004,
   MF1_GET_DETECTION_COUNT = 4005,
   MF1_GET_DETECTION_LOG = 4006,
@@ -106,8 +110,8 @@ export enum Cmd {
   MF1_SET_GEN1A_MODE = 4011,
   MF1_GET_GEN2_MODE = 4012,
   MF1_SET_GEN2_MODE = 4013,
-  HF14A_GET_BLOCK_ANTI_COLL_MODE = 4014,
-  HF14A_SET_BLOCK_ANTI_COLL_MODE = 4015,
+  MF1_GET_BLOCK_ANTI_COLL_MODE = 4014,
+  MF1_SET_BLOCK_ANTI_COLL_MODE = 4015,
   MF1_GET_WRITE_MODE = 4016,
   MF1_SET_WRITE_MODE = 4017,
   HF14A_GET_ANTI_COLL_DATA = 4018,
@@ -130,6 +134,8 @@ export enum Cmd {
   MF0_NTAG_GET_DETECTION_LOG = 4035,
   MF0_NTAG_GET_DETECTION_ENABLE = 4036,
   MF0_NTAG_GET_EMULATOR_CONFIG = 4037,
+  MF1_SET_FIELD_OFF_DO_RESET = 4038,
+  MF1_GET_FIELD_OFF_DO_RESET = 4039,
 
   EM410X_SET_EMU_ID = 5000,
   EM410X_GET_EMU_ID = 5001,
@@ -275,6 +281,33 @@ export enum FreqType {
   HF = 2,
 }
 
+export enum Hf14aBccMode {
+  /** follow standard */
+  STANDARD = 0,
+  /** auto calculate from UID */
+  UID_CALC = 1,
+  /** use BCC from block 0 */
+  BLOCK0 = 2,
+}
+
+export enum Hf14aCascadeLevelMode {
+  /** follow standard */
+  STANDARD = 0,
+  /** force this cascade level */
+  FORCE = 1,
+  /** skip this cascade level */
+  SKIP = 2,
+}
+
+export enum Hf14aRatsMode {
+  /** follow standard */
+  STANDARD = 0,
+  /** force RATS */
+  FORCE = 1,
+  /** skip RATS */
+  SKIP = 2,
+}
+
 export enum HidProxFormat {
   /** HID H10301 26-bit */
   H10301 = 1,
@@ -336,6 +369,8 @@ export enum HidProxFormat {
   HGEN37 = 29,
   /** PointGuard MDI 37-bit */
   MDI37 = 30,
+  /** HID ACTProx 36-bit */
+  ACTPHID = 42,
 }
 
 export enum Mf1EmuWriteMode {
@@ -447,6 +482,7 @@ export enum TagType {
   EM410X_16 = 101,
   EM410X_32 = 102,
   EM410X_64 = 103,
+  EM410X_ELECTRA = 104,
   Viking = 170,
   // 2xx: FSK Tag-Talk-First
   HIDProx = 200,
@@ -560,6 +596,9 @@ export const isDeviceMode = createIsEnum(DeviceMode)
 export const isDeviceModel = createIsEnum(DeviceModel)
 export const isDfuFwId = createIsEnum(DfuFwId)
 export const isFreqType = createIsEnum(FreqType)
+export const isHf14aBccMode = createIsEnum(Hf14aBccMode)
+export const isHf14aCascadeLevelMode = createIsEnum(Hf14aCascadeLevelMode)
+export const isHf14aRatsMode = createIsEnum(Hf14aRatsMode)
 export const isMf1EmuWriteMode = createIsEnum(Mf1EmuWriteMode)
 export const isMf1KeyType = createIsEnum(Mf1KeyType)
 export const isMf1PrngType = createIsEnum(Mf1PrngType)
@@ -614,6 +653,7 @@ export const TagTypeLfIdLen = new Map<TagType, number>([
   [TagType.EM410X_16, 5],
   [TagType.EM410X_32, 5],
   [TagType.EM410X_64, 5],
+  [TagType.EM410X_ELECTRA, 13],
 ])
 
 // facility, id, issueLevel, oem

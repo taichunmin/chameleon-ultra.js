@@ -12,7 +12,7 @@ async function main (): Promise<void> {
 }
 
 // run `serialport-list -f jsonline` to list port, see https://serialport.io/docs/bin-list
-// ts-node src/example/serialport.js
+// tsx src/example/serialport.js
 main().catch(err => {
   console.error(err)
   process.exit(1)

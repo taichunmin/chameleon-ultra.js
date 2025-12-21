@@ -181,11 +181,11 @@ await run(ultraUsb)
 
 ## Star History
 
-<a href="https://www.star-history.com/#taichunmin/chameleon-ultra.js&Date">
+<a href="https://www.star-history.com/#taichunmin/chameleon-ultra.js&type=timeline&legend=bottom-right">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=timeline&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=timeline&legend=bottom-right" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=timeline&legend=bottom-right" />
  </picture>
 </a>
 
