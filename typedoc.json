@@ -5,6 +5,8 @@
   "darkHighlightTheme": "dark-plus",
   "gaID": "G-KB8ZL6LPH5",
   "includeVersion": true,
+  "llmsTxtTemplate": "./llms-template.md",
+  "name": "chameleon-ultra.js",
   "out": "dist",
   "searchInComments": true,
   "searchInDocuments": true,
@@ -69,10 +71,12 @@
     "jsDelivr": "https://www.jsdelivr.com/package/npm/chameleon-ultra.js"
   },
   "plugin": [
+    "typedoc-plugin-ga",
+    "typedoc-plugin-llms-txt",
+    "typedoc-plugin-markdown",
     "typedoc-plugin-mdn-links",
     "typedoc-plugin-missing-exports",
-    "typedoc-plugin-rename-defaults",
-    "typedoc-plugin-ga"
+    "typedoc-plugin-rename-defaults"
   ],
   "projectDocuments": [
     "documents/*.md"
@@ -83,5 +87,19 @@
     "instance-first",
     "enum-value-ascending",
     "alphabetical-ignoring-documents"
+  ],
+  "llmsTxtSections": {
+    "Guides": { "displayName": "Documentation", "order": 1 },
+    "Reference": { "displayName": "Reference", "order": 2 },
+    "About": { "displayName": "Optional", "order": 3 }
+  },
+  "llmsTxtDeclarations": [
+    { "ref": "index!", "label": "index", "description": "index module" },
+    { "ref": "index!ChameleonUltra", "label": "index!ChameleonUltra", "description": "The core class to interact with the Chameleon Ultra device" },
+    { "ref": "plugin/Debug!", "label": "plugin/Debug", "description": "The Debug plugin for debugging purposes" },
+    { "ref": "plugin/DfuZip!", "label": "plugin/DfuZip", "description": "The DFUZip plugin for reading firmwares" },
+    { "ref": "plugin/SerialPortAdapter!", "label": "plugin/SerialPortAdapter", "description": "The Adapter plugin for connecting to device via Serial Port, used in Node.js environment" },
+    { "ref": "plugin/WebbleAdapter!", "label": "plugin/WebbleAdapter", "description": "The Adapter plugin for connecting to device via Web Bluetooth API, used in Chrome based browser of Windows/Linux/macOS/ChromeOS/Android and Bluefy browser of iPhone/iPad" },
+    { "ref": "plugin/WebserialAdapter!", "label": "plugin/WebserialAdapter", "description": "The Adapter plugin for connecting to device via Web Serial API, used in Chrome based browser of Windows/Linux/macOS" }
   ]
 }
