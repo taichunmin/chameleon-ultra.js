@@ -160,11 +160,12 @@ block script
                 }
               } catch (err) {
                 // 有可能是因為不支援 cmdGetGitVersion
-                ultra.emitter.emit('error', _.set(new Error(err.message), 'originalError', err))
+                ultra.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
               }
-              await this.alert({ icon: 'info', text: 'Please reconnect device after reboot.' })
-              this.showLoading({ text: 'Connect device...' })
+              this.showLoading({ text: 'Enter DFU mode...' })
               await ultra.cmdDfuEnter()
+              await this.alert({ icon: 'info', text: 'Please reconnect device again.' })
+              this.showLoading({ text: 'Connect device...' })
               if (!ultra.isConnected()) await ultra.connect()
               if (!ultra.isDfu()) throw new Error('Device is not in DFU mode')
             }
@@ -177,7 +178,7 @@ block script
                 isUploadSuccess = true
                 break
               } catch (err) {
-                ultra.emitter.emit('error', _.set(new Error(err.message), 'originalError', err))
+                ultra.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
               }
             }
             if (!isUploadSuccess) throw new Error('Upload failed')
@@ -211,11 +212,12 @@ block script
                 }
               } catch (err) {
                 // 有可能是因為不支援 cmdGetGitVersion
-                ultra.emitter.emit('error', _.set(new Error(err.message), 'originalError', err))
+                ultra.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
               }
-              await this.alert({ icon: 'info', text: 'Please reconnect device after reboot.' })
-              this.showLoading({ text: 'Connect device...' })
+              this.showLoading({ text: 'Enter DFU mode...' })
               await ultra.cmdDfuEnter()
+              await this.alert({ icon: 'info', text: 'Please reconnect device again.' })
+              this.showLoading({ text: 'Connect device...' })
               if (!ultra.isConnected()) await ultra.connect()
               if (!ultra.isDfu()) throw new Error('Device is not in DFU mode')
             }

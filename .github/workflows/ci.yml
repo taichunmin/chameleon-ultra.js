@@ -13,23 +13,27 @@ permissions:
   pages: write
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Print all context
-        run: |
-          echo 'env=${{ toJSON(env) }}'
-          echo 'github=${{ toJSON(github) }}'
-          echo 'inputs=${{ toJSON(inputs) }}'
-          echo 'job=${{ toJSON(job) }}'
-          echo 'runner=${{ toJSON(runner) }}'
-          echo 'secrets=${{ toJSON(secrets) }}'
-          echo 'steps=${{ toJSON(steps) }}'
-          echo 'vars=${{ toJSON(vars) }}'
+      - name: Dump GitHub context
+        env:
+          ACTION_CONTEXT: |
+            {
+              "env": ${{ toJSON(env) }},
+              "github": ${{ toJSON(github) }},
+              "inputs": ${{ toJSON(inputs) }},
+              "job": ${{ toJSON(job) }},
+              "runner": ${{ toJSON(runner) }},
+              "secrets": ${{ toJSON(secrets) }},
+              "steps": ${{ toJSON(steps) }},
+              "vars": ${{ toJSON(vars) }}
+            }
+        run: echo "$ACTION_CONTEXT" | jq .
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
@@ -52,16 +56,20 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Print all context
-        run: |
-          echo 'env=${{ toJSON(env) }}'
-          echo 'github=${{ toJSON(github) }}'
-          echo 'inputs=${{ toJSON(inputs) }}'
-          echo 'job=${{ toJSON(job) }}'
-          echo 'runner=${{ toJSON(runner) }}'
-          echo 'secrets=${{ toJSON(secrets) }}'
-          echo 'steps=${{ toJSON(steps) }}'
-          echo 'vars=${{ toJSON(vars) }}'
+      - name: Dump GitHub context
+        env:
+          ACTION_CONTEXT: |
+            {
+              "env": ${{ toJSON(env) }},
+              "github": ${{ toJSON(github) }},
+              "inputs": ${{ toJSON(inputs) }},
+              "job": ${{ toJSON(job) }},
+              "runner": ${{ toJSON(runner) }},
+              "secrets": ${{ toJSON(secrets) }},
+              "steps": ${{ toJSON(steps) }},
+              "vars": ${{ toJSON(vars) }}
+            }
+        run: echo "$ACTION_CONTEXT" | jq .
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:

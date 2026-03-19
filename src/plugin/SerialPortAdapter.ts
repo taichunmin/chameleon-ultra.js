@@ -18,7 +18,7 @@ export default class SerialPortAdapter implements UltraPlugin {
   ultra?: ChameleonUltra
 
   constructor () {
-    this.#emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'originalError', err)) }
+    this.#emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'cause', err)) }
   }
 
   #debug (formatter: any, ...args: [] | any[]): void {

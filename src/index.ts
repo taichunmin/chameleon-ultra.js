@@ -15,6 +15,9 @@ export {
   DfuFwType,
   DfuObjType,
   FreqType,
+  Hf14aBccMode,
+  Hf14aCascadeLevelMode,
+  Hf14aRatsMode,
   HidProxFormat,
   HidProxFormatName,
   Mf1EmuWriteMode,
@@ -27,4 +30,5 @@ export {
   NxpMfuTypeName,
   Slot,
   TagType,
+  TagTypeLfIdLen,
 } from './enums'

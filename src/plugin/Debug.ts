@@ -74,7 +74,7 @@ const ERROR_KEYS = [
 
   // GraphQLError: https://www.graphql-js.org/api-v16/error/
   'args',
-  'originalError',
+  'cause',
   'positions',
   'source',
   'locations',

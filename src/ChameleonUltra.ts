@@ -2,41 +2,56 @@ import { Buffer } from '@taichunmin/buffer'
 import crc16a from '@taichunmin/crc/crc16a'
 import crc32 from '@taichunmin/crc/crc32'
 import * as _ from 'lodash-es'
+import CustomEventTarget from './CustomEventTarget'
 import * as Decoder from './decoder'
 import { bufIsLenOrFail } from './decoder'
 import { EventAsyncGenerator } from './EventAsyncGenerator'
-import { EventEmitter } from './EventEmitter'
 import { type MiddlewareComposeFn, middlewareCompose, sleep, versionCompare } from './helper'
 
 import {
   type AnimationMode,
+  BYTES_PER_MF1_KEY,
   type ButtonAction,
   type ButtonType,
+  Cmd,
   type DarksideStatus,
+  DeviceMode,
   type DeviceModel,
+  DfuErrMsg,
   type DfuFwId,
   type DfuFwType,
-  type Mf1EmuWriteMode,
-  type Mf1PrngType,
-  type Mf1VblockOperator,
-  type MfuEmuWriteMode,
-  type Slot,
-  BYTES_PER_MF1_KEY,
-  Cmd,
-  DeviceMode,
-  DfuErrMsg,
   DfuObjType,
   DfuOp,
   DfuResCode,
   FreqType,
+  type Hf14aBccMode,
+  type Hf14aCascadeLevelMode,
+  type Hf14aRatsMode,
   HidProxFormat,
   HidProxFormatLimit,
+  type Mf1EmuWriteMode,
+  Mf1KeyType,
+  type Mf1PrngType,
+  type Mf1VblockOperator,
+  MfuCmd,
+  type MfuEmuWriteMode,
+  MfuVerToNxpMfuType,
+  NxpMfuType,
+  NxpTypeBySak,
+  type Slot,
+  TagType,
+  TagTypeLfIdLen,
+  UltraErrMsg,
+  UltraResCode,
   isAnimationMode,
   isButtonAction,
   isButtonType,
   isDeviceMode,
   isDfuFwId,
   isFailedUltraResCode,
+  isHf14aBccMode,
+  isHf14aCascadeLevelMode,
+  isHf14aRatsMode,
   isMf1EmuWriteMode,
   isMf1KeyType,
   isMf1VblockOperator,
@@ -46,15 +61,6 @@ import {
   isTagType,
   isValidDfuObjType,
   isValidFreqType,
-  Mf1KeyType,
-  MfuCmd,
-  MfuVerToNxpMfuType,
-  NxpMfuType,
-  NxpTypeBySak,
-  TagType,
-  TagTypeLfIdLen,
-  UltraErrMsg,
-  UltraResCode,
 } from './enums'
 import {
   type DfuImage,
@@ -184,7 +190,7 @@ export class ChameleonUltra {
    * - `debug`: Emitted when debug message is generated. `(logName: string, formatter: any, ...args: [] | any[]) => void`
    * @hidden
    */
-  readonly emitter = new EventEmitter()
+  readonly emitter = new CustomEventTarget()
 
   /**
    * @hidden
@@ -1432,7 +1438,7 @@ export class ChameleonUltra {
    * Scan 14a tag, and return basic information. The device mode must be set to READER before using this command.
    * @returns The basic infomation of scanned tag.
    * @throws This command will throw an error if tag not scanned or any error occured.
-   * @group Reader Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -1497,7 +1503,7 @@ export class ChameleonUltra {
    */
   async cmdMf1TestPrngType (): Promise<Mf1PrngType> {
     await this.assureDeviceMode(DeviceMode.READER)
-    const cmd = Cmd.MF1_DETECT_NT_LEVEL // cmd = 2002
+    const cmd = Cmd.MF1_DETECT_PRNG // cmd = 2002
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
     return (await readResp()).data[0]
@@ -1858,7 +1864,7 @@ export class ChameleonUltra {
   /**
    * Get the info composed of `cmdHf14aScan()` and `cmdMf1TestNtLevel()`.
    * @returns The info about 14a tag and mifare protocol.
-   * @group Reader Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -1901,7 +1907,7 @@ export class ChameleonUltra {
    * @param opts.waitResponse - Default value is `true`. Set `false` to skip reading tag response.
    * @param opts.timeout - Default value is `1000 ms`. Maximum timeout for reading tag response in ms while `waitResponse` is `true`.
    * @returns The response from tag.
-   * @group Reader Related
+   * @group Reader/Writer Related
    */
   async cmdHf14aRaw (opts: {
     activateRfField?: boolean
@@ -2234,9 +2240,119 @@ export class ChameleonUltra {
   }
 
   /**
+   * Get hf14a settings.
+   * @returns
+   * - `bcc`: The BCC mode.
+   * - `cl2`: The cascade level 2 mode.
+   * - `cl3`: The cascade level 3 mode.
+   * - `rats`: The RATS mode.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const settings = await ultra.cmdHf14aGetSettings()
+   *   console.log(JSON.stringify(settings))
+   *   /* Example output:
+   *   {"bcc":0,"cl2":0,"cl3":0,"rats":0}
+   *   *\/
+   * })(vm.ultra)
+   * ```
+  */
+  async cmdHf14aGetSettings (): Promise<{
+    bcc: Hf14aBccMode
+    cl2: Hf14aCascadeLevelMode
+    cl3: Hf14aCascadeLevelMode
+    rats: Hf14aRatsMode
+  }> {
+    const cmd = Cmd.HF14A_GET_CONFIG // cmd = 2200
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return Decoder.Hf14aSettings.fromCmd2200((await readResp()).data)
+  }
+
+  /**
+   * Set hf14a settings.
+   * @param opts - The settings to be set.
+   * @param opts.bcc - The BCC mode.
+   * @param opts.cl2 - The cascade level 2 mode.
+   * @param opts.cl3 - The cascade level 3 mode.
+   * @param opts.rats - The RATS mode.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Hf14aBccMode, Hf14aCascadeLevelMode, Hf14aRatsMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const settings = {
+   *     bcc: Hf14aBccMode.STANDARD,
+   *     cl2: Hf14aCascadeLevelMode.STANDARD,
+   *     cl3: Hf14aCascadeLevelMode.STANDARD,
+   *     rats: Hf14aRatsMode.STANDARD,
+   *   }
+   *   await ultra.cmdHf14aSetSettings(settings)
+   * })(vm.ultra)
+   * ```
+  */
+  async cmdHf14aSetSettings (opts: {
+    bcc: Hf14aBccMode
+    cl2: Hf14aCascadeLevelMode
+    cl3: Hf14aCascadeLevelMode
+    rats: Hf14aRatsMode
+  }): Promise<void> {
+    if (!isHf14aBccMode(opts.bcc)) throw new TypeError('Invalid opts.bcc')
+    if (!isHf14aCascadeLevelMode(opts.cl2)) throw new TypeError('Invalid opts.cl2')
+    if (!isHf14aCascadeLevelMode(opts.cl3)) throw new TypeError('Invalid opts.cl3')
+    if (!isHf14aRatsMode(opts.rats)) throw new TypeError('Invalid opts.rats')
+
+    const cmd = Cmd.HF14A_SET_CONFIG // cmd = 2201
+    const readResp = await this.#createReadRespFn({ cmd })
+    const data = Buffer.concat([Buffer.pack('!BBBB', opts.bcc, opts.cl2, opts.cl3, opts.rats)])
+    await this.#sendCmd({ cmd, data })
+    await readResp()
+  }
+
+  /**
+   * Set hf14a settings.
+   * @param opts - The settings to be set.
+   * @param opts.bcc - The BCC mode.
+   * @param opts.cl2 - The cascade level 2 mode.
+   * @param opts.cl3 - The cascade level 3 mode.
+   * @param opts.rats - The RATS mode.
+   * @returns
+   * - `bcc`: The BCC mode.
+   * - `cl2`: The cascade level 2 mode.
+   * - `cl3`: The cascade level 3 mode.
+   * - `rats`: The RATS mode.
+   * @group Emulator Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Hf14aBccMode, Hf14aCascadeLevelMode, Hf14aRatsMode } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const settings = await ultra.hf14aSettings({ bcc: Hf14aBccMode.STANDARD })
+   *   console.log(JSON.stringify(settings))
+   * })(vm.ultra)
+   * ```
+  */
+  async hf14aSettings (opts: {
+    bcc?: Hf14aBccMode
+    cl2?: Hf14aCascadeLevelMode
+    cl3?: Hf14aCascadeLevelMode
+    rats?: Hf14aRatsMode
+  }): Promise<Awaited<ReturnType<this['cmdHf14aGetSettings']>>> {
+    if (!_.isEmpty(opts)) {
+      const old = await this.cmdHf14aGetSettings()
+      const new1 = { ...old, ...opts }
+      if (!_.isEqual(old, new1)) await this.cmdHf14aSetSettings(new1)
+    }
+    return await this.cmdHf14aGetSettings() as any
+  }
+
+  /**
    * Scan em410x tag and read tag id
    * @returns The id of em410x tag.
-   * @group Reader Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2265,10 +2381,10 @@ export class ChameleonUltra {
 
   /**
    * Write id of em410x tag to t55xx tag.
-   * @param id - The id of em410x tag.
+   * @param id - The 5 bytes id of em410x tag.
    * @param newKey - The new key of t55xx tag.
    * @param oldKeys - The keys to be checked.
-   * @group Reader Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2304,7 +2420,7 @@ export class ChameleonUltra {
    * - `cn`: The card number of HID Prox tag.
    * - `il`: The issue level of HID Prox tag.
    * - `oem`: The OEM code of HID Prox tag.
-   * @group Reader Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2327,7 +2443,7 @@ export class ChameleonUltra {
    * Write HID Prox tag to t55xx tag.
    * @param newKey - The new key of t55xx tag.
    * @param oldKeys - The keys to be checked.
-   * @group Reader Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2357,7 +2473,7 @@ export class ChameleonUltra {
   /**
    * Scan ID of Viking tags.
    * @returns The Viking tag ID be scanned.
-   * @group Reader Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2381,7 +2497,7 @@ export class ChameleonUltra {
    * @param id - The id of viking tag.
    * @param newKey - The new key of t55xx tag.
    * @param oldKeys - The keys to be checked.
-   * @group Reader Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -2407,6 +2523,60 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data })
     await readResp()
+  }
+
+  /**
+   * Write id of em410x electra tag to t55xx tag.
+   * @param id - The 13 bytes id of em410x electra tag.
+   * @param newKey - The new key of t55xx tag.
+   * @param oldKeys - The keys to be checked.
+   * @group Reader/Writer Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const id = Buffer.from('000102030405060708090a0b0c', 'hex')
+   *   // https://github.com/RfidResearchGroup/proxmark3/blob/master/client/dictionaries/t55xx_default_pwds.dic
+   *   const newKey = Buffer.from('20206666', 'hex')
+   *   const oldKeys = Buffer.from('5124364819920427', 'hex').chunk(4)
+   *   await ultra.cmdEm410xElectraWriteToT55xx(id, newKey, oldKeys)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdEm410xElectraWriteToT55xx (id: Buffer, newKey: Buffer, oldKeys: Buffer[]): Promise<void> {
+    bufIsLenOrFail(id, 13, 'id')
+    bufIsLenOrFail(newKey, 4, 'newKey')
+    // 13 bytes id + 4 bytes newKey = 17
+    if (oldKeys.length < 1 || oldKeys.length > calcUltraMaxItemSize(4, 17)) throw new TypeError(`Invalid oldKeys.length = ${oldKeys.length}`)
+    for (let i = 0; i < oldKeys.length; i++) bufIsLenOrFail(oldKeys[i], 4, `oldKeys[${i}]`)
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.EM410X_ELECTRA_WRITE_TO_T55XX // cmd = 3006
+    const data = Buffer.concat([id, newKey, ...oldKeys])
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data })
+    await readResp()
+  }
+
+  /**
+   * Read the raw ADC value of LF antenna. The raw ADC value is the direct value read from ADC without any processing, which may be helpful to debug some non working readers.
+   * @returns The raw ADC value of LF antenna.
+   * @group Reader/Writer Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const rawAdc = await ultra.cmdLfReadRawAdc()
+   *   console.log(rawAdc.toString('hex'))
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdLfReadRawAdc (): Promise<Buffer> {
+    await this.assureDeviceMode(DeviceMode.READER)
+    const cmd = Cmd.ADC_GENERIC_READ // cmd = 3009
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data
   }
 
   /**
@@ -2459,7 +2629,7 @@ export class ChameleonUltra {
     ats?: Buffer
   }): Promise<void> {
     const { uid, atqa, sak, ats = new Buffer() } = opts
-    if (!Buffer.isBuffer(uid) || !_.includes([4, 7, 10], uid.length)) throw new TypeError('uid must be a Buffer with length 4, 7 or 10')
+    bufIsLenOrFail(uid, [4, 7, 10], 'uid')
     bufIsLenOrFail(atqa, 2, 'atqa')
     bufIsLenOrFail(sak, 1, 'sak')
     if (!Buffer.isBuffer(ats)) throw new TypeError('ats must be a Buffer')
@@ -2719,7 +2889,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdMf1GetAntiCollMode (): Promise<boolean> {
-    const cmd = Cmd.HF14A_GET_BLOCK_ANTI_COLL_MODE // cmd = 4014
+    const cmd = Cmd.MF1_GET_BLOCK_ANTI_COLL_MODE // cmd = 4014
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
     return (await readResp()).data[0] === 1
@@ -2739,7 +2909,7 @@ export class ChameleonUltra {
    */
   async cmdMf1SetAntiCollMode (enable: boolean | number): Promise<void> {
     if (_.isNil(enable)) throw new TypeError('enable is required')
-    const cmd = Cmd.HF14A_SET_BLOCK_ANTI_COLL_MODE // cmd = 4015
+    const cmd = Cmd.MF1_SET_BLOCK_ANTI_COLL_MODE // cmd = 4015
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data: Buffer.pack('!?', enable) })
     await readResp()
@@ -3701,7 +3871,9 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set the em410x id of actived slot.
+   * Set the em410x id of actived slot. The size of id depends on the em410x tag type.
+   * - 5 bytes for EM410x
+   * - 13 bytes for EM410X ELECTRA
    * @param id - The em410x id of actived slot.
    * @group Emulator Related
    * @example
@@ -3715,7 +3887,7 @@ export class ChameleonUltra {
    * ```
    */
   async cmdEm410xSetEmuId (id: Buffer): Promise<void> {
-    bufIsLenOrFail(id, 5, 'id')
+    bufIsLenOrFail(id, [5, 13], 'id')
     const cmd = Cmd.EM410X_SET_EMU_ID // cmd = 5000
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data: id })
@@ -3741,7 +3913,21 @@ export class ChameleonUltra {
     const cmd = Cmd.EM410X_GET_EMU_ID // cmd = 5001
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
-    return (await readResp()).data
+    const data = (await readResp()).data
+
+    // Format 1: id
+    // Format 2: tagType + id
+    let isFormat2 = true
+    isFormat2 &&= data.length >= 2
+    const tagType = data.readUint16BE(0)
+    isFormat2 &&= _.includes([
+      TagType.EM410X,
+      TagType.EM410X_ELECTRA,
+    ], tagType)
+    const idLen = TagTypeLfIdLen.get(tagType) ?? 0
+    isFormat2 &&= data.length === idLen + 2
+
+    return isFormat2 ? data.subarray(2) : data
   }
 
   /**
@@ -4226,7 +4412,7 @@ export class ChameleonUltra {
    * ```
    */
   static mf1IsValidAcl (data: Buffer): boolean {
-    if (!Buffer.isBuffer(data) || !_.includes([3, 4, 16, 64], data.length)) throw new TypeError('data must be a Buffer with length 3, 4, 16 or 64')
+    bufIsLenOrFail(data, [3, 4, 16, 64], 'data')
     if (data.length === 16) data = data.subarray(6)
     else if (data.length === 64) data = data.subarray(54)
 
@@ -4283,7 +4469,7 @@ export class ChameleonUltra {
   }): Buffer {
     const buf = opts.buf ?? new Buffer(16)
     if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('Invalid buf')
-    if (!Buffer.isBuffer(opts.uid) || !_.includes([4, 7, 10], opts.uid.length)) throw new TypeError('Invalid uid')
+    bufIsLenOrFail(opts.uid, [4, 7, 10], 'uid')
     buf.set(opts.uid, 0)
 
     if (opts.uid.length !== 4) return buf // 7 bytes or 10 bytes UID

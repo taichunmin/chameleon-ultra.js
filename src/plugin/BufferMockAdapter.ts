@@ -2,7 +2,7 @@ import { Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
 import { ReadableStream, WritableStream, type ReadableStreamController } from 'stream/web'
 import { setObject } from '../iifeExportHelper'
-import { type UltraPlugin, type UltraSerialPort, type PluginInstallContext } from '../types'
+import { type AdapterInstallResp, type PluginInstallContext, type UltraPlugin, type UltraSerialPort } from '../types'
 
 const ReadableStream1: typeof ReadableStream = (globalThis as any)?.ReadableStream ?? ReadableStream
 const WritableStream1: typeof WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
@@ -19,7 +19,7 @@ export default class BufferMockAdapter implements UltraPlugin {
   send: Buffer[] = []
   sendIdx = 0
 
-  async install (context: AdapterInstallContext, pluginOption: any): Promise<Record<string, any>> {
+  async install (context: AdapterInstallContext, pluginOption: any): Promise<AdapterInstallResp> {
     const { ultra } = context
 
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))

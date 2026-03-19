@@ -27,10 +27,10 @@ const ERROR_KEYS = [
   'syscall',
 ]
 
-export function errToJson<T extends Error & { originalError?: any, stack?: any }> (err: T): Partial<T> {
+export function errToJson<T extends Error & { cause?: any, stack?: any }> (err: T): Partial<T> {
   const tmp: any = {
     ..._.pick(err, ERROR_KEYS),
-    ...(_.isNil(err.originalError) ? {} : { originalError: errToJson(err.originalError) }),
+    ...(_.isNil(err.cause) ? {} : { cause: errToJson(err.cause) }),
     stack: err?.stack,
   }
   return tmp
