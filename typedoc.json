@@ -97,7 +97,8 @@
   },
   "llmsTxtDeclarations": [
     { "ref": "index!", "label": "index", "description": "index module" },
-    { "ref": "index!ChameleonUltra", "label": "index!ChameleonUltra", "description": "The core class to interact with the Chameleon Ultra device" },
+    { "ref": "index!ChameleonUltra", "label": "index!ChameleonUltra", "description": "Core class for device interaction, slot management, and NFC commands." },
+    { "ref": "Crypto1!", "label": "Crypto1", "description": "Helper for Mifare Classic (Crypto-1) cryptographic operations likes  stream cipher and key recovery algorithms" },
     { "ref": "plugin/Debug!", "label": "plugin/Debug", "description": "The Debug plugin for debugging purposes" },
     { "ref": "plugin/DfuZip!", "label": "plugin/DfuZip", "description": "The DFUZip plugin for reading firmwares" },
     { "ref": "plugin/SerialPortAdapter!", "label": "plugin/SerialPortAdapter", "description": "The Adapter plugin for connecting to device via Serial Port, used in Node.js environment" },
