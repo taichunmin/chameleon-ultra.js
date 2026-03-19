@@ -9,7 +9,6 @@ export enum AnimationMode {
   SHORT = 1,
   NONE = 2,
   SYMMETRIC = 3,
-  MAX = 4,
 }
 
 export enum ButtonAction {
