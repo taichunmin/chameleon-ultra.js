@@ -98,6 +98,8 @@
   "llmsTxtDeclarations": [
     { "ref": "index!", "label": "index", "description": "index module" },
     { "ref": "index!ChameleonUltra", "label": "index!ChameleonUltra", "description": "The core class to interact with the Chameleon Ultra device" },
+    { "ref": "Crypto1!", "label": "Crypto1", "description": "The Crypto1 module for MIFARE Classic cryptographic operations" },
+    { "ref": "Crypto1!Crypto1", "label": "Crypto1!Crypto1", "description": "The Crypto1 class implementing MIFARE Classic stream cipher and key recovery algorithms" },
     { "ref": "plugin/Debug!", "label": "plugin/Debug", "description": "The Debug plugin for debugging purposes" },
     { "ref": "plugin/DfuZip!", "label": "plugin/DfuZip", "description": "The DFUZip plugin for reading firmwares" },
     { "ref": "plugin/SerialPortAdapter!", "label": "plugin/SerialPortAdapter", "description": "The Adapter plugin for connecting to device via Serial Port, used in Node.js environment" },
