@@ -79,7 +79,7 @@ const WebserialAdapter = require('chameleon-ultra.js/plugin/WebserialAdapter')
 
 ### CDN
 
-Using jsDelivr CDN:
+Powered by jsDelivr CDN:
 
 ```html
 <!-- script -->
