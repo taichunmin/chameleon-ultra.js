@@ -29,6 +29,7 @@ import {
   type Hf14aRatsMode,
   HidProxFormat,
   HidProxFormatLimit,
+  Mf1AtqaSakDefaultMap,
   type Mf1EmuWriteMode,
   Mf1KeyType,
   type Mf1PrngType,
@@ -4442,6 +4443,7 @@ export class ChameleonUltra {
 
   /**
    * Generate block 0 (manufacturer block) for magic mifare classic tag.
+   * @param opts.tagType - The tag type of the mifare classic tag. Default to `MIFARE_1024`.
    * @param opts.atqa - The ATQA of the tag.
    * @param opts.buf - If provided, the data will be written to this buffer.
    * @param opts.sak - The SAK of the tag.
@@ -4479,37 +4481,27 @@ export class ChameleonUltra {
     buf?: Buffer
     sak?: Buffer
     uid: Buffer
+    tagType?: TagType
   }): Buffer {
+    opts.tagType ??= TagType.MIFARE_1024
+    if (!isTagType(opts.tagType)) throw new TypeError('Invalid tagType')
     const buf = opts.buf ?? new Buffer(16)
     if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('Invalid buf')
     bufIsLenOrFail(opts.uid, [4, 7, 10], 'uid')
     if (!_.isNil(opts.sak)) bufIsLenOrFail(opts.sak, 1, 'sak')
     if (!_.isNil(opts.atqa)) bufIsLenOrFail(opts.atqa, 2, 'atqa')
 
-    switch (opts.uid.length) {
-      case 4:
-        // example: ABCDEF00890804006263646566676869
-        opts.sak ??= Buffer.of(0x08)
-        opts.atqa ??= Buffer.of(0x04, 0x00)
-        buf.set(opts.uid, 0)
-        buf[4] = buf.subarray(0, 4).xor()
-        buf[5] = opts.sak[0]
-        buf.set(opts.atqa, 6)
-        break
-      case 7:
-        // example: 04FE5572AA4880884400C82000000000
-        opts.sak ??= Buffer.of(0x88)
-        opts.atqa ??= Buffer.of(0x44, 0x00)
-        buf.set(opts.uid, 0)
-        buf[7] = opts.sak[0]
-        buf.set(opts.atqa, 8)
-        buf.set(Buffer.from('C82000000000', 'hex'), 10)
-        break
-      case 10:
-        throw new Error('10 bytes UID is not supported.')
-        // break
-    }
+    const atqaSak: [number[], number[]] | undefined = _.get(Mf1AtqaSakDefaultMap, [opts.uid.length, opts.tagType])
+    if (_.isNil(atqaSak)) throw new Error('Unable to generate magic block 0 for the given opts')
 
+    opts.atqa ??= Buffer.from(atqaSak[0])
+    opts.sak ??= Buffer.from(atqaSak[1])
+    if (opts.uid.length === 4) {
+      buf.pack('!4sBB2s', opts.uid, opts.uid.xor(), opts.sak[0], opts.atqa)
+    } else if (opts.uid.length === 7) {
+      opts.sak[0] |= 0x80
+      buf.pack('!7sB2s6s', opts.uid, opts.sak[0], opts.atqa, Buffer.from('C82000000000', 'hex'))
+    }
     return buf
   }
 
@@ -4552,17 +4544,6 @@ export class ChameleonUltra {
       case TagType.MIFARE_1024:
         opts.buf ??= new Buffer(1024)
         bufIsLenOrFail(opts.buf, 1024, 'buf')
-        if (opts.uid.length === 4) {
-          // M1-4B: atqa = 0x0400, sak = 0x08
-          opts.atqa ??= Buffer.of(0x04, 0x00)
-          opts.sak ??= Buffer.of(0x08)
-        } else if (opts.uid.length === 7) {
-          // M1-7B: atqa = 0x4400, sak = 0x88
-          opts.atqa ??= Buffer.of(0x44, 0x00)
-          opts.sak ??= Buffer.of(0x88)
-        } else if (opts.uid.length === 10) {
-          throw new Error('10 bytes UID is not supported.')
-        }
         ChameleonUltra.mf1GenMagicBlock0(opts as any)
         for (let i = 0; i < 16; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
         return opts.buf
@@ -4570,17 +4551,6 @@ export class ChameleonUltra {
       case TagType.MIFARE_2048:
         opts.buf ??= new Buffer(2048)
         bufIsLenOrFail(opts.buf, 2048, 'buf')
-        if (opts.uid.length === 4) {
-          // M1-4B: atqa = 0x0400, sak = 0x08
-          opts.atqa ??= Buffer.of(0x04, 0x00)
-          opts.sak ??= Buffer.of(0x08)
-        } else if (opts.uid.length === 7) {
-          // M1-7B: atqa = 0x4400, sak = 0x88
-          opts.atqa ??= Buffer.of(0x44, 0x00)
-          opts.sak ??= Buffer.of(0x88)
-        } else if (opts.uid.length === 10) {
-          throw new Error('10 bytes UID is not supported.')
-        }
         ChameleonUltra.mf1GenMagicBlock0(opts as any)
         for (let i = 0; i < 32; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
         return opts.buf
@@ -4588,9 +4558,6 @@ export class ChameleonUltra {
       case TagType.MIFARE_4096:
         opts.buf ??= new Buffer(4096)
         bufIsLenOrFail(opts.buf, 4096, 'buf')
-        // TODO: need to confirm atqa and sak of M1-4K-7B
-        opts.atqa ??= Buffer.of(0x02, 0x00)
-        opts.sak ??= Buffer.of(0x18)
         ChameleonUltra.mf1GenMagicBlock0(opts as any)
         for (let i = 0; i < 32; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
         for (let i = 32; i < 40; i++) opts.buf.set(blkAcl, i * 256 - 5904) // block 16n+15
