@@ -231,16 +231,16 @@ block script
           if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
           return await Swal.fire(args)
         },
-        async btnCopy (text, container = null) {
-          if (!container) container = document.body
-          const dom = document.createElement('textarea')
-          dom.value = text = `${text}`
-          container.appendChild(dom)
-          dom.select()
-          dom.setSelectionRange(0, 1e6) // For mobile devices
-          document.execCommand('copy')
-          container.removeChild(dom)
-          await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
+        async btnCopy (text) {
+          try {
+            text = `${text}`
+            const writeText = navigator.clipboard?.writeText
+            if (!writeText) throw new Error('Clipboard API is not supported.')
+            await writeText(text)
+            await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
+          } catch (err) {
+            await this.swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
+          }
         },
         async btnDataAclPicker (block) {
           const $ref = window.jQuery(this.$refs.dataAclPicker)
