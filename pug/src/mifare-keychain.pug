@@ -114,7 +114,7 @@ block content
         .input-group.input-group-sm.mb-2
           .input-group-prepend: span.input-group-text.justify-content-center SLOT
           select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
-            option(value="-1") use actived slot
+            option(value="-1") use active slot
             option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
         .row.mx-n1.mb-2
           .col.px-1: button.btn.btn-block.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnReadSlot")
@@ -149,8 +149,8 @@ block content
           .modal-body.p-0
             ul.list-group.list-group-flush
               button.list-group-item.list-group-item-action.d-flex.flex-column(
-                :class="[tagPicker?.cur === tag?.id ? 'list-group-item-secondary' : '']",
-                :key="tag?.id",
+                :class="[tagPicker?.cur === tag.id ? 'list-group-item-secondary' : '']",
+                :key="tag.id",
                 @click="tagPicker?.cb?.(tag)",
                 type="button",
                 v-for="tag of filteredTags",
@@ -182,7 +182,7 @@ block content
 
 block script
   script.
-    const { Dexie, FlexSearch } = window
+    const { FlexSearch } = window
     const { Buffer, ChameleonUltra, Debug, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
@@ -199,6 +199,7 @@ block script
       [TagType.MIFARE_2048]: 'MIFARE_2048',
       [TagType.MIFARE_4096]: 'MIFARE_4096',
     }
+    const mTagType = new Map(_.flatMap(tagTypeOptions, (v, k) => [[v, _.toInteger(k)], [_.toInteger(k), v]]))
     const getNxpMifareClassType = sak => {
       // https://www.nxp.com/docs/en/application-note/AN10833.pdf
       sak &= 0b11001 // bit 1, 4, 5
@@ -230,27 +231,23 @@ block script
       data: {
         ls: {
           adapter: 'ble',
+          tags: [],
         },
         ss: {
           atqa: '0004',
           ats: '',
+          mfkeys: WELL_KNOWN_KEYS.join('\n'),
           name: '',
           sak: '08',
           slot: -1,
           tagType: TagType.MIFARE_1024,
           uid: 'DEADBEEF',
         },
-        idbKeyVal: {
-          mfkeys: WELL_KNOWN_KEYS.join('\n'),
-        },
         exportimport: { text: '', cb: null },
-        idb: null,
-        savedTagName: null,
         tagPicker: { cb: null, cur: null, flexsearch: null, keyword: '', mTags: null, tags: [] },
         tagTypeOptions,
       },
       async mounted () {
-        const { ultra } = this
         // 自動儲存功能
         for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
           try {
@@ -261,40 +258,23 @@ block script
             storage.setItem(location.pathname, JSON5.stringify(this[key]))
           }, { deep: true })
         }
-        // indexedDB
-        const persist = await this.idbPersist()
-        ultra.emitter.emit('debug', 'web', `persist = ${persist}`)
-        const idb = this.idb = new Dexie(location.pathname)
-        idb.version(1).stores({
-          tags: '++id, name, &[atqa+ats+sak+tagType+uid]',
-          keyval: 'key',
-        })
-        try {
-          const saved = await this.idbLoadKeyVal('keyval')
-          this.$set(this, 'idbKeyVal', _.merge(this.idbKeyVal, saved))
-        } catch (err) {}
-        this.$watch('idbKeyVal', () => {
-          void this.idbSaveKeyVal('keyval', this.idbKeyVal)
-        }, { deep: true })
-        // savedTagName
-        await this.calcSavedTagName()
-        this.$watch('ssTag', () => { void this.calcSavedTagName() })
       },
       computed: {
-        ultra () {
-          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
-        },
-        ssTag () {
-          return validateTag(this.ss)
-        },
+        mfkeys () { return ChameleonUltra.mf1KeysFromDict(this.ss.mfkeys) },
+        ssTag () { return validateTag(this.ss) },
+        ultra () { return this.ls.adapter === 'usb' ? ultraUsb : ultraBle },
         filteredTags () {
           const { flexsearch, keyword, mTags, tags } = this.tagPicker
           const limit = 100
-          if (_.isNil(flexsearch) || _.isNil(mTags) || keyword?.length === 0) return _.take(tags, limit)
-          return flexsearch.search(keyword, limit).map(id => mTags.get(id))
+          try {
+            if (_.isNil(flexsearch) || _.isNil(mTags) || keyword?.length === 0) return _.take(tags, limit)
+            return flexsearch.search(keyword, limit).map(id => mTags.get(id))
+          } catch (err) {
+            return _.take(tags, limit)
+          }
         },
-        mfkeys () {
-          return ChameleonUltra.mf1KeysFromDict(this.idbKeyVal.mfkeys)
+        savedTagName () {
+          return _.isNil(this.ssTag) ? null : _.find(this.ls.tags, _.omit(this.ssTag, ['name']))?.name
         },
       },
       methods: {
@@ -308,21 +288,11 @@ block script
             html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
           })
         },
-        async calcSavedTagName () {
-          const { idb } = this
-          try {
-            this.savedTagName = null
-            const ssTag = _.omit(this.ssTag, ['name'])
-            this.savedTagName = (await idb.tags.get(ssTag))?.name
-          } catch (err) {}
-        },
         async btnLoadTag () {
-          const { idb, ultra } = this
+          const { ultra } = this
           try {
-            this.showLoading({ text: 'Loading tags...' })
-            // load tags from indexedDB
-            const tags = await idb.tags.orderBy('name').toArray()
-            const cur = _.isNil(this.ssTag) ? null : (await idb.tags.get(_.omit(this.ssTag, ['name'])))?.id
+            const tags = _.map(this.ls.tags, (tag, tagIdx) => ({ ...tag, id: tagIdx }))
+            const cur = _.isNil(this.ssTag) ? null : _.find(tags, _.omit(this.ssTag, ['name']))?.id
             const flexsearch = FlexSearch.Index({ preset: 'default', tokenize: 'full' })
             const mTags = new Map()
             for (const tag of tags) {
@@ -334,7 +304,6 @@ block script
             const $ref = window.jQuery(this.$refs.tagPicker)
             const newVal = validateTag(await new Promise(resolve => {
               this.$set(this, 'tagPicker', { cb: resolve, cur, flexsearch, keyword: '', mTags, tags })
-              Swal.close()
               $ref.one('hide.bs.modal', () => resolve()).modal('show')
             }))
             $ref.modal('hide')
@@ -350,12 +319,11 @@ block script
           const { ultra } = this
           try {
             this.showLoading({ text: 'Saving tag...' })
-            const { idb } = this
             const tag = validateTagOrFail(this.ss)
             if (!_.isString(tag.name) || tag.name.length < 1) tag.name = `UID_${tag.uid}`
-            const oldTag = await idb.tags.get(_.omit(tag, ['name']))
-            await idb.tags.put({ ...tag, id: oldTag?.id })
-            await this.calcSavedTagName()
+            const oldTag = _.find(this.ls.tags, _.omit(tag, ['name']))
+            if (_.isNil(oldTag)) this.ls.tags.push(tag)
+            else _.merge(oldTag, tag)
             await this.swalFire({ icon: 'success', title: 'Save successfully' })
           } catch (err) {
             ultra.emitter.emit('error', err)
@@ -363,16 +331,13 @@ block script
           }
         },
         async btnTagCsv () {
-          const { idb, ultra } = this
+          const { ultra } = this
           try {
-            this.showLoading({ text: 'Loading tags...' })
-            const mTagType = new Map(_.flatMap(tagTypeOptions, (v, k) => [[v, _.toInteger(k)], [_.toInteger(k), v]]))
-            // load tags from indexedDB
-            const oldTags = await idb.tags.orderBy('name').toArray()
-            for (let i = 0; i < oldTags.length; i++) {
-              const tag = oldTags[i] = validateTag(oldTags[i])
-              if (mTagType.has(tag.tagType)) tag.tagType = mTagType.get(tag.tagType)
-            }
+            const oldTags = _.chain(this.ls.tags)
+              .map(validateTag)
+              .compact()
+              .map(tag => ({ ...tag, tagType: mTagType.get(tag.tagType) ?? tag.tagType }))
+              .value()
             const oldCsv = Papa.unparse(oldTags, {
               columns: ['tagType', 'uid', 'atqa', 'sak', 'ats', 'name'],
               header: true,
@@ -381,7 +346,6 @@ block script
             const $ref = window.jQuery(this.$refs.exportimport)
             let newVal = await new Promise(resolve => {
               this.$set(this, 'exportimport', { cb: resolve, text: oldCsv })
-              Swal.close()
               $ref.one('hide.bs.modal', () => resolve()).modal('show')
             })
 
@@ -392,17 +356,14 @@ block script
                 for (let i = 0; i < newTags.length; i++) {
                   let tag = newTags[i]
                   try {
-                    if (mTagType.has(tag.tagType)) tag.tagType = mTagType.get(tag.tagType)
+                    tag.tagType = _.has(tagTypeOptions, tag.tagType) ? tag.tagType : mTagType.get(tag.tagType) ?? tag.tagType
+                    tag.name = _.isString(tag.name) && tag.name.length > 0 ? tag.name : `UID_${tag.uid}`
                     tag = newTags[i] = validateTagOrFail(tag)
-                    if (!_.isString(tag.name) || tag.name.length < 1) tag.name = `UID_${tag.uid}`
                   } catch (err) {
-                    throw _.update(err, 'message', msg => `${msg}, ${JSON5.stringify(tag)}`)
+                    throw _.update(err, 'message', msg => `line ${i + 2}: ${msg}, tag = ${JSON5.stringify(tag)}`)
                   }
                 }
-                await idb.transaction('rw', idb.tags, async () => {
-                  await idb.tags.clear()
-                  await idb.tags.bulkPut(newTags)
-                })
+                this.$set(this.ls, 'tags', newTags)
                 await this.swalFire({ icon: 'success', title: `${newTags.length} records imported` })
                 break
               } catch (err) {
@@ -415,7 +376,7 @@ block script
             }
 
             $ref.modal('hide')
-            this.$set(this.exportimport, 'cb', null)
+            this.$set(this, 'exportimport', { cb: null, text: '' })
           } catch (err) {
             ultra.emitter.emit('error', err)
             await this.swalFire({ icon: 'error', title: 'Failed', text: err.message })
@@ -436,11 +397,12 @@ block script
             const tag = validateTag({
               atqa: toHex(anticoll.atqa.toReversed()),
               ats: toHex(anticoll.ats),
-              name: slotName ?? toHex(anticoll.uid),
+              name: slotName ?? `UID_${toHex(anticoll.uid)}`,
               sak: toHex(anticoll.sak),
               tagType,
               uid: toHex(anticoll.uid),
             })
+            if (_.isNil(tag)) throw new Error('Failed to read tag data from slot.')
             ultra.emitter.emit('debug', 'web', `tag = ${JSON.stringify(tag)}`)
             _.merge(this.ss, tag)
             Swal.close()
@@ -454,6 +416,13 @@ block script
           try {
             let { slot } = this.ss
             const tag = validateTagOrFail(this.ss)
+            const antiColl = {
+              atqa: Buffer.from(tag.atqa, 'hex').reverse(),
+              ats: Buffer.from(tag.ats, 'hex'),
+              sak: Buffer.from(tag.sak, 'hex'),
+              uid: Buffer.from(tag.uid, 'hex'),
+            }
+            if (!_.includes([4, 7], antiColl.uid.length)) throw new Error('Only support 4 or 7 bytes UID for emulation.')
             this.showLoading({ text: 'Emulating slot...' })
             if (slot < 0) slot = await ultra.cmdSlotGetActive()
             ultra.emitter.emit('debug', 'web', JSON5.stringify(tag))
@@ -461,19 +430,13 @@ block script
             const msg1 = `The hf data of slot ${slot + 1} "${oldName}" will be REPLACE! Continue?`
             if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
             this.showLoading({ text: 'Emulating slot...' })
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.assureDeviceMode(DeviceMode.TAG)
             // tag anti-coll
-            const anticoll = {
-              atqa: Buffer.from(tag.atqa, 'hex').reverse(),
-              ats: Buffer.from(tag.ats, 'hex'),
-              sak: Buffer.from(tag.sak, 'hex'),
-              uid: Buffer.from(tag.uid, 'hex').slice(-4),
-            }
             await ultra.slotChangeTagTypeAndActive(slot, tag.tagType) // reset slot
             // set emulated tag
             await ultra.cmdMf1SetAntiCollMode(false)
-            await ultra.cmdHf14aSetAntiCollData(anticoll)
-            await ultra.cmdMf1EmuWriteBlock(0, this.mf1GenMagicBlock0()) // set block0
+            await ultra.cmdHf14aSetAntiCollData(antiColl)
+            await ultra.cmdMf1EmuWriteBlock(0, ChameleonUltra.mf1GenMagicBlock0(antiColl)) // set block0
             await ultra.cmdSlotSetFreqName(slot, FreqType.HF, tag.name)
             await ultra.cmdSlotSaveSettings()
             await this.swalFire({ icon: 'success', title: 'Emulate successfully!' })
@@ -483,20 +446,20 @@ block script
           }
         },
         async btnScanTag () {
-          const { idb, ultra } = this
+          const { ultra } = this
           try {
             this.showLoading({ text: 'Scanning tag...' })
             const anticoll = _.first(await ultra.cmdHf14aScan())
+            const tagType = getNxpMifareClassType(anticoll.sak[0])
+            if (_.isNil(tagType)) await Swal.fire({ icon: 'warrning', title: 'Unknown tag type', text: 'You need to select the correct tag type.' })
             const tag = validateTagOrFail({
               atqa: toHex(anticoll.atqa.toReversed()),
               ats: toHex(anticoll.ats),
-              name: `UID_${toHex(anticoll.uid)}`,
               sak: toHex(anticoll.sak),
-              tagType: getNxpMifareClassType(anticoll.sak[0]) ?? TagType.MIFARE_1024,
+              tagType: tagType ?? TagType.MIFARE_1024,
               uid: toHex(anticoll.uid),
             })
-            const savedTagName = (await idb.tags.get(_.omit(tag, ['name'])))?.name
-            if (!_.isNil(savedTagName)) tag.name = savedTagName
+            tag.name = _.find(this.ls.tags, _.omit(tag, ['name']))?.name ?? `UID_${tag.uid}`
             ultra.emitter.emit('debug', 'web', `tag = ${JSON5.stringify(tag)}`)
             _.merge(this.ss, tag)
             Swal.close()
@@ -544,66 +507,39 @@ block script
           const newVal = await new Promise(resolve => {
             this.$set(this, 'exportimport', {
               cb: resolve,
-              text: this.idbKeyVal.mfkeys,
+              text: this.ss.mfkeys,
             })
             $ref.one('hide.bs.modal', () => resolve()).modal('show')
           })
-          if (!_.isNil(newVal)) this.$set(this.idbKeyVal, 'mfkeys', newVal || WELL_KNOWN_KEYS.join('\n'))
+          if (!_.isNil(newVal)) this.$set(this.ss, 'mfkeys', newVal || WELL_KNOWN_KEYS.join('\n'))
           $ref.modal('hide')
-          this.$set(this.exportimport, 'cb', null)
+          this.$set(this, 'exportimport', { cb: null, text: '' })
         },
-        mf1GenMagicBlock0 () {
+        mf1GenMagicBlock0 (tag) {
           const { ultra } = this
-          const { atqa, sak, uid } = this.ss
-          const tag = {
-            atqa: Buffer.from(atqa, 'hex').reverse(),
-            sak: Buffer.from(sak, 'hex'),
-            uid: Buffer.from(uid, 'hex').slice(-4),
-          }
-          const block0 = ChameleonUltra.mf1GenMagicBlock0(tag)
+          tag ??= this.ssTag
+          if (_.isNil(tag)) throw new Error('Invalid tag data')
+          const block0 = ChameleonUltra.mf1GenMagicBlock0({
+            atqa: Buffer.from(tag.atqa, 'hex').reverse(),
+            sak: Buffer.from(tag.sak, 'hex'),
+            uid: Buffer.from(tag.uid, 'hex'),
+          })
           ultra.emitter.emit('debug', 'web', `block0 = ${toHex(block0)}`)
           return block0
         },
-        async idbLoadKeyVal (collkey) {
+        async btnCopy (text) {
           try {
-            const { idb } = this
-            const saved = {}
-            const records = await idb[collkey].toArray()
-            for (const { key, val } of records) saved[key] = val
-            return saved
+            text = `${text}`
+            const writeText = navigator.clipboard?.writeText
+            if (!writeText) throw new Error('Clipboard API is not supported.')
+            await writeText(text)
+            await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
           } catch (err) {
-            throw _.update(err, 'data.idbLoadKeyVal', old => old ?? { collkey })
+            await this.swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
           }
-        },
-        async idbSaveKeyVal (collkey, newVal) {
-          try {
-            const { idb } = this
-            await idb[collkey].bulkPut(_.map(newVal, (val, key) => ({ key, val })))
-          } catch (err) {
-            throw _.update(err, 'data.idbSaveKeyVal', old => old ?? { collkey, newVal })
-          }
-        },
-        async idbPersist () {
-          // https://dexie.org/docs/StorageManager
-          if (await navigator?.storage?.persisted?.()) return true // already persisted
-          const permState = (await navigator?.permissions?.query?.({ name: 'persistent-storage' }))?.state ?? 'prompt'
-          if (!_.includes(['granted', 'prompt'], permState)) throw new Error(`no persistent-storage permission, state = ${permState}`)
-          if (_.isNil(navigator?.storage?.persist)) throw new Error('indexedDB persist not supported.')
-          return await navigator.storage.persist()
-        },
-        async btnCopy (text, container = null) {
-          if (!container) container = document.body
-          const dom = document.createElement('textarea')
-          dom.value = text = `${text}`
-          container.appendChild(dom)
-          dom.select()
-          dom.setSelectionRange(0, 1e6) // For mobile devices
-          document.execCommand('copy')
-          container.removeChild(dom)
-          await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
         },
         async confirm (text, confirmButtonText, cancelButtonText) {
-          return await new Promise((resolve, reject) => {
+          return await new Promise(resolve => {
             let isConfirmed = false
             const args = {
               cancelButtonColor: '#3085d6',

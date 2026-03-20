@@ -2240,7 +2240,7 @@ export class ChameleonUltra {
   }
 
   /**
-   * Get hf14a settings.
+   * Get hf14a settings for scanning tags.
    * @returns
    * - `bcc`: The BCC mode.
    * - `cl2`: The cascade level 2 mode.
@@ -2272,7 +2272,7 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set hf14a settings.
+   * Set hf14a settings for scanning tags.
    * @param opts - The settings to be set.
    * @param opts.bcc - The BCC mode.
    * @param opts.cl2 - The cascade level 2 mode.
@@ -2313,7 +2313,7 @@ export class ChameleonUltra {
   }
 
   /**
-   * Set hf14a settings.
+   * Set/Get hf14a settings for scanning tags.
    * @param opts - The settings to be set.
    * @param opts.bcc - The BCC mode.
    * @param opts.cl2 - The cascade level 2 mode.
@@ -2324,7 +2324,7 @@ export class ChameleonUltra {
    * - `cl2`: The cascade level 2 mode.
    * - `cl3`: The cascade level 3 mode.
    * - `rats`: The RATS mode.
-   * @group Emulator Related
+   * @group Reader/Writer Related
    * @example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
@@ -4448,6 +4448,7 @@ export class ChameleonUltra {
    * @param opts.uid - The UID of the tag.
    * @group Mifare Classic Related
    * @example
+   * 4 bytes UID example
    * ```js
    * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
    * await (async () => {
@@ -4460,6 +4461,18 @@ export class ChameleonUltra {
    *   console.log(block0.toString('hex')) // deadbeef220804000000000000000000
    * })()
    * ```
+   * @example
+   * 7 bytes UID example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async () => {
+   *   const { Buffer, ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const block0 = ChameleonUltra.mf1GenMagicBlock0({
+   *     uid: Buffer.from('04FE5572AA4880', 'hex'),
+   *   })
+   *   console.log(block0.toString('hex')) // 04FE5572AA4880884400C82000000000
+   * })()
+   * ```
    */
   static mf1GenMagicBlock0 (opts: {
     atqa?: Buffer
@@ -4470,18 +4483,33 @@ export class ChameleonUltra {
     const buf = opts.buf ?? new Buffer(16)
     if (!Buffer.isBuffer(buf) || buf.length < 16) throw new TypeError('Invalid buf')
     bufIsLenOrFail(opts.uid, [4, 7, 10], 'uid')
-    buf.set(opts.uid, 0)
+    if (!_.isNil(opts.sak)) bufIsLenOrFail(opts.sak, 1, 'sak')
+    if (!_.isNil(opts.atqa)) bufIsLenOrFail(opts.atqa, 2, 'atqa')
 
-    if (opts.uid.length !== 4) return buf // 7 bytes or 10 bytes UID
+    switch (opts.uid.length) {
+      case 4:
+        // example: ABCDEF00890804006263646566676869
+        opts.sak ??= Buffer.of(0x08)
+        opts.atqa ??= Buffer.of(0x04, 0x00)
+        buf.set(opts.uid, 0)
+        buf[4] = buf.subarray(0, 4).xor()
+        buf[5] = opts.sak[0]
+        buf.set(opts.atqa, 6)
+        break
+      case 7:
+        // example: 04FE5572AA4880884400C82000000000
+        opts.sak ??= Buffer.of(0x88)
+        opts.atqa ??= Buffer.of(0x44, 0x00)
+        buf.set(opts.uid, 0)
+        buf[7] = opts.sak[0]
+        buf.set(opts.atqa, 8)
+        buf.set(Buffer.from('C82000000000', 'hex'), 10)
+        break
+      case 10:
+        throw new Error('10 bytes UID is not supported.')
+        // break
+    }
 
-    // 4 bytes UID
-    opts.sak ??= Buffer.of(0x08)
-    bufIsLenOrFail(opts.sak, 1, 'sak')
-    opts.atqa ??= Buffer.of(0x04, 0x00)
-    bufIsLenOrFail(opts.atqa, 2, 'atqa')
-    buf[4] = opts.uid.xor()
-    buf[5] = opts.sak[0]
-    buf.set(opts.atqa, 6)
     return buf
   }
 
@@ -4522,28 +4550,47 @@ export class ChameleonUltra {
 
     switch (opts.tagType) {
       case TagType.MIFARE_1024:
-        opts.atqa ??= Buffer.of(0x04, 0x00)
         opts.buf ??= new Buffer(1024)
-        opts.sak ??= Buffer.of(0x08)
         bufIsLenOrFail(opts.buf, 1024, 'buf')
+        if (opts.uid.length === 4) {
+          // M1-4B: atqa = 0x0400, sak = 0x08
+          opts.atqa ??= Buffer.of(0x04, 0x00)
+          opts.sak ??= Buffer.of(0x08)
+        } else if (opts.uid.length === 7) {
+          // M1-7B: atqa = 0x4400, sak = 0x88
+          opts.atqa ??= Buffer.of(0x44, 0x00)
+          opts.sak ??= Buffer.of(0x88)
+        } else if (opts.uid.length === 10) {
+          throw new Error('10 bytes UID is not supported.')
+        }
         ChameleonUltra.mf1GenMagicBlock0(opts as any)
         for (let i = 0; i < 16; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
         return opts.buf
 
       case TagType.MIFARE_2048:
-        opts.atqa ??= Buffer.of(0x04, 0x00)
         opts.buf ??= new Buffer(2048)
-        opts.sak ??= Buffer.of(0x08)
         bufIsLenOrFail(opts.buf, 2048, 'buf')
+        if (opts.uid.length === 4) {
+          // M1-4B: atqa = 0x0400, sak = 0x08
+          opts.atqa ??= Buffer.of(0x04, 0x00)
+          opts.sak ??= Buffer.of(0x08)
+        } else if (opts.uid.length === 7) {
+          // M1-7B: atqa = 0x4400, sak = 0x88
+          opts.atqa ??= Buffer.of(0x44, 0x00)
+          opts.sak ??= Buffer.of(0x88)
+        } else if (opts.uid.length === 10) {
+          throw new Error('10 bytes UID is not supported.')
+        }
         ChameleonUltra.mf1GenMagicBlock0(opts as any)
         for (let i = 0; i < 32; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
         return opts.buf
 
       case TagType.MIFARE_4096:
-        opts.atqa ??= Buffer.of(0x02, 0x00)
         opts.buf ??= new Buffer(4096)
-        opts.sak ??= Buffer.of(0x18)
         bufIsLenOrFail(opts.buf, 4096, 'buf')
+        // TODO: need to confirm atqa and sak of M1-4K-7B
+        opts.atqa ??= Buffer.of(0x02, 0x00)
+        opts.sak ??= Buffer.of(0x18)
         ChameleonUltra.mf1GenMagicBlock0(opts as any)
         for (let i = 0; i < 32; i++) opts.buf.set(blkAcl, i * 64 + 48) // block 4n+3
         for (let i = 32; i < 40; i++) opts.buf.set(blkAcl, i * 256 - 5904) // block 16n+15
