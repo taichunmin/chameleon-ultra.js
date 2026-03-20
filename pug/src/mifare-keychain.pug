@@ -530,9 +530,9 @@ block script
         async btnCopy (text) {
           try {
             text = `${text}`
-            const writeText = navigator.clipboard?.writeText
-            if (!writeText) throw new Error('Clipboard API is not supported.')
-            await writeText(text)
+            const clipboard = navigator.clipboard
+            if (!clipboard) throw new Error('Clipboard API is not supported.')
+            await clipboard.writeText(text)
             await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
           } catch (err) {
             await this.swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
