@@ -722,6 +722,21 @@ export const HidProxFormatName = new Map<HidProxFormat, string>([
   [HidProxFormat.MDI37, 'PointGuard MDI 37-bit'],
 ])
 
+export const Mf1AtqaSakDefaultMap = {
+  4: {
+    [TagType.MIFARE_Mini]: [[0x04, 0x00], [0x09]],
+    [TagType.MIFARE_1024]: [[0x04, 0x00], [0x08]], // example: ABCDEF00 89 08 0400 6263646566676869
+    [TagType.MIFARE_2048]: [[0x04, 0x00], [0x08]],
+    [TagType.MIFARE_4096]: [[0x02, 0x00], [0x18]],
+  },
+  7: {
+    [TagType.MIFARE_Mini]: [[0x44, 0x00], [0x09]],
+    [TagType.MIFARE_1024]: [[0x44, 0x00], [0x08]], // example: 04FE5572AA4880 88 4400 C82000000000
+    [TagType.MIFARE_2048]: [[0x44, 0x00], [0x08]],
+    [TagType.MIFARE_4096]: [[0x42, 0x00], [0x18]],
+  },
+} as const
+
 export const MfuVerToNxpMfuType = new Map([
   ['0004030101000B', NxpMfuType.UL_EV1_48],
   ['0004030101000E', NxpMfuType.UL_EV1_128],

@@ -1336,3 +1336,46 @@ test('calcUltraMaxItemSize()', async () => {
   expect(calcUltraMaxItemSize(6, 1024)).toBe(0)
   expect(calcUltraMaxItemSize(undefined, 10)).toBe(502)
 })
+
+test.each([
+  {
+    input: {
+      tagType: TagType.MIFARE_1024,
+      atqa: Buffer.of(0x04, 0x00),
+      sak: Buffer.of(0x08),
+      uid: Buffer.from('ABCDEF00', 'hex'),
+      buf: Buffer.from('00000000000000006263646566676869', 'hex'),
+    },
+    expected: Buffer.from('ABCDEF00890804006263646566676869', 'hex'),
+  },
+  {
+    input: {
+      uid: Buffer.from('ABCDEF00', 'hex'),
+    },
+    expected: Buffer.from('ABCDEF00890804000000000000000000', 'hex'),
+  },
+  {
+    input: {
+      tagType: TagType.MIFARE_1024,
+      uid: Buffer.from('04010203040506', 'hex'),
+    },
+    expected: Buffer.from('04010203040506884400c82000000000', 'hex'),
+  },
+  {
+    input: {
+      tagType: TagType.MIFARE_4096,
+      uid: Buffer.from('DEADBEEF', 'hex'),
+    },
+    expected: Buffer.from('deadbeef221802000000000000000000', 'hex'),
+  },
+  {
+    input: {
+      tagType: TagType.MIFARE_4096,
+      uid: Buffer.from('04010203040506', 'hex'),
+    },
+    expected: Buffer.from('04010203040506984200c82000000000', 'hex'),
+  },
+])('.mf1GenMagicBlock0({ uid: $input.uid })', ({ input, expected }) => {
+  const actual = ChameleonUltra.mf1GenMagicBlock0(input)
+  expect(actual.toString('hex')).toEqual(expected.toString('hex'))
+})
