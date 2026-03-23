@@ -1,12 +1,13 @@
 import { type Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
-import { TransformStream, WritableStream, type Transformer, type TransformStreamDefaultController } from 'stream/web'
+import { TransformStream, WritableStream } from 'stream/web'
 import { serial } from 'web-serial-polyfill'
 import { type ChameleonUltra } from '../ChameleonUltra'
 import { DfuOp } from '../enums'
 import { sleep } from '../helper'
 import { setObject } from '../iifeExportHelper'
-import { type AdapterInstallResp, type UltraPlugin, type PluginInstallContext, type SerialPort } from '../types'
+import { type AdapterInstallResp, type PluginInstallContext, type SerialPort, type UltraPlugin } from '../types'
+import { SlipDecodeTransformer, slipEncode } from './SlipEncoder'
 
 // https://github.com/RfidResearchGroup/ChameleonUltra/blob/main/resource/tools/enter_dfu.py
 const WEBSERIAL_FILTERS = [
@@ -72,7 +73,7 @@ export default class WebserialAdapter implements UltraPlugin {
         await this.port.open({ baudRate: 115200 })
         while (_.isNil(this.port.readable) || _.isNil(this.port.writable)) await sleep(10) // wait for port.readable
         this.#isOpen = true
-        this.port.addEventListener('disconnect', () => { void ultra.disconnect(new Error('Webserial disconnect')) })
+        this.port.addEventListener('disconnect', () => { void ultra.disconnect(new Error('Webserial disconnect')).catch(() => {}) })
 
         if (this.#isDfu) { // Nrf DFU
           ultra.port = {
@@ -132,77 +133,3 @@ export default class WebserialAdapter implements UltraPlugin {
 }
 
 setObject(globalThis, ['ChameleonUltraJS', 'WebserialAdapter'], WebserialAdapter)
-
-enum SlipByte {
-  END = 0xC0,
-  ESC = 0xDB,
-  ESC_END = 0xDC,
-  ESC_ESC = 0xDD,
-}
-
-class SlipDecodeTransformer implements Transformer<Buffer, Buffer> {
-  readonly #bufs: Buffer[] = []
-  readonly #Buffer: typeof Buffer
-
-  constructor (_Buffer: typeof Buffer) {
-    this.#Buffer = _Buffer
-  }
-
-  transform (chunk: Buffer, controller: TransformStreamDefaultController<Buffer>): void {
-    if (!this.#Buffer.isBuffer(chunk)) chunk = this.#Buffer.fromView(chunk)
-    this.#bufs.push(chunk)
-    let buf = this.#Buffer.concat(this.#bufs.splice(0, this.#bufs.length))
-    try {
-      while (buf.length > 0) {
-        const endIdx = buf.indexOf(SlipByte.END)
-        if (endIdx < 0) break // break, END not found
-        const decoded = slipDecode(buf.subarray(0, endIdx + 1))
-        if (decoded.length > 0) controller.enqueue(decoded)
-        buf = buf.subarray(endIdx + 1)
-      }
-    } finally {
-      if (buf.length > 0) this.#bufs.push(buf)
-    }
-  }
-}
-
-/**
- * @group Internal
- * @internal
- */
-function slipEncode (buf: Buffer, Buffer1: typeof Buffer): Buffer {
-  let len1 = buf.length
-  for (const b of buf) if (b === SlipByte.END || b === SlipByte.ESC) len1++
-  const encoded = Buffer1.alloc(len1 + 1)
-  let i = 0
-  for (const byte of buf) {
-    if (byte === SlipByte.END) {
-      encoded[i++] = SlipByte.ESC
-      encoded[i++] = SlipByte.ESC_END
-    } else if (byte === SlipByte.ESC) {
-      encoded[i++] = SlipByte.ESC
-      encoded[i++] = SlipByte.ESC_ESC
-    } else {
-      encoded[i++] = byte
-    }
-  }
-  encoded[i] = SlipByte.END
-  return encoded
-}
-
-/**
- * @group Internal
- * @internal
- */
-function slipDecode (buf: Buffer): Buffer {
-  let len1 = 0
-  for (let i = 0; i < buf.length; i++) {
-    if (buf[i] === SlipByte.ESC) {
-      if ((++i) >= buf.length) break
-      if (buf[i] === SlipByte.ESC_END) buf[len1++] = SlipByte.END
-      else if (buf[i] === SlipByte.ESC_ESC) buf[len1++] = SlipByte.ESC
-    } else if (buf[i] === SlipByte.END) break
-    else buf[len1++] = buf[i]
-  }
-  return buf.slice(0, len1)
-}

@@ -71,7 +71,7 @@ export default class WebbleAdapter implements UltraPlugin {
           optionalServices: [DFU_SERV_UUID, ULTRA_SERV_UUID],
         }).catch(err => { throw _.set(new Error(err.message), 'cause', err) }) ?? null
         if (_.isNil(this.device)) throw new Error('no device')
-        this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect(new Error('WebBLE gattserverdisconnected')) })
+        this.device.addEventListener('gattserverdisconnected', () => { void ultra.disconnect(new Error('WebBLE gattserverdisconnected')).catch(() => {}) })
         this.#debug(`device selected, name = ${this.device.name ?? 'null'}, id = ${this.device.id}`)
 
         for (let i = 0; i < 100; i++) {

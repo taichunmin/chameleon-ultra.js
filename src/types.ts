@@ -155,6 +155,18 @@ export type SerialPort = SerialPortPolyfill & CustomEventTarget
 export interface SerialPortOption {
   path?: string
   baudRate?: number
+  devicePicker?: (portInfos: SerialPortInfo[]) => Promise<SerialPortInfo | undefined>
+}
+
+/** @inline @expand */
+export interface SerialPortInfo {
+  path: string
+  manufacturer: string | undefined
+  serialNumber: string | undefined
+  pnpId: string | undefined
+  locationId: string | undefined
+  productId: string | undefined
+  vendorId: string | undefined
 }
 
 /** @inline @expand */
