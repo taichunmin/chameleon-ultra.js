@@ -4073,10 +4073,10 @@ export class ChameleonUltra {
     try {
       if (_.isNil(cb)) throw new TypeError('cb is required')
       await this.mf1Halt()
-      const resp1 = await this.cmdHf14aRaw({ data: Buffer.pack('!B', 0x40), dataBitLength: 7, keepRfField: true }) // 0x40 (7)
+      const resp1 = await this.cmdHf14aRaw({ data: Buffer.of(0x40), dataBitLength: 7, keepRfField: true }) // 0x40 (7)
         .catch(err => { throw new Error(`Gen1a auth failed 1: ${err.message}`, { cause: err }) })
       if (resp1[0] !== 0x0A) throw new Error('Gen1a auth failed 1')
-      const resp2 = await this.cmdHf14aRaw({ data: Buffer.pack('!B', 0x43), keepRfField: true }) // 0x43
+      const resp2 = await this.cmdHf14aRaw({ data: Buffer.of(0x43), keepRfField: true }) // 0x43
         .catch(err => { throw new Error(`Gen1a auth failed 2: ${err.message}`, { cause: err }) })
       if (resp2[0] !== 0x0A) throw new Error('Gen1a auth failed 2')
       return await cb()
@@ -4109,7 +4109,7 @@ export class ChameleonUltra {
         buf.set(await this.cmdHf14aRaw({
           appendCrc: true,
           checkResponseCrc: true,
-          data: Buffer.pack('!BB', 0x30, offset + i),
+          data: Buffer.of(0x30, offset + i),
           keepRfField: true,
         }), i * 16)
       }
@@ -4137,11 +4137,100 @@ export class ChameleonUltra {
     await this._mf1Gen1aAuth(async () => {
       const blocks = data.chunk(16)
       for (let i = 0; i < blocks.length; i++) {
-        const resp1 = await this.cmdHf14aRaw({ appendCrc: true, data: Buffer.pack('!BB', 0xA0, offset + i), keepRfField: true })
+        const resp1 = await this.cmdHf14aRaw({ appendCrc: true, data: Buffer.of(0xA0, offset + i), keepRfField: true })
         if (resp1[0] !== 0x0A) throw new Error('Gen1a write failed 1')
         const resp2 = await this.cmdHf14aRaw({ appendCrc: true, data: blocks[i], keepRfField: true })
         if (resp2[0] !== 0x0A) throw new Error('Gen1a write failed 2')
       }
+    })
+  }
+
+  /**
+   * Magic auth helper function for mifare GDM/USCUID tag.
+   * @param cb - The callback function to be executed after auth.
+   * @returns The result of callback function.
+   * @group Mifare Classic Related
+   */
+  async _mf1GdmAuth<T extends (...args: any) => any> (cb: T): Promise<Awaited<ReturnType<T>>> {
+    try {
+      if (_.isNil(cb)) throw new TypeError('cb is required')
+      const errors: Error[] = []
+      let isAuthSuccess = false
+      for (const authCmd of [[0x20, 0x23], [0x40, 0x43]] as const) {
+        try {
+          await this.mf1Halt()
+          const resp1 = await this.cmdHf14aRaw({ data: Buffer.of(authCmd[0]), dataBitLength: 7, keepRfField: true })
+            .catch(err => { throw new Error(`Gdm auth failed 0x${authCmd[0].toString(16)}: ${err.message}`, { cause: err }) })
+          if (resp1[0] !== 0x0A) throw new Error(`Gdm auth failed 0x${authCmd[0].toString(16)}: unexpected response`)
+          const resp2 = await this.cmdHf14aRaw({ data: Buffer.of(authCmd[1]), keepRfField: true })
+            .catch(err => { throw new Error(`Gdm auth failed 0x${authCmd[1].toString(16)}: ${err.message}`, { cause: err }) })
+          if (resp2[0] !== 0x0A) throw new Error(`Gdm auth failed 0x${authCmd[1].toString(16)}: unexpected response`)
+          isAuthSuccess = true
+          break
+        } catch (err) {
+          errors.push(err)
+        }
+      }
+      if (!isAuthSuccess) throw new Error(_.map(errors, 'message').join(', '))
+      return await cb()
+    } finally {
+      if (this.isConnected()) await this.mf1Halt()
+    }
+  }
+
+  /**
+   * Read configuration from Mifare GDM/USCUID tag.
+   * @returns The configuration data.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const cfg = await ultra.mf1GdmReadCfg()
+   *   console.log(cfg.toString('hex'))
+   * })(vm.ultra)
+   * ```
+   */
+  async mf1GdmReadCfg (): Promise<Buffer> {
+    return await this._mf1GdmAuth(async () => {
+      return this.cmdHf14aRaw({
+        appendCrc: true,
+        checkResponseCrc: true,
+        data: Buffer.of(0xE0, 0x00),
+        keepRfField: true,
+      })
+    })
+  }
+
+  /**
+   * Read hidden blocks from Mifare GDM/USCUID tag.
+   * @param offset - The start block of Mifare GDM/USCUID tag.
+   * @param length - The amount of blocks to read.
+   * @returns The blocks data.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const card = await ultra.mf1GdmReadHiddenBlocks(0, 10)
+   *   console.log(_.map(card.chunk(16), chunk => chunk.toString('hex')).join('\n'))
+   * })(vm.ultra)
+   * ```
+   */
+  async mf1GdmReadHiddenBlocks (offset: number, length: number = 1): Promise<Buffer> {
+    if (!_.isSafeInteger(offset)) throw new TypeError('Invalid offset')
+    if (!_.isSafeInteger(length)) throw new TypeError('Invalid length')
+    return await this._mf1GdmAuth(async () => {
+      const buf = new Buffer(length * 16)
+      for (let i = 0; i < length; i++) {
+        buf.set(await this.cmdHf14aRaw({
+          appendCrc: true,
+          checkResponseCrc: true,
+          data: Buffer.of(0x38, offset + i),
+          keepRfField: true,
+        }), i * 16)
+      }
+      return buf
     })
   }
 
