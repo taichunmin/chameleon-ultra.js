@@ -143,12 +143,12 @@ block script
             this.showLoading({ text: 'Download firmware...' })
             const release = this.releases[this.ss.tagName]
             if (_.isNil(release)) throw new Error('Invalid tagName')
-            const images = await Promise.all(_.map(['ultra', 'lite'], async model => {
+            const images = _.compact(await Promise.all(_.map(['ultra', 'lite'], async model => {
               const dfuZipUrl = `${release[model].url}?t=${release.createdAt.getTime()}` // 避免快取，加上時間戳
               ultra.emitter.emit('debug', 'web', `model = ${model}, url = ${dfuZipUrl}`)
               const dfuZip = new DfuZip(new Buffer((await axios.get(dfuZipUrl, { responseType: 'arraybuffer' }))?.data))
               return await dfuZip.getAppImage()
-            }))
+            })))
             this.showLoading({ text: 'Connect device...' })
             if (!ultra.isConnected()) await ultra.connect()
             if (!ultra.isDfu()) {
