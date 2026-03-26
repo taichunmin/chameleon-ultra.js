@@ -12,7 +12,7 @@ export class EventAsyncGenerator<T = unknown, TReturn = unknown, TNext = unknown
   removeCallback?: () => void | Promise<void>
 
   constructor (init?: (me: EventAsyncGenerator<T, TReturn, TNext>) => void | Promise<void>) {
-    const me = this // eslint-disable-line @typescript-eslint/no-this-alias
+    const me = this
     this.onData = (value: T) => {
       if (this.#pullPromise !== null) this.#pullPromise.resolve?.(value)
       else this.#queue.push(value)
@@ -89,7 +89,7 @@ function createResolvable<T> (): Resolvable<T> {
   const resolvable = new Promise<T>((...args) => {
     ;[resolve, reject] = args
   }) as Resolvable<T>
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+
   Object.assign(resolvable, { resolve, reject })
   return resolvable
 }

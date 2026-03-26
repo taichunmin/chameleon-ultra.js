@@ -1,0 +1,144 @@
+doctype html
+-
+  let description = site.description
+  let ogImage = 'https://i.imgur.com/bWJGSGq.png'
+  let ogImageHeight = 630
+  let ogImageWidth = 1200
+  let title = site.name
+  let importmap = {
+    '@app/': baseurl,
+    '@popperjs/core': 'https://cdn.jsdelivr.net/npm/@popperjs/core@2/dist/esm/popper.min.js',
+    '@taichunmin/buffer': 'https://cdn.jsdelivr.net/npm/@taichunmin/buffer@0/+esm',
+    '@taichunmin/crc/crc16a': 'https://cdn.jsdelivr.net/npm/@taichunmin/crc@0/crc16a/+esm',
+    '@taichunmin/crc/crc32': 'https://cdn.jsdelivr.net/npm/@taichunmin/crc@0/crc32/+esm',
+    'bootstrap': 'https://cdn.jsdelivr.net/npm/bootstrap@5.3/dist/js/bootstrap.esm.min.js',
+    'chameleon-ultra.js': `${baseurl}index.mjs`,
+    'chameleon-ultra.js/Crypto1': `${baseurl}Crypto1.mjs`,
+    'chameleon-ultra.js/plugin/Debug': `${baseurl}plugin/Debug.mjs`,
+    'chameleon-ultra.js/plugin/DfuZip': `${baseurl}plugin/DfuZip.mjs`,
+    'chameleon-ultra.js/plugin/WebbleAdapter': `${baseurl}plugin/WebbleAdapter.mjs`,
+    'chameleon-ultra.js/plugin/WebserialAdapter': `${baseurl}plugin/WebserialAdapter.mjs`,
+    'dayjs': 'https://cdn.jsdelivr.net/npm/dayjs@1/+esm',
+    'dayjs/plugin/customParseFormat': 'https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat/+esm',
+    'dayjs/plugin/utc': 'https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc/+esm',
+    'js-yaml': 'https://cdn.jsdelivr.net/npm/js-yaml@4/+esm',
+    'json5': 'https://cdn.jsdelivr.net/npm/json5@2/dist/index.mjs/+esm',
+    'jszip': 'https://cdn.jsdelivr.net/npm/jszip/+esm',
+    'lodash-es': 'https://cdn.jsdelivr.net/npm/lodash-es/+esm',
+    'lodash': 'https://cdn.jsdelivr.net/npm/lodash/+esm',
+    'papaparse': 'https://cdn.jsdelivr.net/npm/papaparse@5/papaparse.js/+esm',
+    'prismjs': 'https://cdn.jsdelivr.net/npm/prismjs@1/+esm',
+    'sweetalert2': 'https://cdn.jsdelivr.net/npm/sweetalert2@11/+esm',
+    'vue': 'https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.js',
+    'zod': 'https://cdn.jsdelivr.net/npm/zod@4/+esm',
+  }
+block beforehtml
+html(lang="zh-Hant")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1")
+    title= title
+    script(async src=`https://www.googletagmanager.com/gtag/js?id=${site.gtagId}`)
+    script.
+      window.dataLayer = window.dataLayer || []
+      function gtag () { dataLayer.push(arguments) } // eslint-disable-line
+      gtag('js', new Date())
+      gtag('config', '#{site.gtagId}')
+    meta(property="og:site_name" content=site.name)
+    meta(property="og:title" content=title)
+    meta(property="og:url" content=ogUrl || "https://taichunmin.idv.tw")
+    meta(property="og:type" content="website")
+    meta(property="og:description" content=description)
+    meta(property="og:image" content=ogImage)
+    meta(property="og:image:width" content=ogImageWidth)
+    meta(property="og:image:height" content=ogImageHeight)
+    meta(property="og:locale" content="zh_TW")
+    meta(property="fb:app_id" content="2133031763635285")
+    meta(name="facebook-domain-verification" content="mgmr4w16bn47djmdyrk9tlkdrdu0mq")
+    link(rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3/dist/css/bootstrap.min.css")
+    link(rel="canonical" href=ogUrl || "https://taichunmin.idv.tw")
+    link(rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin)
+    link(rel="preconnect" href="https://fonts.googleapis.com")
+    link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin)
+    link(rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Noto+Sans+TC:wght@100..900&family=Noto+Serif+TC:wght@200..900&display=swap")
+    link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-tomorrow.min.css")
+    style
+      :sass
+        :root, [data-bs-theme=light]
+          --bs-font-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Noto Sans TC", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"
+          --bs-font-monospace: "Fira Code", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace
+        .noto-sans-tc
+          font-family: "Noto Sans TC", sans-serif
+          font-optical-sizing: auto
+          font-style: normal
+        .noto-serif-tc
+          font-family: "Noto Serif TC", serif
+          font-optical-sizing: auto
+          font-style: normal
+        .fira-code
+          font-family: "Fira Code", monospace
+          font-optical-sizing: auto
+          font-style: normal
+        $fs-px-items: 1px, 10px, 11px, 12px, 13px, 14px, 15px, 16px, 18px, 20px, 30px, 32px, 40px
+        @each $item in $fs-px-items
+          .fs-#{$item}
+            font-size: $item
+        $fs-em-items: ("1em": 1em, "1dot2em": 1.2em, "1dot5em": 1.5em)
+        @each $k, $v in $fs-em-items
+          .fs-#{$k}
+            font-size: $v
+        $ls-items: ("n2px": -2px, "n1px": -1px, "1px": 1px)
+        @each $k, $v in $ls-items
+          .ls-#{$k}
+            letter-spacing: $v
+        $m-n-items: ("n1": -.25rem, "n2": -.5rem, "n3": -1rem, "n4": -1.5rem, "n5": -3rem)
+        @each $k, $v in $m-n-items
+          .m-#{$k}
+            margin: $v !important
+          .mx-#{$k}
+            margin-left: $v !important
+            margin-right: $v !important
+          .my-#{$k}
+            margin-top: $v !important
+            margin-bottom: $v !important
+          .mt-#{$k}
+            margin-top: $v !important
+          .me-#{$k}
+            margin-right: $v !important
+          .mb-#{$k}
+            margin-bottom: $v !important
+          .ms-#{$k}
+            margin-left: $v !important
+        // https://iconify.design/docs/usage/css/no-code/
+        .svgmask
+          -webkit-print-color-adjust: exact
+          print-color-adjust: exact
+          display: inline-block
+          height: 1em
+          width: 1em
+          &:not(img)
+            background-color: currentColor
+            -webkit-mask: no-repeat center / 100%
+            mask: no-repeat center / 100%
+            -webkit-mask-image: var(--svgmask-url)
+            mask-image: var(--svgmask-url)
+        .mw-print-100
+          @media print
+            max-width: 100% !important
+    style.
+      .svgmask-chameleon-ultra { --svgmask-url: url(#{baseurl}img/chameleon-ultra.svg) }
+      .svgmask-nfc { --svgmask-url: url(#{baseurl}img/nfc.svg) }
+    block style
+  body
+    include ./livereload
+    block content
+    script(crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3/dist/js/bootstrap.bundle.min.js")
+    script(crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js")
+    script(crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-core.min.js")
+    script(crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/prismjs@1/plugins/autoloader/prism-autoloader.min.js")
+    script(crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/sweetalert2@11")
+    script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/axios@1/dist/axios.min.js")
+    script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/flexsearch@0.7/dist/flexsearch.bundle.min.js")
+    script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/qs@6/dist/qs.min.js")
+    script(type="importmap") !{JSON.stringify({ imports: importmap }, null, 2)}
+    block script

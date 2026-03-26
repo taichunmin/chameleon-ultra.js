@@ -4,10 +4,12 @@
   "exclude": ["dist/**/*", "node_modules/**/*", "**/*.d.ts"],
   "compilerOptions": {
     "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "6.0",
     "lib": ["es2023"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "outDir": "./dist",
-    "useUnknownInCatchVariables": false
+    "types": ["debug", "finalhandler", "html-minifier", "json5", "livereload", "lodash-es", "node", "pug", "serve-static", "uglify-js", "web-bluetooth"],
+    "useUnknownInCatchVariables": false,
   }
 }

@@ -10,7 +10,7 @@ import path from 'path'
 import serveStatic from 'serve-static'
 import watch from 'node-watch'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 async function readMkcert (): Promise<{ cert: Buffer, key: Buffer }> {
   try {

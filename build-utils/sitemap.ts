@@ -7,7 +7,7 @@ import dayjs from 'dayjs'
 import fg from 'fast-glob'
 import path from 'path'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function toUrl (url: string): string {
   url = url.replace(/[/]index[.]html$/, '/')

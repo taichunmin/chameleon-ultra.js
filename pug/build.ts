@@ -11,6 +11,7 @@ import path from 'path'
 import process from 'process'
 import pug from 'pug'
 import UglifyJS from 'uglify-js'
+import pkg from '../package.json'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const srcDir = path.resolve(__dirname, './src/')
@@ -23,6 +24,11 @@ export async function build (): Promise<void> {
     basedir: path.resolve(__dirname),
     baseurl: getSiteurl(),
     NODE_ENV: getenv('NODE_ENV', 'production'),
+    site: {
+      name: pkg.name,
+      description: pkg.description,
+      version: pkg.version,
+    },
   }
 
   const htmlMinifierOptions = {

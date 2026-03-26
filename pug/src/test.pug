@@ -14,17 +14,19 @@ block style
 block content
   #app.my-3.container(v-cloak)
     h4.text-center #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group.mt-3
-      label Choose connection method:
-      select.form-control.form-control-sm(v-model="ls.adapter")
-        option(value="ble") via BLE (PC &amp; Android, bond is required)
-        option(value="usb") via USB Serial (PC only)
+    .form-group.letter-spacing-n1px
+      label Connect method:
+      .input-group.input-group-sm.mb-3
+        select.form-control(v-model="ls.adapter")
+          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
+          option(value="usb") USB Serial (PC only)
+        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
 
 block script
   script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/vconsole@3/dist/vconsole.min.js")
   script.
     window.vConsole = new window.VConsole()
-    const { Buffer, ChameleonUltra, Debug, NrfDfu, NrfDfuWebserialAdapter, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS // eslint-disable-line no-unused-vars, @typescript-eslint/no-unused-vars
+    const { Buffer, ChameleonUltra, Debug, NrfDfu, NrfDfuWebserialAdapter, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS // eslint-disable-line no-unused-vars
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -58,6 +60,16 @@ block script
         },
       },
       methods: {
+        async swalFire (args) {
+          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
+          return await Swal.fire(args)
+        },
+        async btnAdapterTips () {
+          await this.swalFire({
+            title: 'Browser & OS',
+            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
+          })
+        },
         showLoading (title, text) {
           Swal.fire({
             title,

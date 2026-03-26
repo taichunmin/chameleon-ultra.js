@@ -1,0 +1,8 @@
+.mb-3
+  label.form-label(for="ls-adapter") Connect method:
+  .input-group.input-group-sm
+    select.form-select#ls-adapter(v-model="ls.adapter")
+      option(value="ble") BLE (PC &amp; Android &amp; iPhone)
+      option(value="usb") USB Serial (PC only)
+    button.btn.btn-outline-secondary.icon-link(type="button", @click="btnAdapterTips")
+      span.svgmask(style="--svgmask-url: url(https://api.iconify.design/ic:sharp-help-outline.svg)")
