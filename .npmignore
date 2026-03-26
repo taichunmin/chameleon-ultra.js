@@ -135,6 +135,7 @@ out
 .claude
 .env*
 .nojekyll
+.nvmrc
 *.config.js
 *.config.mjs
 *.html

@@ -1,101 +1,106 @@
-extends /include/bootstrapV4
+extends /include/bootstrap5
 
 block beforehtml
   -
-    const title = 'Mifare Value Block'
-    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/jJ3pNvn.png']
+    title = 'Mifare Value Block'
+    description = 'MIFARE Classic value block commands'
+    ogImage = 'https://i.imgur.com/jJ3pNvn.png'
+    ogImageWidth = 1200
+    ogImageHeight = 600
+    ogUrl = `${baseurl}mifare-value.html`
 
 block style
-  meta(property="og:description", content="MIFARE Classic value block commands")
-  meta(property="og:locale", content="zh_TW")
-  meta(property="og:title", content=title)
-  meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}mifare-value.html`)
   style
     :sass
       [v-cloak]
         display: none
-      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
-        font-family: 'Noto Sans TC', sans-serif
-      .input-group-prepend > .input-group-text
+      .input-group-text
         width: 80px
-      .letter-spacing-n1px
-        &, .btn, textarea, select, input
-          letter-spacing: -1px
-      .text-sm
-        font-size: 0.875rem
 
 block content
-  #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group.letter-spacing-n1px
-      label Connect method:
-      .input-group.input-group-sm.mb-3
-        select.form-control(v-model="ls.adapter")
-          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
-          option(value="usb") USB Serial (PC only)
-        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
-    .form-group.letter-spacing-n1px
-      label Value Block: Source
-      .input-group.input-group-sm.mb-2.was-validated
-        .input-group-prepend: span.input-group-text.justify-content-center Block
-        input.form-control(type="number", min="0", max="63", required, v-model.number="ss.src.block")
-        .input-group-append: span.input-group-text Sector {{ blockToSector(ss?.src?.block ?? 0) }}
-      .input-group.input-group-sm.mb-2
-        .input-group-prepend: span.input-group-text.justify-content-center KeyType
-        select.form-control.form-control-sm(v-model.number="ss.src.keyType")
-          option(value="0") Key A
-          option(value="1") Key B
-      .input-group.input-group-sm.mb-2.was-validated
-        .input-group-prepend: span.input-group-text.justify-content-center Key
-        input.form-control(pattern="[\\dA-Fa-f]{12}", maxlength="12", required, v-model="ss.src.key")
-    .form-group.letter-spacing-n1px
-      label Value Block: Target
-      .custom-control.custom-checkbox.mb-2
-        input.custom-control-input#ss-srcAsDst(type="checkbox", v-model="ss.srcAsDst")
-        label.custom-control-label(for="ss-srcAsDst") Use source as target
-      template(v-if="ss.srcAsDst")
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center Block
-          input.form-control(type="number", v-model.number="ss.src.block", disabled)
-          .input-group-append: span.input-group-text Sector {{ blockToSector(ss?.src?.block ?? 0) }}
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center KeyType
-          select.form-control.form-control-sm(v-model.number="ss.src.keyType", disabled)
-            option(value="0") Key A
-            option(value="1") Key B
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center Key
-          input.form-control(type="text", v-model="ss.src.key", disabled)
-      template(v-else)
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      header.text-center.mb-3
+        h4.d-flex.justify-content-center.align-items-center.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          = title
+      include /include/bootstrap5-adapter-content
+      .mb-3
+        label.form-label Value Block: Source
         .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center Block
-          input.form-control(type="number", min="0", max="63", required, v-model.number="ss.dst.block")
-          .input-group-append: span.input-group-text Sector {{ blockToSector(ss?.dst?.block ?? 0) }}
+          span.input-group-text.justify-content-center Block
+          input.form-control(type="number", min="0", max="63", required, v-model.number="ss.src.block")
+          span.input-group-text Sector {{ blockToSector(ss?.src?.block ?? 0) }}
         .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center KeyType
-          select.form-control.form-control-sm(v-model.number="ss.dst.keyType")
+          span.input-group-text.justify-content-center KeyType
+          select.form-select.form-select-sm(v-model.number="ss.src.keyType")
             option(value="0") Key A
             option(value="1") Key B
         .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center Key
-          input.form-control(pattern="[\\dA-Fa-f]{12}", maxlength="12", required, v-model="ss.dst.key")
-    .form-group.letter-spacing-n1px
-      label Value Block: Operation
-      .input-group.input-group-sm.mb-2.was-validated
-        .input-group-prepend: span.input-group-text.justify-content-center Value
-        input.form-control(type="number", required, v-model.number="ss.operand")
-      .row.mx-n1.mb-2
-        .col.px-1: button.btn.btn-sm.btn-block.btn-outline-success(@click="btnGetValue") #[i.fa.fa-fw.fa-sign-out] Get Source
-        .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnSetValue") #[i.fa.fa-fw.fa-sign-in] Set Source
-      button.btn.btn-sm.btn-block.btn-outline-dark.mb-2(@click="btnManipulateValue(Mf1VblockOperator.INCREMENT)") #[i.fa.mr-1.fa-plus-square] Increase Value
-      button.btn.btn-sm.btn-block.btn-outline-dark.mb-2(@click="btnManipulateValue(Mf1VblockOperator.DECREMENT)") #[i.fa.mr-1.fa-minus-square] Decrease Value
-      button.btn.btn-sm.btn-block.btn-outline-dark.mb-2(@click="btnManipulateValue(Mf1VblockOperator.RESTORE)") #[i.fa.mr-1.fa-clone] Clone Value
+          span.input-group-text.justify-content-center Key
+          input.form-control(pattern="[\\dA-Fa-f]{12}", maxlength="12", required, v-model="ss.src.key")
+      .mb-3
+        label.form-label Value Block: Target
+        .form-check.mb-2
+          input.form-check-input#ss-srcAsDst(type="checkbox", v-model="ss.srcAsDst")
+          label.form-check-label(for="ss-srcAsDst") Use source as target
+        template(v-if="ss.srcAsDst")
+          .input-group.input-group-sm.mb-2
+            span.input-group-text.justify-content-center Block
+            input.form-control(type="number", v-model.number="ss.src.block", disabled)
+            span.input-group-text Sector {{ blockToSector(ss?.src?.block ?? 0) }}
+          .input-group.input-group-sm.mb-2
+            span.input-group-text.justify-content-center KeyType
+            select.form-select.form-select-sm(v-model.number="ss.src.keyType", disabled)
+              option(value="0") Key A
+              option(value="1") Key B
+          .input-group.input-group-sm.mb-2
+            span.input-group-text.justify-content-center Key
+            input.form-control(type="text", v-model="ss.src.key", disabled)
+        template(v-else)
+          .input-group.input-group-sm.mb-2.was-validated
+            span.input-group-text.justify-content-center Block
+            input.form-control(type="number", min="0", max="63", required, v-model.number="ss.dst.block")
+            span.input-group-text Sector {{ blockToSector(ss?.dst?.block ?? 0) }}
+          .input-group.input-group-sm.mb-2
+            span.input-group-text.justify-content-center KeyType
+            select.form-select.form-select-sm(v-model.number="ss.dst.keyType")
+              option(value="0") Key A
+              option(value="1") Key B
+          .input-group.input-group-sm.mb-2.was-validated
+            span.input-group-text.justify-content-center Key
+            input.form-control(pattern="[\\dA-Fa-f]{12}", maxlength="12", required, v-model="ss.dst.key")
+      .mb-3
+        label.form-label Value Block: Operation
+        .input-group.input-group-sm.mb-2.was-validated
+          span.input-group-text.justify-content-center Value
+          input.form-control(type="number", required, v-model.number="ss.operand")
+        .row.g-2
+          .col-6: button.btn.w-100.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnGetValue")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+            .mt-1.ls-n1px Get Source
+          .col-6: button.btn.w-100.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnSetValue")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+            .mt-1.ls-n1px Set Source
+          .col-4: button.btn.w-100.btn-outline-dark.d-flex.flex-column.align-items-center(type="button", @click="btnManipulateValue(Mf1VblockOperator.INCREMENT)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:plus-box-outline.svg)")
+            .mt-1.ls-n1px Increase#[br]Value
+          .col-4: button.btn.w-100.btn-outline-dark.d-flex.flex-column.align-items-center(type="button", @click="btnManipulateValue(Mf1VblockOperator.DECREMENT)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:minus-box-outline.svg)")
+            .mt-1.ls-n1px Decrease#[br]Value
+          .col-4: button.btn.w-100.btn-outline-dark.d-flex.flex-column.align-items-center(type="button", @click="btnManipulateValue(Mf1VblockOperator.RESTORE)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:content-duplicate.svg)")
+            .mt-1.ls-n1px Clone#[br]Value
 
 block script
-  script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/joi@17/dist/joi-browser.min.js")
-  script.
-    const { Buffer, ChameleonUltra, Debug, Mf1KeyType, Mf1VblockOperator, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+  script(type="module").
+    import { Buffer, ChameleonUltra, Mf1KeyType, Mf1VblockOperator } from 'chameleon-ultra.js'
+    import Debug from 'chameleon-ultra.js/plugin/Debug'
+    import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+    import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+    import { computed, createApp, reactive, watch } from 'vue'
+    import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalFire } from '@app/js/bootstrap5-utils.mjs'
+
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -103,108 +108,91 @@ block script
     ultraBle.use(new Debug())
     ultraBle.use(new WebbleAdapter())
 
-    window.vm = new Vue({
-      el: '#app',
-      data: {
-        ls: {
-          adapter: 'ble',
-        },
-        ss: {
+    function blockToSector (block = 0) {
+      return block < 128 ? block >>> 2 : 24 + (block >>> 4)
+    }
+
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({ adapter: 'ble' })
+        const ss = reactive({
           src: { block: 4, keyType: 0, key: 'FFFFFFFFFFFF' },
           dst: { block: 4, keyType: 0, key: 'FFFFFFFFFFFF' },
           operand: 0,
           srcAsDst: true,
-        },
-      },
-      async mounted () {
-        // 自動儲存功能
-        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
-          try {
-            const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
-          } catch (err) {}
-          this.$watch(key, () => {
-            storage.setItem(location.pathname, JSON5.stringify(this[key]))
-          }, { deep: true })
-        }
-      },
-      computed: {
-        ultra () {
-          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
-        },
-      },
-      methods: {
-        async swalFire (args) {
-          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
-          return await Swal.fire(args)
-        },
-        async btnAdapterTips () {
-          await this.swalFire({
-            title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
-          })
-        },
-        async cmdVblockGet (src) {
-          const { ultra } = this
-          src = this.mf1ParseBlockKey(src)
-          const res = await ultra.mf1VblockGetValue(src)
-          await this.swalFire({ icon: 'success', title: 'Success', text: `block[${src.block}] = ${JSON.stringify(res)}` })
-        },
-        async btnGetValue () {
-          const { ultra } = this
-          try {
-            this.showLoading({ text: 'Processing...' })
-            await this.cmdVblockGet(this.ss.src)
-          } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Failed to get value from src', text: err.message })
-          }
-        },
-        async btnSetValue () {
-          const { ultra } = this
-          try {
-            this.showLoading({ text: 'Processing...' })
-            const src = this.mf1ParseBlockKey(this.ss.src)
-            await ultra.mf1VblockSetValue(src, { adr: src.block, value: this.ss.operand })
-            await this.cmdVblockGet(this.ss.src)
-          } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Failed to set value to src', text: err.message })
-          }
-        },
-        async btnManipulateValue (operator) {
-          const { ultra } = this
-          try {
-            this.showLoading({ text: 'Processing...' })
-            const src = this.mf1ParseBlockKey(this.ss.src)
-            const dst = this.ss.srcAsDst ? src : this.mf1ParseBlockKey(this.ss.dst)
-            const operand = this.ss.operand
-            await ultra.cmdMf1VblockManipulate(src, operator, operand, dst)
-            await this.cmdVblockGet(this.ss.src)
-          } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: `Failed to ${Mf1VblockOperator[operator]} value`, text: err.message })
-          }
-        },
-        mf1ParseBlockKey ({ block, keyType, key }) {
+        })
+
+        loadPageStorage(localStorage, ls)
+        loadPageStorage(sessionStorage, ss)
+        watch(ls, () => { savePageStorage(localStorage, ls) }, { deep: true })
+        watch(ss, () => { savePageStorage(sessionStorage, ss) }, { deep: true })
+
+        const ultra = computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)
+
+        const logError = err => { ultra.value.emitter.emit('error', err) }
+
+        function mf1ParseBlockKey ({ block, keyType, key }) {
           return {
             block,
             keyType: keyType === 1 ? Mf1KeyType.KEY_B : Mf1KeyType.KEY_A,
             key: Buffer.from(key, 'hex'),
           }
-        },
-        blockToSector (block = 0) {
-          return block < 128 ? block >>> 2 : 24 + (block >>> 4)
-        },
-        showLoading (opts = {}) {
-          opts = {
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            ...opts,
-          }
-          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
-          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
-        },
-      },
-    })
+        }
 
+        async function cmdVblockGet (src) {
+          src = mf1ParseBlockKey(src)
+          const res = await ultra.value.mf1VblockGetValue(src)
+          await swalFire({ icon: 'success', title: 'Success', text: `block[${src.block}] = ${JSON.stringify(res)}` })
+        }
+
+        async function btnGetValue () {
+          try {
+            showLoading({ text: 'Processing...' })
+            await cmdVblockGet(ss.src)
+          } catch (err) {
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Failed to get value from src', text: err.message })
+          }
+        }
+
+        async function btnSetValue () {
+          try {
+            showLoading({ text: 'Processing...' })
+            const src = mf1ParseBlockKey(ss.src)
+            await ultra.value.mf1VblockSetValue(src, { adr: src.block, value: ss.operand })
+            await cmdVblockGet(ss.src)
+          } catch (err) {
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Failed to set value to src', text: err.message })
+          }
+        }
+
+        async function btnManipulateValue (operator) {
+          try {
+            showLoading({ text: 'Processing...' })
+            const src = mf1ParseBlockKey(ss.src)
+            const dst = ss.srcAsDst ? src : mf1ParseBlockKey(ss.dst)
+            const operand = ss.operand
+            await ultra.value.cmdMf1VblockManipulate(src, operator, operand, dst)
+            await cmdVblockGet(ss.src)
+          } catch (err) {
+            logError(err)
+            await swalFire({ icon: 'error', title: `Failed to ${Mf1VblockOperator[operator]} value`, text: err.message })
+          }
+        }
+
+        return {
+          ls,
+          ss,
+          ultra,
+          Mf1VblockOperator,
+          blockToSector,
+          btnAdapterTips,
+          btnGetValue,
+          btnSetValue,
+          btnManipulateValue,
+          showLoading,
+          swalFire,
+        }
+      },
+    }).mount('#app')

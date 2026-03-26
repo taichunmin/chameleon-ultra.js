@@ -5,56 +5,67 @@ paths:
 
 # Browser demo pages
 
-## What this is
+Standalone, no-bundler browser demo pages that exercise the SDK end-to-end against a real ChameleonUltra device (documented in `documents/demos.md`, linked from the main README's Demo button). Each `pug/src/*.pug` compiles to one HTML file under `dist/` (e.g. `pug/src/mfkey32.pug` → `dist/mfkey32.html`), served from GitHub Pages alongside the typedoc output. Vue 3 + Bootstrap 5, loaded via native ESM `<script type="module">` — no bundler, no jQuery, no Font Awesome.
 
-Standalone, no-bundler browser demo pages that exercise the SDK end-to-end against a real ChameleonUltra device (documented in `documents/demos.md`, linked from the main README's Demo button). Each `pug/src/*.pug` compiles to one HTML file at the same relative path under `dist/` (e.g. `pug/src/mfkey32.pug` → `dist/mfkey32.html`), served from GitHub Pages alongside the library's own typedoc output.
-
-These pages are not part of the TypeScript build — they're plain Vue 2 + Bootstrap 4 apps that load the already-built SDK via `<script>` tags, for manual/browser testing of adapters (`WebbleAdapter`/`WebserialAdapter`) and device commands that can't be exercised by `vitest` (real BLE/USB, real tag hardware).
-
-## Commands (run from repo root)
+## Commands
 
 ```bash
-yarn build:pug                # tsx ./pug/build.ts — renders all pug/src/**/*.pug into dist/
-yarn dev:pug                    # nodemon --watch pug --ext pug --exec "yarn build:pug"
-yarn dev:https                  # serves dist/ over HTTPS with livereload (requires yarn mkcert once)
-yarn dev                        # runs dev:docs + dev:https + dev:pug + dev:js together
+yarn build:pug   # tsx ./pug/build.ts — renders all pug/src/**/*.pug into dist/
+yarn dev:pug     # nodemon --watch pug --ext pug --exec "yarn build:pug && yarn build:sitemap"
+yarn dev:https   # serves dist/ over HTTPS with livereload (requires yarn mkcert once)
+yarn dev         # dev:docs + dev:https + dev:pug + dev:js together
 ```
 
-`dev:https` needs local certs first: `yarn mkcert` (writes `./mkcert/{cert,key}.pem`, used by `build-utils/https.ts`).
-
-There's no dedicated lint script for this folder — `pug/.eslintrc.cjs` is picked up automatically by the root `yarn lint`/`yarn lint:ci` (which runs `eslint --ext .mjs,.js,.js,.ts,.pug .`), and it also lints the inline `script.` blocks inside `.pug` files via `eslint-plugin-pug`.
+Linted by the root `yarn lint`/`yarn lint:ci` (`pug/.eslintrc.cjs`, picked up via `eslint --ext .pug`, also lints inline `script.` blocks via `eslint-plugin-pug`). **After editing a page, run `yarn build:pug` then `yarn lint:ci`** — lint catches real bugs here (undefined identifiers, a `let` that should be `const`), not just style; neither catches a broken Vue expression, so also check the rendered `dist/*.html` by hand.
 
 ## Build pipeline (`pug/build.ts`)
 
-- Globs `pug/src/**/*.pug` and renders each with `pug.renderFile`, passing `PUG_OPTIONS = { basedir, baseurl, NODE_ENV }` as template locals.
-  - `baseurl` (from `pug/dotenv.ts#getSiteurl()`, default `https://taichunmin.idv.tw/chameleon-ultra.js/`, overridable via `.env` `BASEURL`) is used everywhere a page needs an absolute/site-relative asset URL — the site is deployed under a GitHub Pages subpath, so **never hardcode `/`-rooted asset paths in a page; always prefix with `baseurl`** (see script tags in `pug/include/bootstrapV4.pug`).
-  - `NODE_ENV` (default `production`) — when not `production`, `html-minifier` is skipped and `pug/include/livereload.pug` injects the livereload client script.
-- In production mode, output HTML is run through `html-minifier` (with inline JS minified via `uglify-js` and inline CSS minified).
-- Output path mirrors the source path 1:1 under `dist/` with `.pug` → `.html`; adding a new page under `pug/src/` is picked up automatically by the glob — no manual registration needed for the build itself. (It still won't appear in `documents/demos.md`, the nav, or the CI jsDelivr purge list in `.github/workflows/ci.yml` unless added there.)
-- A render failure in one file is logged (with `errToJson` from `pug/utils.ts` for readable error dumps) and counted; the build throws only after attempting all files, failing CI if any page has an error.
+Globs `pug/src/**/*.pug`, renders each with `pug.renderFile(file, { basedir, baseurl, NODE_ENV, site })`. `baseurl` (from `pug/dotenv.ts#getSiteurl()`, `.env` `BASEURL`) prefixes every asset URL since the site is under a GitHub Pages subpath — never hardcode `/`-rooted paths. `site` (`{name, description, version}` from `package.json` + `gtagId` from `typedoc.json`'s `gaID`) feeds the layout's default `<title>`/`og:description`/Google Analytics tag. In production, output runs through `html-minifier`; its `minifyJS` only touches classic `<script>` tags, so `script(type="module")` blocks (all page logic) pass through untouched regardless of ES6+ syntax. Output mirrors `pug/src/` 1:1 under `dist/`; a new page needs no registration for the build itself, but won't show up in `documents/demos.md`, nav, or the CI jsDelivr purge list without adding it there.
 
-## Shared layout: `pug/include/bootstrapV4.pug`
+## Shared layout: `pug/include/bootstrap5.pug`
 
-Every page does `extends /include/bootstrapV4` and fills in these blocks:
+Every page `extends /include/bootstrap5` and fills:
 
-- `beforehtml` — set `title` (required) and optionally reassign the top-level `ogImage`/`ogImageWidth`/`ogImageHeight` locals (declared before this block runs) for social-preview meta tags.
-- `style` — page-specific `<meta property="og:*">` tags and a `style: :sass` block. Common page CSS conventions: `[v-cloak] { display: none }` (hide app root until Vue mounts), Noto Sans TC font stack, `.letter-spacing-n1px` utility class, `.text-sm`.
-- `content` — the page body, conventionally a single `#app.container(v-cloak)` Vue root.
-- `script` — page logic (see below). Loaded after all shared vendor/SDK scripts from the base layout.
+- `beforehtml` — reassign `title`/`description`/`ogImage`/`ogImageWidth`/`ogImageHeight`/`ogUrl`; the layout renders all `<meta property="og:*">`/`<link rel="canonical">` from these. `ogUrl` defaults to `baseurl` if left unset, but reassign it per page for a correct canonical URL (e.g. `` ogUrl = `${baseurl}mfkey32.html` ``). Don't hand-write OG meta tags in a page's own `style` block.
+- `style` — page CSS. Always include `[v-cloak] { display: none }` (every page sets this itself). Reuse the layout's utility classes below instead of redeclaring them.
+- `content` — `#app > .container.font-monospace.p-3.pb-5(v-cloak) > header.text-center.mb-3 > h4.icon-link(...)`, then `include /include/bootstrap5-adapter-content`, then one `.card.shadow.mb-2` per feature section. Modals go as siblings of `.container`, still inside `#app` (Vue 3 allows multiple root children).
+- `script` — one `script(type="module").` block (Composition API, see below).
 
-The base layout itself loads, in order: Bootstrap 4/jQuery/Popper, Vue 2, axios, dayjs, lodash, papaparse, json5, qs, SweetAlert2 (`Swal`), prismjs, flexsearch, animate.css, font-awesome — then the SDK's global IIFE builds (`index.global.js`, `Crypto1.global.js`, `plugin/Debug.global.js`, `plugin/DfuZip.global.js`, `plugin/WebbleAdapter.global.js`, `plugin/WebserialAdapter.global.js`, all exposed together on `window.ChameleonUltraJS`), plus an `importmap` for pages that prefer real ESM imports (`@taichunmin/buffer`, `@taichunmin/crc/*`, `jszip`, `lodash`) instead of the globals.
+Loads: Bootstrap 5 CSS/JS, Google Fonts, animate.css, prismjs theme, then classic `<script>`s (dayjs, prismjs, SweetAlert2, axios, flexsearch, qs — UMD globals, e.g. `const { FlexSearch } = window`), then an ESM `importmap` (`chameleon-ultra.js` + each `chameleon-ultra.js/plugin/*`, `vue`, `bootstrap`, `sweetalert2`, `zod`, `lodash`/`lodash-es`, `json5`, `dayjs`, `jszip`, `@taichunmin/buffer`, `@taichunmin/crc/*`, `papaparse`, and `@app/` → `baseurl` for the shared utils below).
 
-## Conventions shared across demo pages
+Shared utility classes: `.fs-<Npx>` (1–40px) and `.fs-1em`/`.fs-1dot2em`/`.fs-1dot5em`, `.ls-n2px`/`.ls-n1px`/`.ls-1px` (letter-spacing), `.m-n1`–`.m-n5` + directional (negative margins), `.svgmask` (icon convention below), `.svgmask-chameleon-ultra`/`.svgmask-nfc` (image icons, `public/img/*.svg`).
 
-- **Dual adapter pattern**: pages that talk to a device create two `ChameleonUltra` instances up front — one with `WebserialAdapter` (USB, PC only) and one with `WebbleAdapter` (BLE, PC/Android/iPhone) — both wrapped with `Debug` for console logging, and expose a `computed.ultra` that picks between them based on a `ls.adapter` (`'usb' | 'ble'`) toggle bound to a `<select>`.
-- **Persisted UI state**: reactive `ls` (localStorage) and `ss` (sessionStorage) data objects are auto-saved/restored per-page via `location.pathname` as the storage key, serialized with `JSON5`, restored on `mounted()` and persisted via a deep `$watch`. Follow this pattern for any new page state instead of inventing a new persistence mechanism.
-- **`showLoading(title, text)`** via `Swal.fire(...)` + `Swal.showLoading()` is the standard way to block the UI during async device operations.
-- **File import** for dump files uses a hidden `input.d-none(type="file", ref="dumpImport", @change=..., @cancel=...)` plus a `dumpImport: { cb: null }` data field used as a one-shot promise resolver — copy this pattern (see `mfkey32.pug`, `mifare-xiaomi.pug`) rather than inventing a new file-picker flow.
-- UI is Bootstrap 4 utility classes + a small set of custom helpers: `.bgicon.bgicon-<name>` for SVG background icons (defined in `pug/include/bootstrapV4.pug`, backed by `public/img/*.svg`), `.letter-spacing-n1px`, `.text-sm`.
-- Pages are standalone: there is no shared JS module between `pug/src/*.pug` files. Common logic (well-known keys, hex/byte helpers, etc.) is currently duplicated per page — check an existing page with a similar feature before writing new helper logic from scratch.
+## Shared partial & utils
+
+`include /include/bootstrap5-adapter-content` renders the BLE/USB `<select>` + "?" tips button, bound to `ls.adapter`/`btnAdapterTips` — every device-talking page must return both from `setup()`. Pages with no device interaction (e.g. `mifare1k-acls.pug`, an offline calculator) omit it.
+
+`public/js/bootstrap5-utils.mjs` (imported via `@app/js/bootstrap5-utils.mjs`, a real shipped static asset — see `.claude/rules/static-assets.md`) exports: `showLoading(opts)` (block UI during async ops), `swalFire(args)` (`Swal.fire` + Discord footer), `swalConfirm(text, yes, cancel)` (Yes/Cancel dialog, use before destructive actions), `btnAdapterTips()`, `loadPageStorage`/`savePageStorage(storage, obj)` (persisted UI state pair), `enumToOptions(enumObj)`, `getJson`/`getCsv(url, cachetime)`, `btnCopy(text, container)` (`execCommand`-based, no feedback — **distinct from** the Clipboard-API+toast `btnCopy` some pages define locally), `parseJson5OrDefault`, `sleep`. Check here before writing near-identical page logic.
+
+## Composition API conventions
+
+`setup()` returns `{ ls, ss, ultra, btnAdapterTips, ...everything the template references }`; two `ChameleonUltra` instances (`ultraUsb`/`ultraBle`, each `.use(new Debug())` + its adapter) at module scope, picked via `computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)`. `ls`/`ss` are `reactive()`, loaded via `loadPageStorage`, saved via a deep `watch` + `savePageStorage`. Exception: a `Buffer`-shaped field (e.g. a MIFARE dump) can't round-trip through `JSON5` — `mfkey32.pug`/`mifare-xiaomi.pug` hand-roll base64url encode/decode for that one field instead.
+
+**Everything the Pug template references must be in `setup()`'s return** — the compiled render function only sees that plus a small allowlist, not the module's own `import`/`const` bindings. A module-level enum/lookup-table used in the template (`v-for="(v, k) in tagTypeOptions"`) needs re-exposing even though the script can use it freely. **Never use `lodash` in a template expression** (`v-for="i of _.range(8)"`) — Vue's render-proxy refuses any property named `_` outright (reserved for internals), so this fails even if returned; use Vue's numeric `v-for="n in 8"` (1-based) instead. Sanity-check a page with `awk '/^block content/{flag=1} /^block script/{flag=0} flag' pug/src/<page>.pug | grep -E '_\.|Buffer\.|ChameleonUltra\.'` — should be empty.
+
+Modals use the `bootstrap` package's `Modal` class (`import { Modal } from 'bootstrap'`) — `useTemplateRef('x')` (pairs with `ref="x"`) → `Modal.getOrCreateInstance(el.value)` → `.show()`/`.hide()`; attach a `'hidden.bs.modal'` listener as a safety net when using it as a promise-based picker (see `mfkey32.pug`'s `editTextModal`). `data-dismiss`/`data-backdrop`/`data-keyboard` → `data-bs-*`; `button.close` (`&times;`) → `button.btn-close` (empty, styled via CSS, needs `aria-label="Close"`).
+
+File import: hidden `input.d-none(type="file", ref="dumpImportInput", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")` + `dumpImport = reactive({ cb: null })` as a one-shot promise resolver, `useTemplateRef('dumpImportInput')` in place of the DOM ref.
+
+## Icon convention
+
+Icons are [Iconify](https://iconify.design/docs/usage/css/no-code/) SVGs via `.svgmask` (`background-color: currentColor` + CSS mask) — `span.svgmask(style="--svgmask-url: url(https://api.iconify.design/<set>:<name>.svg)")`. Always `mdi:` (Material Design Icons), one exception (`icon-park-outline:tips` in `test.pug`).
+
+- Sizing: `.fs-1dot5em` inside a `<button>`, `.fs-1dot2em` beside a header/title (`card-header`, `modal-title`, `alert-heading`). Missing either is likely a bug — check for Pug's `.col: button.foo(...)` colon syntax, which a naive `grep '^\s*button'` misses.
+- Same action → same icon everywhere: Load device/slot config → `mdi:logout`; Save/Emulate (push config to device) → `mdi:login`; Read/Scan a physical tag → `mdi:tag-arrow-down-outline`; Write a physical tag → `mdi:tag-arrow-up-outline`; Import a file → `mdi:file-import-outline`; Export a file → `mdi:file-export-outline`; Reset/clear to defaults → `mdi:restore`; clear one field → `mdi:close`; recover a key (mfkey32) → `mdi:lock-open-variant-outline`.
+- `.ls-n1px` on a button whose label is multi-word or a single word ≥8 chars; short words (Load, Read, Write, Scan, Import, Export, Check, Verify, CSV) skip it. In the stacked icon-over-text layout (`.d-flex.flex-column`), the tighter `.ls-n2px` on the label already covers this — don't double up.
+
+## Other conventions
+
+- No `.btn-block` (→ `.w-100`/`.d-grid`), no `.input-group-prepend`/`-append` (flush inside `.input-group`), no `.custom-control`/`.custom-checkbox` (→ `.form-check*`), `.text-left`/`-right` → `.text-start`/`-end`, `.pl-*`/`.pr-*` → `.ps-*`/`.pe-*`.
+- No shared page-specific JS module beyond `bootstrap5-utils.mjs` — feature logic (well-known keys, hex helpers, dump (de)serialization) is duplicated per page; check a similar existing page first.
 
 ## Adding a new demo page
 
-1. Add `pug/src/<name>.pug`, `extends /include/bootstrapV4`, fill in `beforehtml`/`style`/`content`/`script` blocks following an existing page of similar shape (`test.pug` for minimal, `hf14a-scanner.pug` for a simple device-interaction tool).
-2. Add an entry to `documents/demos.md` if it should be discoverable from the docs site.
-3. Add its `.html` path to the jsDelivr purge list in `.github/workflows/ci.yml` only if it's meant to be CDN-cached long-term (most demo pages currently are not listed there — only the library bundles are).
+1. `pug/src/<name>.pug`, `extends /include/bootstrap5`, follow `test.pug` (minimal), `hf14a-scanner.pug`/`mifare-value.pug` (simple device tool), or `mfkey32.pug`/`mifare1k.pug` (modals + file import/export).
+2. Add an entry to `documents/demos.md` if it should be discoverable.
+3. Verify with `yarn build:pug` + `yarn lint:ci`, then eyeball `dist/<name>.html`: no BS4 classes, no stray module-scope identifiers in the template, unique `<label for>`/`id` pairs, import-map entries resolve.

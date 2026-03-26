@@ -1,61 +1,65 @@
-extends /include/bootstrapV4
+extends /include/bootstrap5
 
 block beforehtml
   -
-    const title = 'Device Firmware Update'
-    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/yYsKXgx.png']
+    title = 'Device Firmware Update'
+    description = 'A tool to update ChameleonUltra firmware.'
+    ogImage = 'https://i.imgur.com/yYsKXgx.png'
+    ogImageWidth = 1200
+    ogImageHeight = 600
+    ogUrl = `${baseurl}dfu.html`
 
 block style
-  meta(property="og:description", content="A tool to update ChameleonUltra firmware.")
-  meta(property="og:locale", content="zh_TW")
-  meta(property="og:title", content=title)
-  meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}dfu.html`)
   style
     :sass
       [v-cloak]
         display: none
-      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
-        font-family: 'Noto Sans TC', sans-serif
-      .input-group-prepend > .input-group-text
-        width: 80px
-      .letter-spacing-n1px
-        &, .btn, textarea, select, input
-          letter-spacing: -1px
-      .text-sm
-        font-size: 0.875rem
 
 block content
-  #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group.letter-spacing-n1px
-      label Connect method:
-      .input-group.input-group-sm.mb-3
-        select.form-control(v-model="ls.adapter")
-          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
-          option(value="usb") USB Serial (PC only)
-        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
-    .card.shadow-sm.mb-2
-      h6.card-header #[i.fa.mr-1.fa-github] From GitHub
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        .form-group.letter-spacing-n1px.mb-3
-          label Tag (gitVersion):
-          select.form-control.form-control-sm(v-model="ss.tagName")
-            option(v-for="[k, v] of tagNames", :value="k") {{ v }}
-        button.btn.btn-block.btn-outline-primary.letter-spacing-n1px.mb-2(@click="btnUpdateRelease") #[i.fa.mr-1.fa-puzzle-piece] Update release
-    .card.shadow-sm.mb-2
-      h6.card-header #[i.fa.mr-1.fa-file-archive-o] From Zip File
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        .form-group.letter-spacing-n1px.mb-3
-          label Choose firmware:
-          .custom-file.form-control-sm.letter-spacing-n1px
-            input.custom-file-input#zipSelected(type="file", v-model="zipSelected", ref="zipSelected", @change="onZipSelected($event?.target?.files[0])", @cancel="onZipSelected()", accept=".zip,application/zip,application/x-zip-compressed")
-            label.custom-file-label(for="zipSelected", :class="['','text-muted'][+_.isEmpty(zipSelected)]") {{ getZipInfo() || 'Choose firmware...' }}
-        button.btn.btn-block.btn-outline-primary.letter-spacing-n1px.mb-2(@click="btnUpdateSelected") #[i.fa.mr-1.fa-puzzle-piece] Update selected
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      header.text-center.mb-3
+        h4.d-flex.justify-content-center.align-items-center.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          = title
+      include /include/bootstrap5-adapter-content
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:github.svg)")
+          | From GitHub
+        .card-body.overflow-hidden
+          .mb-3
+            label.form-label(for="ss-tagName") Tag (gitVersion):
+            select.form-select.form-select-sm#ss-tagName(v-model="ss.tagName")
+              option(v-for="[k, v] of tagNames", :value="k") {{ v }}
+          button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnUpdateRelease")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:puzzle-outline.svg)")
+            | Update release
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:folder-zip-outline.svg)")
+          | From Zip File
+        .card-body.overflow-hidden
+          .mb-3
+            label.form-label(for="zipSelected") Choose firmware:
+            input.form-control.form-control-sm#zipSelected(type="file", @change="onZipSelected($event?.target?.files[0])", @cancel="onZipSelected()", accept=".zip,application/zip,application/x-zip-compressed")
+            .form-text(v-if="imageGitVersion") Firmware gitVersion: {{ imageGitVersion }}
+          button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnUpdateSelected")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:puzzle-outline.svg)")
+            | Update selected
 
 block script
-  script.
-    const { Buffer, ChameleonUltra, Debug, DfuZip, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+  script(type="module").
+    import { Buffer, ChameleonUltra } from 'chameleon-ultra.js'
+    import Debug from 'chameleon-ultra.js/plugin/Debug'
+    import DfuZip from 'chameleon-ultra.js/plugin/DfuZip'
+    import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+    import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+    import _ from 'lodash'
+    import { computed, createApp, onMounted, reactive, ref, watch } from 'vue'
+    import { btnAdapterTips, getJson, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import Swal from 'sweetalert2'
+
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -63,226 +67,186 @@ block script
     ultraBle.use(new Debug())
     ultraBle.use(new WebbleAdapter())
 
-    window.vm = new Vue({
-      el: '#app',
-      data: {
-        ls: {
-          adapter: 'ble',
-        },
-        ss: {
-          tagName: '',
-        },
-        image: null,
-        imageGitVersion: null,
-        manifest: {},
-        zipSelected: '',
-      },
-      async mounted () {
-        // 自動儲存功能
-        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
-          try {
-            const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
-          } catch (err) {}
-          this.$watch(key, () => {
-            storage.setItem(location.pathname, JSON5.stringify(this[key]))
-          }, { deep: true })
-        }
-        await this.fetchManifest()
-      },
-      computed: {
-        ultra () {
-          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
-        },
-        tagNames () {
-          return _.map(_.orderBy(this?.manifest?.releases, ['createdAt'], ['desc']), release => {
-            if (_.isNil(release.gitVersion)) return [release.tagName, release.tagName]
-            return [release.tagName, `${release.tagName} (${release.gitVersion})`]
-          })
-        },
-        releases () {
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({ adapter: 'ble' })
+        const ss = reactive({ tagName: '' })
+        const image = ref(null)
+        const imageGitVersion = ref(null)
+        const manifest = ref({})
+
+        loadPageStorage(localStorage, ls)
+        loadPageStorage(sessionStorage, ss)
+        watch(ls, () => { savePageStorage(localStorage, ls) }, { deep: true })
+        watch(ss, () => { savePageStorage(sessionStorage, ss) }, { deep: true })
+
+        const ultra = computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)
+
+        const tagNames = computed(() => _.map(_.orderBy(manifest.value?.releases, ['createdAt'], ['desc']), release => {
+          if (_.isNil(release.gitVersion)) return [release.tagName, release.tagName]
+          return [release.tagName, `${release.tagName} (${release.gitVersion})`]
+        }))
+
+        const releases = computed(() => {
           const isAsset = model => asset => asset.name.indexOf(model) >= 0 && asset.name.indexOf('app') >= 0
           const isUltraAsset = isAsset('ultra')
           const isLiteAsset = isAsset('lite')
-          return _.fromPairs(_.map(this?.manifest?.releases, release => [release.tagName, {
+          return _.fromPairs(_.map(manifest.value?.releases, release => [release.tagName, {
             ..._.pick(release, ['commit', 'gitVersion', 'prerelease', 'tagName']),
             createdAt: new Date(release.createdAt),
             lite: _.find(release.assets, isLiteAsset),
             ultra: _.find(release.assets, isUltraAsset),
           }]))
-        },
-      },
-      methods: {
-        async swalFire (args) {
-          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
-          return await Swal.fire(args)
-        },
-        async btnAdapterTips () {
-          await this.swalFire({
-            title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
-          })
-        },
-        async fetchManifest () {
-          this.showLoading({ text: 'Loading firmwares...' })
-          const url = `https://taichunmin.idv.tw/ChameleonUltra-releases/manifest.json?t=${Math.trunc(Date.now() / 6e5)}`
-          this.$set(this, 'manifest', (await axios.get(url))?.data ?? {})
-          this.ss.tagName = _.first(this.tagNames)[0]
+        })
+
+        const logError = err => { ultra.value.emitter.emit('error', err) }
+
+        function alert (opts) {
+          return new Promise(resolve => { Swal.fire({ ...opts, didDestroy: resolve }) })
+        }
+
+        async function fetchManifest () {
+          showLoading({ text: 'Loading firmwares...' })
+          manifest.value = await getJson('https://taichunmin.idv.tw/ChameleonUltra-releases/manifest.json', 6e5)
+          ss.tagName = _.first(tagNames.value)[0]
           Swal.close()
-        },
-        async btnUpdateRelease () {
-          const { ultra } = this
+        }
+
+        async function btnUpdateRelease () {
           const numFormater = new Intl.NumberFormat('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
           const showProgress = ({ func, offset, size, type }) => {
             if (func !== 'dfuUpdateObject' || type !== 2) return
             const width = _.round(size > 0 ? offset / size * 100 : 0, 1)
             const html = `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${width}%"></div></div><div class="d-flex justify-content-between"><span>Uploading:</span><span>${numFormater.format(width)} %</span></div></div>`
-            this.showLoading({ html })
+            showLoading({ html })
           }
           try {
-            this.showLoading({ text: 'Download firmware...' })
-            const release = this.releases[this.ss.tagName]
+            showLoading({ text: 'Download firmware...' })
+            const release = releases.value[ss.tagName]
             if (_.isNil(release)) throw new Error('Invalid tagName')
             const images = _.compact(await Promise.all(_.map(['ultra', 'lite'], async model => {
               const dfuZipUrl = `${release[model].url}?t=${release.createdAt.getTime()}` // 避免快取，加上時間戳
-              ultra.emitter.emit('debug', 'web', `model = ${model}, url = ${dfuZipUrl}`)
-              const dfuZip = new DfuZip(new Buffer((await axios.get(dfuZipUrl, { responseType: 'arraybuffer' }))?.data))
+              ultra.value.emitter.emit('debug', 'web', `model = ${model}, url = ${dfuZipUrl}`)
+              const dfuZip = new DfuZip(new Buffer(await (await fetch(dfuZipUrl)).arrayBuffer()))
               return await dfuZip.getAppImage()
             })))
-            this.showLoading({ text: 'Connect device...' })
-            if (!ultra.isConnected()) await ultra.connect()
-            if (!ultra.isDfu()) {
+            showLoading({ text: 'Connect device...' })
+            if (!ultra.value.isConnected()) await ultra.value.connect()
+            if (!ultra.value.isDfu()) {
               try {
-                const gitVersion = await ultra.cmdGetGitVersion()
+                const gitVersion = await ultra.value.cmdGetGitVersion()
                 if (!_.isNil(release.gitVersion) && release.gitVersion === gitVersion) {
                   const msg1 = `gitVersion(${gitVersion}) is the same, do you want to upload again?`
-                  if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+                  if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
                 }
               } catch (err) {
                 // 有可能是因為不支援 cmdGetGitVersion
-                ultra.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
+                ultra.value.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
               }
-              this.showLoading({ text: 'Enter DFU mode...' })
-              await ultra.cmdDfuEnter()
-              await this.alert({ icon: 'info', text: 'Please reconnect device again.' })
-              this.showLoading({ text: 'Connect device...' })
-              if (!ultra.isConnected()) await ultra.connect()
-              if (!ultra.isDfu()) throw new Error('Device is not in DFU mode')
+              showLoading({ text: 'Enter DFU mode...' })
+              await ultra.value.cmdDfuEnter()
+              await alert({ icon: 'info', text: 'Please reconnect device again.' })
+              showLoading({ text: 'Connect device...' })
+              if (!ultra.value.isConnected()) await ultra.value.connect()
+              if (!ultra.value.isDfu()) throw new Error('Device is not in DFU mode')
             }
-            this.showLoading({ text: 'Uploading Firmware...' })
-            ultra.emitter.on('progress', showProgress)
+            showLoading({ text: 'Uploading Firmware...' })
+            ultra.value.emitter.on('progress', showProgress)
             let isUploadSuccess = false
-            for (const image of images) {
+            for (const img of images) {
               try {
-                await ultra.dfuUpdateImage(image)
+                await ultra.value.dfuUpdateImage(img)
                 isUploadSuccess = true
                 break
               } catch (err) {
-                ultra.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
+                ultra.value.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
               }
             }
             if (!isUploadSuccess) throw new Error('Upload failed')
-            await this.swalFire({ icon: 'success', title: 'Upload Success' })
+            await swalFire({ icon: 'success', title: 'Upload Success' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Upload Failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Upload Failed', text: err.message })
           }
-          ultra.emitter.removeListener('progress', showProgress)
-        },
-        async btnUpdateSelected () {
-          const { ultra } = this
+          ultra.value.emitter.removeListener('progress', showProgress)
+        }
+
+        async function btnUpdateSelected () {
           const numFormater = new Intl.NumberFormat('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
           const showProgress = ({ func, offset, size, type }) => {
             if (func !== 'dfuUpdateObject' || type !== 2) return
             const width = _.round(size > 0 ? offset / size * 100 : 0, 1)
             const html = `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${width}%"></div></div><div class="d-flex justify-content-between"><span>Uploading:</span><span>${numFormater.format(width)} %</span></div></div>`
-            this.showLoading({ html })
+            showLoading({ html })
           }
           try {
-            const { image, imageGitVersion } = this
-            if (_.isNil(image)) throw new Error('Please browse a firmware file.')
-            this.showLoading({ text: 'Connect device...' })
-            if (!ultra.isConnected()) await ultra.connect()
-            if (!ultra.isDfu()) {
+            if (_.isNil(image.value)) throw new Error('Please browse a firmware file.')
+            showLoading({ text: 'Connect device...' })
+            if (!ultra.value.isConnected()) await ultra.value.connect()
+            if (!ultra.value.isDfu()) {
               try {
-                const gitVersion = await ultra.cmdGetGitVersion()
-                if (!_.isNil(imageGitVersion) && imageGitVersion === gitVersion) {
+                const gitVersion = await ultra.value.cmdGetGitVersion()
+                if (!_.isNil(imageGitVersion.value) && imageGitVersion.value === gitVersion) {
                   const msg1 = `gitVersion(${gitVersion}) is the same, do you want to upload again?`
-                  if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+                  if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
                 }
               } catch (err) {
                 // 有可能是因為不支援 cmdGetGitVersion
-                ultra.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
+                ultra.value.emitter.emit('error', _.set(new Error(err.message), 'cause', err))
               }
-              this.showLoading({ text: 'Enter DFU mode...' })
-              await ultra.cmdDfuEnter()
-              await this.alert({ icon: 'info', text: 'Please reconnect device again.' })
-              this.showLoading({ text: 'Connect device...' })
-              if (!ultra.isConnected()) await ultra.connect()
-              if (!ultra.isDfu()) throw new Error('Device is not in DFU mode')
+              showLoading({ text: 'Enter DFU mode...' })
+              await ultra.value.cmdDfuEnter()
+              await alert({ icon: 'info', text: 'Please reconnect device again.' })
+              showLoading({ text: 'Connect device...' })
+              if (!ultra.value.isConnected()) await ultra.value.connect()
+              if (!ultra.value.isDfu()) throw new Error('Device is not in DFU mode')
             }
-            this.showLoading({ text: 'Uploading Firmware...' })
-            ultra.emitter.on('progress', showProgress)
-            await ultra.dfuUpdateImage(image)
-            await this.swalFire({ icon: 'success', title: 'Upload Success' })
+            showLoading({ text: 'Uploading Firmware...' })
+            ultra.value.emitter.on('progress', showProgress)
+            await ultra.value.dfuUpdateImage(image.value)
+            await swalFire({ icon: 'success', title: 'Upload Success' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Upload Failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Upload Failed', text: err.message })
           }
-          ultra.emitter.removeListener('progress', showProgress)
-        },
-        async onZipSelected (zip) {
-          const { ultra } = this
+          ultra.value.emitter.removeListener('progress', showProgress)
+        }
+
+        async function onZipSelected (zip) {
           try {
-            this.image = null
-            this.imageGitVersion = null
+            image.value = null
+            imageGitVersion.value = null
             if (_.isNil(zip)) throw new Error('no zip file selected')
             const dfuZip = new DfuZip(new Buffer(await zip.arrayBuffer()))
-            this.image = await dfuZip.getAppImage()
-            this.imageGitVersion = await dfuZip.getGitVersion()
+            image.value = await dfuZip.getAppImage()
+            imageGitVersion.value = await dfuZip.getGitVersion()
           } catch (err) {
-            ultra.emitter.emit('error', err)
+            logError(err)
           }
-        },
-        async sleep (t) {
-          await new Promise(resolve => setTimeout(resolve, t))
-        },
-        async alert (opts) {
-          return await new Promise(resolve => { Swal.fire({ ...opts, didDestroy: resolve }) })
-        },
-        async confirm (text, confirmButtonText, cancelButtonText) {
-          return await new Promise(resolve => {
-            let isConfirmed = false
-            const args = {
-              cancelButtonColor: '#3085d6',
-              cancelButtonText,
-              confirmButtonColor: '#d33',
-              confirmButtonText,
-              didDestroy: () => { resolve(isConfirmed) },
-              focusCancel: true,
-              icon: 'warning',
-              reverseButtons: true,
-              showCancelButton: true,
-              text,
-            }
-            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
-          })
-        },
-        getZipInfo () {
-          let str = ''
-          const { imageGitVersion, zipSelected } = this
-          if (!_.isNil(zipSelected)) str += zipSelected.replaceAll(/.*[/\\]/g, '')
-          if (!_.isNil(imageGitVersion)) str += ` (${imageGitVersion})`
-          return str
-        },
-        showLoading (opts = {}) {
-          opts = {
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            ...opts,
+        }
+
+        onMounted(async () => {
+          try {
+            await fetchManifest()
+          } catch (err) {
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Load firmwares failed', text: err.message })
           }
-          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
-          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
-        },
+        })
+
+        return {
+          ls,
+          ss,
+          ultra,
+          tagNames,
+          image,
+          imageGitVersion,
+          btnAdapterTips,
+          btnUpdateRelease,
+          btnUpdateSelected,
+          onZipSelected,
+          showLoading,
+          swalFire,
+        }
       },
-    })
+    }).mount('#app')

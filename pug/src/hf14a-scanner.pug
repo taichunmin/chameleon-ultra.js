@@ -1,69 +1,73 @@
-extends /include/bootstrapV4
+extends /include/bootstrap5
 
 block beforehtml
   -
-    const title = 'ISO/IEC 14443-A Scanner'
-    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/8QfzaaZ.png']
+    title = 'ISO/IEC 14443-A Scanner'
+    description = 'A tool to scan uid of ISO/IEC 14443-A tags.'
+    ogImage = 'https://i.imgur.com/8QfzaaZ.png'
+    ogImageWidth = 1200
+    ogImageHeight = 600
+    ogUrl = `${baseurl}hf14a-scanner.html`
 
 block style
-  meta(property="og:description", content="A tool to scan uid of ISO/IEC 14443-A tags.")
-  meta(property="og:locale", content="zh_TW")
-  meta(property="og:title", content=title)
-  meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}hf14a-scanner.html`)
   style
     :sass
       [v-cloak]
         display: none
-      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
-        font-family: 'Noto Sans TC', sans-serif
-      .input-group-prepend > .input-group-text
-        width: 80px
-      .letter-spacing-n1px
-        &, .btn, textarea, select, input
-          letter-spacing: -1px
-      .text-sm
-        font-size: 0.875rem
 
 block content
-  #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group.letter-spacing-n1px
-      label Connect method:
-      .input-group.input-group-sm.mb-3
-        select.form-control(v-model="ls.adapter")
-          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
-          option(value="usb") USB Serial (PC only)
-        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
-    .row.mx-n1.mb-3.letter-spacing-n1px
-      .col.px-1: button.btn.btn-block.btn-outline-danger(type="button", @click="btnClear") #[i.fa.mr-1.fa-repeat] Reset
-      .col.px-1
-        button.btn.btn-block.btn-outline-success(v-if="!scanning", type="button", @click="btnScanStart") #[i.fa.mr-1.fa-play] Start Scan
-        button.btn.btn-block.btn-outline-warning(v-else, type="button", @click="btnScanStop") #[i.fa.mr-1.fa-stop] Stop Scan
-    .table-responsive.letter-spacing-n1px(style="font-size: .85rem")
-      table.table.table-striped.table-bordered.table-sm.text-center
-        caption.text-right: small Click cell to copy value.
-        thead: tr
-          th Time
-          th UID
-          th ATQA
-          th SAK
-          th ATS
-        tbody
-          tr(
-            v-for="tag in ss.tags",
-            :key="`${tag.uid}-${tag.atqa}-${tag.sak}`",
-            :class="tag.ts + 1000 > tsnow ? 'animate__animated animate__flash' : ''",
-          )
-            td {{ dayjs(tag.ts).format('YYYY-MM-DD HH:mm:ss') }}
-            td.text-left(@click="btnCopy(tag.uid)") {{ tag.uid }}
-            td(@click="btnCopy(tag.atqa)") {{ tag.atqa }}
-            td(@click="btnCopy(tag.sak)") {{ tag.sak }}
-            td.text-left(@click="btnCopy(tag.ats)") {{ tag.ats }}
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      header.text-center.mb-3
+        h4.d-flex.justify-content-center.align-items-center.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          .ls-n2px #{title}
+      include /include/bootstrap5-adapter-content
+      .row.g-2.ls-n1px.mb-3
+        .col
+          button.btn.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px(type="button", @click="btnClear")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            | Reset
+        .col
+          button.btn.w-100.btn-outline-success.icon-link.justify-content-center.ls-n1px(v-if="!scanning", type="button", @click="btnScanStart")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:play.svg)")
+            | Start Scan
+          button.btn.w-100.btn-outline-warning.icon-link.justify-content-center.ls-n1px(v-else, type="button", @click="btnScanStop")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:stop.svg)")
+            | Stop Scan
+      .table-responsive.fw-light.ls-n1px.text-nowrap(style="font-size: .85rem")
+        table.table.table-striped.table-bordered.table-sm.text-center
+          caption.text-end: small Click cell to copy value.
+          thead: tr
+            th Time
+            th UID
+            th ATQA
+            th SAK
+            th ATS
+          tbody
+            tr(
+              v-for="tag in ss.tags",
+              :key="`${tag.uid}-${tag.atqa}-${tag.sak}`",
+              :class="tag.ts + 1000 > tsnow ? 'animate__animated animate__flash' : ''",
+            )
+              td {{ dayjs(tag.ts).format('MM/DD HH:mm:ss') }}
+              td.text-start(@click="btnCopy(tag.uid)") {{ tag.uid }}
+              td(@click="btnCopy(tag.atqa)") {{ tag.atqa }}
+              td(@click="btnCopy(tag.sak)") {{ tag.sak }}
+              td.text-start(@click="btnCopy(tag.ats)") {{ tag.ats }}
 
 block script
-  script.
-    const { ChameleonUltra, Debug, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+  script(type="module").
+    import { ChameleonUltra } from 'chameleon-ultra.js'
+    import Debug from 'chameleon-ultra.js/plugin/Debug'
+    import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+    import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+    import dayjs from 'dayjs'
+    import _ from 'lodash'
+    import { computed, createApp, reactive, ref, watch } from 'vue'
+    import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, sleep, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import Swal from 'sweetalert2'
+
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -72,57 +76,32 @@ block script
     ultraBle.use(new WebbleAdapter())
     const toHex = buf => _.toUpper(buf.toString('hex'))
 
-    window.vm = new Vue({
-      el: '#app',
-      data: {
-        ls: {
-          adapter: 'ble',
-        },
-        ss: {
-          tags: [],
-        },
-        scanning: false,
-        tsnow: Date.now(),
-      },
-      async mounted () {
-        // 自動儲存功能
-        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({ adapter: 'ble' })
+        const ss = reactive({ tags: [] })
+        const scanning = ref(false)
+        const tsnow = ref(Date.now())
+
+        loadPageStorage(localStorage, ls)
+        loadPageStorage(sessionStorage, ss)
+        watch(ls, () => { savePageStorage(localStorage, ls) }, { deep: true })
+        watch(ss, () => { savePageStorage(sessionStorage, ss) }, { deep: true })
+
+        const ultra = computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)
+
+        const logError = err => { ultra.value.emitter.emit('error', err) }
+
+        async function btnScanStart () {
           try {
-            const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
-          } catch (err) {}
-          this.$watch(key, () => {
-            storage.setItem(location.pathname, JSON5.stringify(this[key]))
-          }, { deep: true })
-        }
-      },
-      computed: {
-        ultra () {
-          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
-        },
-      },
-      methods: {
-        async swalFire (args) {
-          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
-          return await Swal.fire(args)
-        },
-        async btnAdapterTips () {
-          await this.swalFire({
-            title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
-          })
-        },
-        async btnScanStart () {
-          const { ultra } = this
-          try {
-            this.showLoading({ text: 'Connecting...' })
-            const version = await ultra.cmdGetGitVersion()
-            ultra.emitter.emit('debug', `Git version: ${version}`)
-            this.scanning = true
+            showLoading({ text: 'Connecting...' })
+            const version = await ultra.value.cmdGetGitVersion()
+            ultra.value.emitter.emit('debug', `Git version: ${version}`)
+            scanning.value = true
             Swal.close() // scanning started
-            while (this.scanning) {
+            while (scanning.value) {
               try {
-                const scanned = await ultra.cmdHf14aScan()
+                const scanned = await ultra.value.cmdHf14aScan()
                 const newTags = []
                 for (const tag of scanned) {
                   newTags.push({
@@ -133,51 +112,55 @@ block script
                     uid: toHex(tag.uid),
                   })
                 }
-                this.$set(this.ss, 'tags', _.uniqBy([
-                  ...newTags,
-                  ...this.ss.tags,
-                ], c => `${c.uid}-${c.atqa}-${c.sak}-${c.ats}`))
+                ss.tags = _.uniqBy([...newTags, ...ss.tags], c => `${c.uid}-${c.atqa}-${c.sak}-${c.ats}`)
               } catch (err) {
-                if (!ultra.isConnected()) throw err
+                if (!ultra.value.isConnected()) throw err
               }
-              this.tsnow = Date.now()
-              await this.sleep(50)
+              tsnow.value = Date.now()
+              await sleep(50)
             }
             Swal.close() // scanning stopped
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Scan failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Scan failed', text: err.message })
           }
-        },
-        async btnScanStop () {
-          this.showLoading({ text: 'Stopping...' })
-          this.scanning = false
-        },
-        async btnClear () {
-          this.$set(this.ss, 'tags', [])
-        },
-        async btnCopy (text) {
+        }
+
+        async function btnScanStop () {
+          showLoading({ text: 'Stopping...' })
+          scanning.value = false
+        }
+
+        function btnClear () {
+          ss.tags = []
+        }
+
+        async function btnCopy (text) {
           try {
             text = `${text}`
             const clipboard = navigator.clipboard
             if (!clipboard) throw new Error('Clipboard API is not supported.')
             await clipboard.writeText(text)
-            await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
+            await swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
           } catch (err) {
-            await this.swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
+            await swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
           }
-        },
-        async sleep (t) {
-          await new Promise(resolve => setTimeout(resolve, t))
-        },
-        showLoading (opts = {}) {
-          opts = {
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            ...opts,
-          }
-          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
-          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
-        },
+        }
+
+        return {
+          ls,
+          ss,
+          ultra,
+          scanning,
+          tsnow,
+          dayjs,
+          btnAdapterTips,
+          btnScanStart,
+          btnScanStop,
+          btnClear,
+          btnCopy,
+          showLoading,
+          swalFire,
+        }
       },
-    })
+    }).mount('#app')

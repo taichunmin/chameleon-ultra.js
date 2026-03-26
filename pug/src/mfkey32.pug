@@ -1,153 +1,179 @@
-extends /include/bootstrapV4
+extends /include/bootstrap5
 
 block beforehtml
   -
-    const title = 'MFKey32'
-    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/TQC83i4.png']
+    title = 'MFKey32'
+    description = 'A ChameleonUltra tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32).'
+    ogImage = 'https://i.imgur.com/TQC83i4.png'
+    ogImageWidth = 1200
+    ogImageHeight = 600
+    ogUrl = `${baseurl}mfkey32.html`
 
 block style
-  meta(property="og:description", content="A ChameleonUltra tool to detect the mifare key that reader is authenticating (a.k.a. MFKey32).")
-  meta(property="og:locale", content="zh_TW")
-  meta(property="og:title", content=title)
-  meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}mfkey32.html`)
   style
     :sass
       [v-cloak]
         display: none
-      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
-        font-family: 'Noto Sans TC', sans-serif
-      .input-group-prepend > .input-group-text
+      .input-group-text
         width: 85px
-      .letter-spacing-n1px
-        &, .btn, textarea, select, input
-          letter-spacing: -1px
-      .text-sm
-        font-size: 0.875rem
 
 block content
-  #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group
-      label Connect method:
-      .input-group.input-group-sm.mb-3
-        select.form-control(v-model="ls.adapter")
-          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
-          option(value="usb") USB Serial (PC only)
-        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
-    .card.shadow-sm.mb-3
-      h6.card-header.bg-light #[i.fa.fa-id-card.mr-1] Mifare Dump
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center TagType
-          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.tagType")
-            option(value="0") Mifare 1k
-            option(value="1") Mifare 4k
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center UID
-          input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center ATQA
-          input.form-control(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.atqa = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center SAK
-          input.form-control(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.sak = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center ATS
-          input.form-control(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.ats = ''") #[i.fa.fa-fw.fa-times]
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnEditKeys") #[i.fa.fa-fw.fa-key] Edit Keys
-          .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnReadTag") #[i.fa.fa-fw.fa-upload] Read Tag
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnNewDump") #[i.fa.fa-fw.fa-file-o] New dump
-          .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnEditDump") #[i.fa.fa-fw.fa-pencil-square-o] Edit dump
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnImportDump") #[i.fa.fa-fw.fa-file-code-o] Import file
-          .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnExportDump") #[i.fa.fa-fw.fa-floppy-o] Export file
-        details.text-sm
-          summary.text-muted Click to open manual
-          p.my-2 ChameleonUltra is a powerful tool for recovering the keys the reader uses to authenticate the tag. Before starting the recovery process, you must prepare the anti-collision and dump data.
-          h6.text-info.my-3 # Button functionality
-          ul.pl-3.mb-0
-            li.mb-2 Edit keys: Edit the known keys, which will be used to read the tag, in hex format one key per line. If no keys are provided, the well-known keys will be used.
-            li.mb-2 Read Tag: Read the anti-collision data and blocks of tag via ChameleonUltra. Unreadable blocks will be filled with pre-defined data.
-            li.mb-2 New dump: Generate a new dump corresponding to current anti-collision data.
-            li.mb-2 Edit dump: Edit the dump data in hex format, one block per line. If anti-collision data exists within the block 0, it will be overwritten.
-            li.mb-2 Import file: Import dump from file and extract the associated keys. If anti-collision data exists within the file or block 0, it will be overwritten. Supported file ext.: bin, json, eml, mct.
-            li.mb-2 Export file: Export dump to a file. Supported file ext.: bin, json, eml, mct.
-          h6.text-info.my-3 # Anti-collision data and its necessity
-          p.my-2 Anti-collision data comprises UID, ATQA, SAK, and ATS. Some reader will use different keys based on specific anit-collision data. Therefore, it may not be possible to recover the matched keys without the correct anti-collision data.
-          h6.text-info.my-3 # Read data from tag
-          p.my-2 If you have a tag, the preferred method is to use the keys to read the tag via ChameleonUltra. If you already have some keys of the tag, you can update them by clicking "Edit keys". Otherwise, you can leave the keys input empty to begin with the well-known keys. Subsequently, you can click "Read Tag".
-          h6.text-info.my-3 # Generate new blank dump
-          p.my-2 If you don't have a tag, you can modify the anti-collision data and click "New dump" to create a new blank dump. Since the actual dump data is unknown, only a subset of the keys that the reader uses to authenticate the tag can be recovered.
-          h6.text-info.my-3 # Export dump before closing
-          p.my-2 To preserve your data, click "Export file" to save the data to a file. You may restore dump data later by clicking "Import file". #[span.text-danger Please ensure that you export the dump before closing the page to avoid data loss!]
-    .card.shadow-sm.mb-3
-      h6.card-header #[i.fa.fa-fw.fa-lock] Emulate / Recover key
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center Slot
-          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
-            option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnWriteEmu") #[i.fa.fa-fw.fa-sign-in] Emulate
-          .col.px-1: button.btn.btn-sm.btn-block.btn-outline-primary(@click="btnRecoverKeys") #[i.fa.fa-fw.fa-unlock-alt] Recover
-        details.text-sm
-          summary.text-muted Click to open manual
-          p.my-2 To recover the keys, emulate the dump through ChameleonUltra, let the genuine reader to read ChameleonUltra at least twice to gather failed authentication logs, and subsequently read the logs to recover the keys.
-          h6.text-info.my-3 # Button functionality
-          ul.pl-3.mb-0
-            li.mb-2 Emulate: Write the dump data to a selected ChameleonUltra slot and start emulation with detection mode enabled. Note that this action will overwrite any existing data in the selected slot.
-            li.mb-2 Recover: Read logs from ChameleonUltra to recover the keys. This process may take a long time. Successfully recovered keys will be automatically appended to the known keys list.
-          h6.text-info.my-3 # Repeat to recover more keys
-          p.my-2 The more similarity between the dump data and the tag, the more keys can be recovered. You can repeat the workflow (read tag, emulate, recover) and try to recover more keys of previously unreadable blocks.
-          h6.text-info.my-3 # Learn more about MFKey32
-          p.my-2 If you want to learn more about MFKey32, please refer to the Flipper documentation "#[a(target="_blank" href="https://docs.flipper.net/nfc/mfkey32") Recovering MIFARE Classic keys]" and MTools Tec documentation "#[a(target="_blank" href="https://shop.mtoolstec.com/how-to-use-mfkey32-on-chameleonultra-devices.html") How to use mfkey32 on ChameleonUltra devices]".
-          img.my-2.d-block.mx-auto.w-100.rounded.shadow(src="https://i.imgur.com/FRl2vl9.png" style="max-width: 32rem")
-    .modal.fade(data-backdrop="static", data-keyboard="false", tabindex="-1", ref="exportimport")
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      header.text-center.mb-3
+        h4.d-flex.justify-content-center.align-items-center.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          = title
+      include /include/bootstrap5-adapter-content
+      .card.shadow.mb-3
+        h6.card-header.icon-link
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:card-account-details-outline.svg)")
+          | Mifare Dump
+        .card-body.overflow-hidden
+          input.d-none(type="file", ref="dumpImportInput", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-tagType") TagType
+            select.form-select.form-select-sm#ss-tagType(v-model.number="ss.tagType")
+              option(value="0") Mifare 1k
+              option(value="1") Mifare 4k
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-uid") UID
+            input.form-control.form-control-sm#ss-uid(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-atqa") ATQA
+            input.form-control.form-control-sm#ss-atqa(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-sak") SAK
+            input.form-control.form-control-sm#ss-sak(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-ats") ATS
+            input.form-control.form-control-sm#ss-ats(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.ats = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .row.g-2.mb-2
+            .col
+              button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnEditKeys")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:key-outline.svg)")
+                | Edit Keys
+            .col
+              button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnReadTag")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+                | Read Tag
+          .row.g-2.mb-2
+            .col
+              button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnNewDump")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+                | New dump
+            .col
+              button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnEditDump")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-edit-outline.svg)")
+                | Edit dump
+          .row.g-2.mb-2
+            .col
+              button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnImportDump")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-import-outline.svg)")
+                | Import file
+            .col
+              button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnExportDump")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+                | Export file
+          details.fs-14px
+            summary.text-muted Click to open manual
+            p.my-2 ChameleonUltra is a powerful tool for recovering the keys the reader uses to authenticate the tag. Before starting the recovery process, you must prepare the anti-collision and dump data.
+            h6.text-info.my-3 # Button functionality
+            ul.ps-3.mb-0
+              li.mb-2 Edit keys: Edit the known keys, which will be used to read the tag, in hex format one key per line. If no keys are provided, the well-known keys will be used.
+              li.mb-2 Read Tag: Read the anti-collision data and blocks of tag via ChameleonUltra. Unreadable blocks will be filled with pre-defined data.
+              li.mb-2 New dump: Generate a new dump corresponding to current anti-collision data.
+              li.mb-2 Edit dump: Edit the dump data in hex format, one block per line. If anti-collision data exists within the block 0, it will be overwritten.
+              li.mb-2 Import file: Import dump from file and extract the associated keys. If anti-collision data exists within the file or block 0, it will be overwritten. Supported file ext.: bin, json, eml, mct.
+              li.mb-2 Export file: Export dump to a file. Supported file ext.: bin, json, eml, mct.
+            h6.text-info.my-3 # Anti-collision data and its necessity
+            p.my-2 Anti-collision data comprises UID, ATQA, SAK, and ATS. Some reader will use different keys based on specific anit-collision data. Therefore, it may not be possible to recover the matched keys without the correct anti-collision data.
+            h6.text-info.my-3 # Read data from tag
+            p.my-2 If you have a tag, the preferred method is to use the keys to read the tag via ChameleonUltra. If you already have some keys of the tag, you can update them by clicking "Edit keys". Otherwise, you can leave the keys input empty to begin with the well-known keys. Subsequently, you can click "Read Tag".
+            h6.text-info.my-3 # Generate new blank dump
+            p.my-2 If you don't have a tag, you can modify the anti-collision data and click "New dump" to create a new blank dump. Since the actual dump data is unknown, only a subset of the keys that the reader uses to authenticate the tag can be recovered.
+            h6.text-info.my-3 # Export dump before closing
+            p.my-2 To preserve your data, click "Export file" to save the data to a file. You may restore dump data later by clicking "Import file". #[span.text-danger Please ensure that you export the dump before closing the page to avoid data loss!]
+      .card.shadow.mb-3
+        h6.card-header.icon-link
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:lock-outline.svg)")
+          | Emulate / Recover key
+        .card-body.overflow-hidden
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-slot") Slot
+            select.form-select.form-select-sm#ss-slot(v-model.number="ss.slot")
+              option(v-for="i of 8", :key="i", :value="i - 1") Slot {{ i }}
+          .row.g-2.mb-2
+            .col
+              button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnWriteEmu")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+                | Emulate
+            .col
+              button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnRecoverKeys")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:lock-open-variant-outline.svg)")
+                | Recover
+          details.fs-14px
+            summary.text-muted Click to open manual
+            p.my-2 To recover the keys, emulate the dump through ChameleonUltra, let the genuine reader to read ChameleonUltra at least twice to gather failed authentication logs, and subsequently read the logs to recover the keys.
+            h6.text-info.my-3 # Button functionality
+            ul.ps-3.mb-0
+              li.mb-2 Emulate: Write the dump data to a selected ChameleonUltra slot and start emulation with detection mode enabled. Note that this action will overwrite any existing data in the selected slot.
+              li.mb-2 Recover: Read logs from ChameleonUltra to recover the keys. This process may take a long time. Successfully recovered keys will be automatically appended to the known keys list.
+            h6.text-info.my-3 # Repeat to recover more keys
+            p.my-2 The more similarity between the dump data and the tag, the more keys can be recovered. You can repeat the workflow (read tag, emulate, recover) and try to recover more keys of previously unreadable blocks.
+            h6.text-info.my-3 # Learn more about MFKey32
+            p.my-2 If you want to learn more about MFKey32, please refer to the Flipper documentation "#[a(target="_blank" href="https://docs.flipper.net/nfc/mfkey32") Recovering MIFARE Classic keys]" and MTools Tec documentation "#[a(target="_blank" href="https://shop.mtoolstec.com/how-to-use-mfkey32-on-chameleonultra-devices.html") How to use mfkey32 on ChameleonUltra devices]".
+            img.my-2.d-block.mx-auto.w-100.rounded.shadow(src="https://i.imgur.com/FRl2vl9.png" style="max-width: 32rem")
+    .modal.fade(data-bs-backdrop="static", data-bs-keyboard="false", tabindex="-1", ref="exportimportModal")
       .modal-dialog.modal-dialog-centered.modal-xl.align-items-stretch
         .modal-content
           .modal-body.d-flex.flex-column
-            h5.modal-title #[i.fa.fa-fw.fa-pencil-square-o] {{ exportimport.title ?? 'Edit text' }}
+            h5.modal-title.icon-link
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-edit-outline.svg)")
+              | {{ exportimport.title || 'Edit text' }}
             textarea.form-control.form-control-sm.flex-fill(v-model="exportimport.text")
             small.text-muted.form-text Click "Copy" to copy text, or click "Apply" to apply change.
           .modal-footer
             button.btn.btn-outline-secondary(type="button", @click="exportimport?.cb?.()") Cancel
             button.btn.btn-outline-danger(type="button", @click="exportimport.text = ''") Clear
-            button.btn.btn-outline-success(type="button", @click="btnCopy(exportimport.text, $refs.exportimport)") Copy
+            button.btn.btn-outline-success(type="button", @click="btnCopy(exportimport.text)") Copy
             button.btn.btn-outline-primary(type="button", @click="exportimport?.cb?.(exportimport.text)") Apply
-    .modal.fade(tabindex="-1", ref="dumpExport")
+    .modal.fade(tabindex="-1", ref="dumpExportModal")
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
           .modal-header
-            h5.modal-title #[i.fa.fa-fw.fa-floppy-o] Export Dump
-            button.close(type="button", data-dismiss="modal") #[span &times;]
+            h5.modal-title.icon-link
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+              | Export Dump
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body
-            a.btn.btn-block.btn-outline-primary.mb-2.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.json.download",
               :href="dumpExport.json.href",
               target="_blank")
               .my-1 {{ dumpExport.json.download }}
               h6.text-muted.mb-1 Click to download as JSON format. This format can be used in Proxmark3 and Chameleon Mini GUI.
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.bin.download",
               :href="dumpExport.bin.href",
               target="_blank")
               .my-1 {{ dumpExport.bin.download }}
               h6.text-muted.mb-1 Click to download as BIN format. This format can be used in Proxmark3, libnfc, mfoc...
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.eml.download",
               :href="dumpExport.eml.href",
               target="_blank")
               .my-1 {{ dumpExport.eml.download }}
               h6.text-muted.mb-1 Click to download as EML format. This format can be used in Proxmark3 emulator.
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.text-start(
               :download="dumpExport.mct.download",
               :href="dumpExport.mct.href",
               target="_blank")
@@ -155,8 +181,18 @@ block content
               h6.text-muted.mb-1 Click to download as MCT format. This format can be used in Mifare Classic Tool.
 
 block script
-  script.
-    const { Buffer, ChameleonUltra, Debug, DeviceMode, FreqType, Mf1KeyType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+  script(type="module").
+    import { Buffer, ChameleonUltra, DeviceMode, FreqType, TagType } from 'chameleon-ultra.js'
+    import Crypto1 from 'chameleon-ultra.js/Crypto1'
+    import Debug from 'chameleon-ultra.js/plugin/Debug'
+    import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+    import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+    import { Modal } from 'bootstrap'
+    import JSON5 from 'json5'
+    import _ from 'lodash'
+    import { computed, createApp, nextTick, reactive, useTemplateRef, watch } from 'vue'
+    import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, sleep, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -169,13 +205,10 @@ block script
     const WELL_KNOWN_KEYS = _.map(['FFFFFFFFFFFF', 'A0A1A2A3A4A5', 'D3F7D3F7D3F7'], hex => Buffer.from(hex, 'hex'))
     const isMf1MagicBlock0 = buf => Buffer.isBuffer(buf) && buf.length >= 16 && _.includes([0x08, 0x88], buf[5]) && toHex(buf.subarray(6, 8)) === '0400' && buf[4] === buf.subarray(0, 4).xor()
 
-    window.vm = new Vue({
-      el: '#app',
-      data: {
-        ls: {
-          adapter: 'ble',
-        },
-        ss: {
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({ adapter: 'ble' })
+        const ss = reactive({
           atqa: '0004',
           ats: '',
           dump: null,
@@ -184,82 +217,145 @@ block script
           slot: 0,
           tagType: 0,
           uid: 'DEADBEEF',
-        },
-        dumpImport: { cb: null },
-        dumpExport: {
+        })
+        const dumpImport = reactive({ cb: null })
+        const dumpExport = reactive({
           json: { download: '', href: '' },
           bin: { download: '', href: '' },
           eml: { download: '', href: '' },
           mct: { download: '', href: '' },
-        },
-        exportimport: { title: '', text: '', cb: null },
-      },
-      async mounted () {
-        // 自動儲存功能
-        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
-          try {
-            const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) {
-              if (key === 'ss') {
-                try {
-                  saved.dump = Buffer.from(saved.dump, 'base64url')
-                } catch (err) {}
+        })
+        const exportimport = reactive({ title: '', text: '', cb: null })
+
+        const dumpImportInputRef = useTemplateRef('dumpImportInput')
+        const exportimportModalRef = useTemplateRef('exportimportModal')
+        const dumpExportModalRef = useTemplateRef('dumpExportModal')
+
+        loadPageStorage(localStorage, ls)
+        watch(ls, () => { savePageStorage(localStorage, ls) }, { deep: true })
+
+        // ss.dump is a Buffer, JSON5 can't (de)serialize it directly, so it's stored as base64url
+        try {
+          const saved = JSON5.parse(sessionStorage.getItem(location.pathname))
+          if (_.isObject(saved)) {
+            if (!_.isNil(saved.dump)) {
+              try {
+                saved.dump = Buffer.from(saved.dump, 'base64url')
+              } catch (err) {
+                delete saved.dump
               }
-              this.$set(this, key, _.merge(this[key], saved))
             }
-          } catch (err) {}
-          this.$watch(key, () => {
-            let saved = { ...this[key] }
-            if (Buffer.isBuffer(saved.dump)) saved = { ...saved, dump: saved.dump.toString('base64url') }
-            storage.setItem(location.pathname, JSON5.stringify(saved))
-          }, { deep: true })
-        }
-        if (!Buffer.isBuffer(this.ss.dump)) this.ss.dump = this.mf1GenEmptyDump()
-      },
-      computed: {
-        ultra () {
-          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
-        },
-      },
-      methods: {
-        async swalFire (args) {
-          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
-          return await Swal.fire(args)
-        },
-        async btnAdapterTips () {
-          await this.swalFire({
-            title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
-          })
-        },
-        async btnEditKeys () {
-          try {
-            const $ref = window.jQuery(this.$refs.exportimport)
-            const newVal = await new Promise(resolve => {
-              this.$set(this, 'exportimport', {
-                title: 'Edit keys',
-                cb: resolve,
-                text: this.ss.keys,
-              })
-              $ref.one('hide.bs.modal', () => resolve()).modal('show')
-            })
-            $ref.modal('hide')
-            this.$set(this.exportimport, 'cb', null)
-            if (_.isNil(newVal)) return
-            this.$set(this.ss, 'keys', newVal)
-          } catch (err) {
-            this.ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Edit failed', text: err.message })
+            _.merge(ss, saved)
           }
-        },
-        async btnReadTag () {
-          const { ultra } = this
+        } catch (err) {}
+        watch(ss, () => {
+          const saved = { ...ss }
+          if (Buffer.isBuffer(saved.dump)) saved.dump = saved.dump.toString('base64url')
+          sessionStorage.setItem(location.pathname, JSON5.stringify(saved))
+        }, { deep: true })
+        if (!Buffer.isBuffer(ss.dump)) ss.dump = mf1GenEmptyDump()
+
+        const ultra = computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)
+
+        const logError = err => { ultra.value.emitter.emit('error', err) }
+
+        function mf1GenEmptyDump (antiColl) {
+          antiColl ??= {
+            atqa: Buffer.from(ss.atqa, 'hex').toReversed(),
+            sak: Buffer.from(ss.sak, 'hex'),
+            tagType: ss.tagType === 1 ? TagType.MIFARE_4096 : TagType.MIFARE_1024,
+            uid: Buffer.from(ss.uid, 'hex'),
+          }
+          const dump = ChameleonUltra.mf1GenEmptyDump(antiColl)
+          // empty dump in mfkey32 should not use default key FFFFFFFFFFFF
+          const keyUnknown = new Buffer(6)
+          const endOfSectors = [
+            ..._.times(32, i => (i + 1) * 64), // sector 0~31: 64 bytes
+            ..._.times(8, i => i * 256 + 2304), // sector 32~39: 256 bytes
+          ]
+          for (const i of endOfSectors) {
+            if (i > dump.length) break
+            for (const j of [-16, -6]) dump.set(keyUnknown, i + j)
+          }
+          return dump
+        }
+
+        function mfGetKeys () {
+          try {
+            const keys = ChameleonUltra.mf1KeysFromDict(ss.keys)
+            return keys.length > 0 ? keys : null
+          } catch (err) {
+            return null
+          }
+        }
+
+        function mfMergeKeys (newKeys) {
+          const keys = ChameleonUltra.mf1UniqueKeys([
+            ...ChameleonUltra.mf1KeysFromDict(ss.keys),
+            ...newKeys,
+          ])
+          ss.keys = _.map(keys, toHex).join('\n')
+        }
+
+        function mfGrabKeysFromDump () {
+          // merge keys
+          const { tagType, dump } = ss
+          const tagSectors = tagType === 1 ? 40 : 16
+          const newKeys = []
+          for (let i = 0; i < tagSectors; i++) {
+            const [blkStart, secblks] = i < 32 ? [i * 4, 4] : [(i - 24) * 16, 16]
+            const sectorData = dump.subarray(blkStart * 16).subarray(0, secblks * 16)
+            newKeys.push(..._.map([0, 10], pos => sectorData.subarray(pos - 16).subarray(0, 6)))
+          }
+          ss.keys = ''
+          mfMergeKeys(newKeys)
+        }
+
+        function mfkey32v2 (uid, r0, r1) {
+          return Crypto1.mfkey32v2({
+            uid,
+            nt0: r0.nt,
+            nr0: r0.nr,
+            ar0: r0.ar,
+            nt1: r1.nt,
+            nr1: r1.nr,
+            ar1: r1.ar,
+          })
+        }
+
+        async function editTextModal (title, text) {
+          const modalEl = exportimportModalRef.value
+          const modal = Modal.getOrCreateInstance(modalEl)
+          const newVal = await new Promise(resolve => {
+            exportimport.title = title
+            exportimport.text = text
+            exportimport.cb = resolve
+            modalEl.addEventListener('hidden.bs.modal', () => resolve(), { once: true })
+            modal.show()
+          })
+          modal.hide()
+          exportimport.cb = null
+          return newVal
+        }
+
+        async function btnEditKeys () {
+          try {
+            const newVal = await editTextModal('Edit keys', ss.keys)
+            if (_.isNil(newVal)) return
+            ss.keys = newVal
+          } catch (err) {
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Edit failed', text: err.message })
+          }
+        }
+
+        async function btnReadTag () {
           try {
             const res = {}
 
             // read anti-collision
-            this.showLoading({ text: 'Reading anti-collision...' })
-            const tag1 = _.first(await ultra.cmdHf14aScan())
+            showLoading({ text: 'Reading anti-collision...' })
+            const tag1 = _.first(await ultra.value.cmdHf14aScan())
             _.merge(res, {
               atqa: toHex(tag1.atqa.toReversed()),
               ats: toHex(tag1.ats),
@@ -267,72 +363,62 @@ block script
               uid: toHex(tag1.uid),
             })
             res.tagType = (res.atqa === '0002' && res.sak === '18') ? 1 : 0
-            ultra.emitter.emit('debug', 'web', `res = ${JSON.stringify(res)}`)
+            ultra.value.emitter.emit('debug', 'web', res)
 
             // read blocks
             const [tagSectors, tagBlocks] = res.tagType === 1 ? [40, 256] : [16, 64]
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading sectors:</span><span>${i} / ${tagSectors}</span></div></div>`,
             })
-            this.showLoading(genSwalCfg(0))
+            showLoading(genSwalCfg(0))
             const failed = []
-            const keys = this.mfGetKeys() ?? WELL_KNOWN_KEYS
-            const newDump = this.mf1GenEmptyDump(tag1)
-            const oldDump = this.ss.dump
+            const keys = mfGetKeys() ?? WELL_KNOWN_KEYS
+            const newDump = mf1GenEmptyDump(tag1)
+            const oldDump = ss.dump
             for (let i = 0; i < tagSectors; i++) {
               const [blkStart, secblks] = i < 32 ? [i * 4, 4] : [(i - 24) * 16, 16]
               try {
                 const oldSectorData = oldDump.subarray(blkStart * 16).subarray(0, secblks * 16)
                 const oldSectorKeys = _.map([0, 10], pos => oldSectorData.subarray(pos - 16).subarray(0, 6))
-                const { data: newSectorData, success } = await ultra.mf1ReadSectorByKeys(i, [...oldSectorKeys, ...keys])
+                const { data: newSectorData, success } = await ultra.value.mf1ReadSectorByKeys(i, [...oldSectorKeys, ...keys])
                 newDump.set(newSectorData, blkStart * 16)
                 for (let j = 0; j < secblks; j++) {
                   if (!success[j]) failed.push(blkStart + j)
                   else newDump.set(newSectorData.subarray(j * 16).subarray(0, 16), (blkStart + j) * 16)
                 }
               } catch (err) {
-                if (!ultra.isConnected()) throw err
+                if (!ultra.value.isConnected()) throw err
                 for (let j = 0; j < secblks; j++) failed.push(blkStart + j)
-                ultra.emitter.emit('error', err)
+                ultra.value.emitter.emit('error', err)
               }
-              this.showLoading(genSwalCfg(i + 1))
+              showLoading(genSwalCfg(i + 1))
             }
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
             res.dump = newDump
-            this.$set(this, 'ss', { ...this.ss, ...res })
-            this.mfGrabKeysFromDump() // must after update this.ss.dump
-            await this.swalFire({ icon: 'success', title: 'Read result', text: `${tagBlocks - failed.length}/${tagBlocks} blocks read.` })
+            Object.assign(ss, res)
+            mfGrabKeysFromDump() // must after update ss.dump
+            await swalFire({ icon: 'success', title: 'Read result', text: `${tagBlocks - failed.length}/${tagBlocks} blocks read.` })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
-        },
-        async btnNewDump () {
-          const { ultra } = this
+        }
+
+        async function btnNewDump () {
           try {
             const msg1 = 'Mifare dump will be REPLACED! Continue?'
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.$set(this.ss, 'dump', this.mf1GenEmptyDump())
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            ss.dump = mf1GenEmptyDump()
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
-        },
-        async btnEditDump () {
-          const { ultra } = this
+        }
+
+        async function btnEditDump () {
           try {
-            const $ref = window.jQuery(this.$refs.exportimport)
-            const oldVal = _.map(this.ss.dump.chunk(16), toHex).join('\n')
-            const newVal = await new Promise(resolve => {
-              this.$set(this, 'exportimport', {
-                title: 'Edit dump',
-                cb: resolve,
-                text: oldVal,
-              })
-              $ref.one('hide.bs.modal', () => resolve()).modal('show')
-            })
-            $ref.modal('hide')
-            this.$set(this.exportimport, 'cb', null)
+            const oldVal = _.map(ss.dump.chunk(16), toHex).join('\n')
+            const newVal = await editTextModal('Edit dump', oldVal)
             if (_.isNil(newVal)) return
 
             const res = {}
@@ -350,22 +436,22 @@ block script
               })
             }
 
-            this.$set(this, 'ss', { ...this.ss, ...res })
-            this.mfGrabKeysFromDump() // must after update this.ss.dump
+            Object.assign(ss, res)
+            mfGrabKeysFromDump() // must after update ss.dump
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Edit failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Edit failed', text: err.message })
           }
-        },
-        async btnImportDump () {
-          const { ultra } = this
+        }
+
+        async function btnImportDump () {
           try {
-            this.showLoading({ text: 'Importing' })
+            showLoading({ text: 'Importing' })
             const file = await new Promise(resolve => {
-              this.$set(this.dumpImport, 'cb', resolve)
-              const $ref = this.$refs.dumpImport
-              $ref.value = ''
-              $ref.click()
+              dumpImport.cb = resolve
+              const inputEl = dumpImportInputRef.value
+              inputEl.value = ''
+              inputEl.click()
             })
             if (_.isNil(file)) throw new Error('No file selected')
             if (file.size > 1e6) throw new Error(`File size too large: ${file.size} bytes`)
@@ -417,66 +503,66 @@ block script
               })
             }
 
-            this.$set(this, 'ss', { ...this.ss, ...res })
-            this.mfGrabKeysFromDump() // must after update this.ss.dump
+            Object.assign(ss, res)
+            mfGrabKeysFromDump() // must after update ss.dump
 
-            await this.swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
+            await swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Import failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Import failed', text: err.message })
           }
-        },
-        async btnExportDump () {
-          const dump = this.ss.dump
-          const atqa = Buffer.from(this.ss.atqa, 'hex').toReversed()
-          const ats = Buffer.from(this.ss.ats, 'hex')
-          const sak = Buffer.from(this.ss.sak, 'hex')
-          const uid = Buffer.from(this.ss.uid, 'hex')
+        }
+
+        async function btnExportDump () {
+          const dump = ss.dump
+          const atqa = Buffer.from(ss.atqa, 'hex').toReversed()
+          const ats = Buffer.from(ss.ats, 'hex')
+          const sak = Buffer.from(ss.sak, 'hex')
+          const uid = Buffer.from(ss.uid, 'hex')
           const strUid = toHex(uid)
 
           // json
           const json = ChameleonUltra.mf1DumpToPm3Json({ atqa, ats, body: dump, sak, uid })
-          this.$set(this.dumpExport, 'json', {
+          dumpExport.json = {
             href: URL.createObjectURL(new Blob([JSON.stringify(json, null, 2)], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.json`,
-          })
+          }
 
           // bin
-          this.$set(this.dumpExport, 'bin', {
+          dumpExport.bin = {
             href: URL.createObjectURL(new Blob([dump], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.bin`,
-          })
+          }
 
           // eml
           const eml = ChameleonUltra.mf1DumpToEml({ body: dump })
-          this.$set(this.dumpExport, 'eml', {
+          dumpExport.eml = {
             href: URL.createObjectURL(new Blob([eml], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.eml`,
-          })
+          }
 
           // mct
           const mct = ChameleonUltra.mf1DumpToMct({ body: dump })
-          this.$set(this.dumpExport, 'mct', {
+          dumpExport.mct = {
             href: URL.createObjectURL(new Blob([mct], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.mct`,
-          })
+          }
 
-          await new Promise(resolve => this.$nextTick(resolve)) // wait for DOM update
-          const $ref = window.jQuery(this.$refs.dumpExport)
-          $ref.modal('show')
-        },
-        async btnWriteEmu () {
-          const { ultra } = this
+          await nextTick() // wait for DOM update
+          Modal.getOrCreateInstance(dumpExportModalRef.value).show()
+        }
+
+        async function btnWriteEmu () {
           try {
-            const { atqa, ats, dump, sak, slot, tagType, uid } = this.ss
-            ultra.emitter.emit('debug', 'web', JSON.stringify({ atqa, ats, dump, sak, slot, tagType, uid }))
-            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
+            const { atqa, ats, dump, sak, slot, tagType, uid } = ss
+            ultra.value.emitter.emit('debug', 'web', { atqa, ats, dump, sak, slot, tagType, uid })
+            const slotName = await ultra.value.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Emulating...' })
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await ultra.slotChangeTagTypeAndActive(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024) // reset slot
-            await ultra.cmdSlotSetFreqName(slot, FreqType.HF, `mfkey32_${uid}`)
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            showLoading({ text: 'Emulating...' })
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.value.slotChangeTagTypeAndActive(slot, tagType ? TagType.MIFARE_4096 : TagType.MIFARE_1024) // reset slot
+            await ultra.value.cmdSlotSetFreqName(slot, FreqType.HF, `mfkey32_${uid}`)
             // set anti-coll
             const tag = {
               atqa: Buffer.from(atqa, 'hex').toReversed(),
@@ -484,51 +570,50 @@ block script
               sak: Buffer.from(sak, 'hex'),
               uid: Buffer.from(uid, 'hex'),
             }
-            await ultra.cmdMf1SetAntiCollMode(false)
-            await ultra.cmdHf14aSetAntiCollData(tag)
-            await ultra.cmdMf1SetDetectionEnable(true) // enable detection
+            await ultra.value.cmdMf1SetAntiCollMode(false)
+            await ultra.value.cmdHf14aSetAntiCollData(tag)
+            await ultra.value.cmdMf1SetDetectionEnable(true) // enable detection
             for (const [i, chunk] of _.entries(dump.chunk(64))) {
-              await ultra.cmdMf1EmuWriteBlock(i << 2, chunk)
+              await ultra.value.cmdMf1EmuWriteBlock(i << 2, chunk)
             }
-            await ultra.cmdSlotSaveSettings()
-            await this.swalFire({ icon: 'success', title: 'Emulate successfully!' })
+            await ultra.value.cmdSlotSaveSettings()
+            await swalFire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
           }
-        },
-        async btnRecoverKeys () {
-          const { ultra } = this
+        }
+
+        async function btnRecoverKeys () {
           try {
             const swalCfg = {
               text: 'Connecting device...',
               progressSteps: ['1', '2', '3'],
               currentProgressStep: 0,
             }
-            this.showLoading(swalCfg)
-            const logCnt = await ultra.cmdMf1GetDetectionCount()
+            showLoading(swalCfg)
+            const logCnt = await ultra.value.cmdMf1GetDetectionCount()
             if (logCnt < 2) throw new Error('Please let reader to read ChameleonUltra more than 2 times to collect logs.')
 
             // retrive logs
             let logs = []
             while (logs.length < logCnt) {
-              this.showLoading(_.merge(swalCfg, {
+              showLoading(_.merge(swalCfg, {
                 currentProgressStep: 1,
                 text: `Retrive logs: ${logs.length} / ${logCnt}`,
               }))
-              await this.sleep(0) // 等待 UI 更新
-              logs.push(...await ultra.cmdMf1GetDetectionLogs(logs.length))
+              await sleep(0) // 等待 UI 更新
+              logs.push(...await ultra.value.cmdMf1GetDetectionLogs(logs.length))
             }
-            this.showLoading(_.merge(swalCfg, {
+            showLoading(_.merge(swalCfg, {
               currentProgressStep: 1,
               text: `Retrive logs: ${logs.length} / ${logCnt}`,
             }))
-            await this.sleep(0) // 等待 UI 更新
-            ultra.emitter.emit('debug', 'web', `logs = ${JSON.stringify(logs)}`)
+            await sleep(0) // 等待 UI 更新
+            ultra.value.emitter.emit('debug', 'web', `logs = ${JSON.stringify(logs)}`)
 
             // calc how many mfkey32v2 need to be run
             logs = _.values(_.groupBy(logs, log => `${toHex(log.uid)}-${blockToSector(log.block)}-${'AB'[+log.isKeyB]}`))
-            console.log(logs)
             const recoverMax = _.sumBy(logs, arr => arr.length * (arr.length - 1) / 2)
 
             const skipRecordsByKnownKey = (recs, key) => {
@@ -545,161 +630,75 @@ block script
               }
             }
 
-            const knownKeys = this.mfGetKeys() ?? []
             const newKeys = []
             let recoverCnt = 0
             for (const grp of logs) {
-              for (const knownKey of knownKeys) skipRecordsByKnownKey(grp, knownKey)
+              for (const knownKey of mfGetKeys() ?? []) skipRecordsByKnownKey(grp, knownKey)
               for (let i = 0; i < grp.length; i++) {
                 const r0 = grp[i]
                 for (let j = i + 1; j < grp.length; j++) {
-                  this.showLoading(_.merge(swalCfg, {
+                  showLoading(_.merge(swalCfg, {
                     currentProgressStep: 2,
                     text: `Recover log pairs: ${recoverCnt++} / ${recoverMax}`,
                   }))
-                  await this.sleep(0) // 等待 UI 更新
+                  await sleep(0) // 等待 UI 更新
                   const r1 = grp[j]
                   if (r0.skip || r1.skip) continue // skip by known key
                   try {
-                    const key1 = this.mfkey32v2(r0.uid, r0, r1)
+                    const key1 = mfkey32v2(r0.uid, r0, r1)
                     newKeys.push(key1)
                     r0.skip = r1.skip = true
                     skipRecordsByKnownKey(grp, key1)
                   } catch (err) {
-                    ultra.emitter.emit('error', err)
+                    logError(err)
                   }
                 }
               }
+              mfMergeKeys(newKeys)
             }
-            this.mfMergeKeys(newKeys)
             if (newKeys.length > 0) {
-              await this.swalFire({ icon: 'success', title: `Recovered ${newKeys.length} keys!`, text: 'You can repeat whole process to recover more keys.' })
-              this.btnEditKeys()
+              await swalFire({ icon: 'success', title: `Recovered ${newKeys.length} keys!`, text: 'You can repeat whole process to recover more keys.' })
+              await btnEditKeys()
             } else {
-              await this.swalFire({ icon: 'success', title: 'No new keys recovered', text: 'You can read tag and then export dump.' })
+              await swalFire({ icon: 'success', title: 'No new keys recovered', text: 'You can read tag and then export dump.' })
             }
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Failed to recover key.', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Failed to recover key.', text: err.message })
           }
-        },
-        async btnCheck () {
-          const { ultra } = this
-          try {
-            this.showLoading({ text: 'Checking key...' })
-            const { block, keyType, key } = this.ss
-            const isCorrect = await ultra.cmdMf1CheckBlockKey({
-              block,
-              keyType: [Mf1KeyType.KEY_A, Mf1KeyType.KEY_B][keyType],
-              key: Buffer.from(key, 'hex'),
-            })
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            if (!isCorrect) return await this.swalFire({ icon: 'error', title: 'Key is incorrect!' })
-            await this.swalFire({ icon: 'success', title: 'Key is correct!' })
-          } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Failed to check key.', text: err.message })
-          }
-        },
-        async btnCopy (text) {
+        }
+
+        async function btnCopy (text) {
           try {
             text = `${text}`
             const clipboard = navigator.clipboard
             if (!clipboard) throw new Error('Clipboard API is not supported.')
             await clipboard.writeText(text)
-            await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
+            await swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
           } catch (err) {
-            await this.swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
+            await swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
           }
-        },
-        async confirm (text, confirmButtonText, cancelButtonText) {
-          return await new Promise((resolve, reject) => {
-            let isConfirmed = false
-            const args = {
-              cancelButtonColor: '#3085d6',
-              cancelButtonText,
-              confirmButtonColor: '#d33',
-              confirmButtonText,
-              didDestroy: () => { resolve(isConfirmed) },
-              focusCancel: true,
-              icon: 'warning',
-              reverseButtons: true,
-              showCancelButton: true,
-              text,
-            }
-            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
-          })
-        },
-        async sleep (t) {
-          await new Promise(resolve => setTimeout(resolve, t))
-        },
-        mf1GenEmptyDump (antiColl) {
-          antiColl ??= {
-            atqa: Buffer.from(this.ss.atqa, 'hex').toReversed(),
-            sak: Buffer.from(this.ss.sak, 'hex'),
-            tagType: this.ss.tagType === 1 ? TagType.MIFARE_4096 : TagType.MIFARE_1024,
-            uid: Buffer.from(this.ss.uid, 'hex'),
-          }
-          const dump = ChameleonUltra.mf1GenEmptyDump(antiColl)
-          // empty dump in mfkey32 should not use default key FFFFFFFFFFFF
-          const keyUnknown = new Buffer(6)
-          const endOfSectors = [
-            ..._.times(32, i => (i + 1) * 64), // sector 0~31: 64 bytes
-            ..._.times(8, i => i * 256 + 2304), // sector 32~39: 256 bytes
-          ]
-          for (const i of endOfSectors) {
-            if (i > dump.length) break
-            for (const j of [-16, -6]) dump.set(keyUnknown, i + j)
-          }
-          return dump
-        },
-        mfGetKeys () {
-          try {
-            const keys = ChameleonUltra.mf1KeysFromDict(this.ss.keys)
-            return keys.length > 0 ? keys : null
-          } catch (err) {
-            return null
-          }
-        },
-        mfMergeKeys (newKeys) {
-          const keys = ChameleonUltra.mf1UniqueKeys([
-            ...ChameleonUltra.mf1KeysFromDict(this.ss.keys),
-            ...newKeys,
-          ])
-          this.$set(this.ss, 'keys', _.map(keys, toHex).join('\n'))
-        },
-        mfGrabKeysFromDump () {
-          // merge keys
-          const { tagType, dump } = this.ss
-          const tagSectors = tagType === 1 ? 40 : 16
-          const newKeys = []
-          for (let i = 0; i < tagSectors; i++) {
-            const [blkStart, secblks] = i < 32 ? [i * 4, 4] : [(i - 24) * 16, 16]
-            const sectorData = dump.subarray(blkStart * 16).subarray(0, secblks * 16)
-            newKeys.push(..._.map([0, 10], pos => sectorData.subarray(pos - 16).subarray(0, 6)))
-          }
-          this.$set(this.ss, 'keys', '')
-          this.mfMergeKeys(newKeys)
-        },
-        mfkey32v2 (uid, r0, r1) {
-          return Crypto1.mfkey32v2({
-            uid,
-            nt0: r0.nt,
-            nr0: r0.nr,
-            ar0: r0.ar,
-            nt1: r1.nt,
-            nr1: r1.nr,
-            ar1: r1.ar,
-          })
-        },
-        showLoading (opts = {}) {
-          opts = {
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            ...opts,
-          }
-          if (Swal.isVisible()) return Swal.update(opts)
-          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
-        },
+        }
+
+        return {
+          ls,
+          ss,
+          dumpImport,
+          dumpExport,
+          exportimport,
+          ultra,
+          btnAdapterTips,
+          btnEditKeys,
+          btnReadTag,
+          btnNewDump,
+          btnEditDump,
+          btnImportDump,
+          btnExportDump,
+          btnWriteEmu,
+          btnRecoverKeys,
+          btnCopy,
+          showLoading,
+          swalFire,
+        }
       },
-    })
+    }).mount('#app')

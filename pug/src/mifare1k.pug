@@ -1,159 +1,194 @@
-extends /include/bootstrapV4
+extends /include/bootstrap5
 
 block beforehtml
   -
-    const title = 'Mifare 1k Tools'
-    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/zJ1qIdj.png']
+    title = 'Mifare 1k Tools'
+    description = 'A ChameleonUltra tool for mifare class 1k.'
+    ogImage = 'https://i.imgur.com/zJ1qIdj.png'
+    ogImageWidth = 1200
+    ogImageHeight = 600
+    ogUrl = `${baseurl}mifare1k.html`
 
 block style
-  meta(property="og:description", content="A ChameleonUltra tool for mifare class 1k.")
-  meta(property="og:locale", content="zh_TW")
-  meta(property="og:title", content=title)
-  meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}mifare1k.html`)
   style
     :sass
       [v-cloak]
         display: none
-      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
-        font-family: 'Noto Sans TC', sans-serif
-      .input-group-prepend > .input-group-text
+      .input-group-text
         width: 80px
-      .letter-spacing-n1px
-        &, .btn, textarea, select, input
-          letter-spacing: -1px
-      .text-sm
-        font-size: 0.875rem
 
 block content
-  #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group
-      label Connect method:
-      .input-group.input-group-sm.mb-3
-        select.form-control(v-model="ls.adapter")
-          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
-          option(value="usb") USB Serial (PC only)
-        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
-    .card.shadow-sm.mb-2
-      h6.card-header.bg-light #[.bgicon.bgicon-chameleon-ultra.mr-1] Slot HF Emulator
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center slot
-          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
-            option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center name
-          input.form-control(placeholder="name of slot HF", v-model="ss.name")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.name = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center detection
-          select.form-control.form-control-sm(v-model.number="ss.detection")
-            option(value="0") Off
-            option(value="1") On
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center gen1a
-          select.form-control.form-control-sm(v-model.number="ss.gen1a")
-            option(value="0") Normal
-            option(value="1") Emulate gen1a (magic auth)
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center gen2
-          select.form-control.form-control-sm(v-model.number="ss.gen2")
-            option(value="0") Normal
-            option(value="1") Emulate gen2 (direct write)
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center antiColl
-          select.form-control.form-control-sm(v-model.number="ss.antiColl")
-            option(value="0") From slot settings
-            option(value="1") From block 0
-        .input-group.input-group-sm.letter-spacing-n1px.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center write
-          select.form-control.form-control-sm(v-model.number="ss.write")
-            option(value="0") Normal
-            option(value="1") Denied
-            option(value="2") Deceive
-            option(value="3") Shadow
-            option(value="4") Shadow Request
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnEmuRead") #[i.fa.fa-fw.fa-sign-out] Load
-          .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnEmuWrite") #[i.fa.fa-fw.fa-sign-in] Emulate
-        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnEmuReset") #[i.fa.mr-1.fa-repeat] Reset slot HF to default
-    .card.shadow-sm.mb-2
-      h6.card-header.bg-light #[.bgicon.bgicon-nfc.mr-1] Mifare Tag
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        h6.card-title M1, CUID, FUID, UFUID
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: label.input-group-text.justify-content-center keys
-          textarea.form-control(rows="4", v-model="ss.keys", :class="isValidKeys(ss.keys) ? 'is-valid' : 'is-invalid'")
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnGen2Read") #[i.fa.fa-fw.fa-upload] Read
-          .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnGen2Write") #[i.fa.fa-fw.fa-download] Write
-        button.btn.btn-sm.btn-block.btn-outline-info.mb-2(@click="btnKeysGrab") #[i.fa.mr-1.fa-key] Grab keys from Mifare Dump
-        button.btn.btn-sm.btn-block.btn-outline-secondary.mb-2(@click="btnKeysReset") #[i.fa.mr-1.fa-fire] Reset to well-known keys
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
-        h6.card-title UID (Chinese Magic Card gen1a)
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnGen1aRead") #[i.fa.fa-fw.fa-upload] Read
-          .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnGen1aWrite") #[i.fa.fa-fw.fa-download] Write
-    .card.shadow-sm.mb-2
-      h6.card-header.bg-light #[i.fa.fa-id-card.mr-1] Mifare Dump
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnImportDump") #[i.fa.fa-fw.fa-file-code-o] Import
-          .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnExportDump") #[i.fa.fa-fw.fa-floppy-o] Export
-        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnResetDump") #[i.fa.mr-1.fa-repeat] Reset to empty dump
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
-        h6.card-title Anti Collision
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center UID
-          input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center ATQA
-          input.form-control(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.atqa = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center SAK
-          input.form-control(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.sak = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center ATS
-          input.form-control(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.ats = ''") #[i.fa.fa-fw.fa-times]
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
-        h6.card-title Mifare 1k Card Dump
-        .input-group.input-group-sm.mb-2(v-for="i in _.times(16)")
-          .input-group-prepend: label.input-group-text.justify-content-center.flex-column(style="width: 2rem", :for="`i-toggle-${i}`")
-            input.my-2(type="checkbox", v-model="ss.toggle[i]", :id="`i-toggle-${i}`")
-            span {{ `0${i}`.slice(-2) }}
-          textarea.form-control(rows="4", v-model="ss.dump[i]", :class="isValidBlock(ss.dump[i]) ? 'is-valid' : 'is-invalid'")
-    .modal.fade(tabindex="-1", ref="dumpExport")
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      header.text-center.mb-3
+        h4.d-flex.justify-content-center.align-items-center.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          = title
+      include /include/bootstrap5-adapter-content
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          | Slot HF Emulator
+        .card-body.overflow-hidden
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-slot") slot
+            select.form-select.form-select-sm#ss-slot(v-model.number="ss.slot")
+              option(v-for="i of 8", :key="i", :value="i - 1") Slot {{ i }}
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-name") name
+            input.form-control.form-control-sm#ss-name(placeholder="name of slot HF", v-model="ss.name")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.name = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-detection") detection
+            select.form-select.form-select-sm#ss-detection(v-model.number="ss.detection")
+              option(value="0") Off
+              option(value="1") On
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-gen1a") gen1a
+            select.form-select.form-select-sm#ss-gen1a(v-model.number="ss.gen1a")
+              option(value="0") Normal
+              option(value="1") Emulate gen1a (magic auth)
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-gen2") gen2
+            select.form-select.form-select-sm#ss-gen2(v-model.number="ss.gen2")
+              option(value="0") Normal
+              option(value="1") Emulate gen2 (direct write)
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-antiColl") antiColl
+            select.form-select.form-select-sm#ss-antiColl(v-model.number="ss.antiColl")
+              option(value="0") From slot settings
+              option(value="1") From block 0
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-write") write
+            select.form-select.form-select-sm#ss-write(v-model.number="ss.write")
+              option(value="0") Normal
+              option(value="1") Denied
+              option(value="2") Deceive
+              option(value="3") Shadow
+              option(value="4") Shadow Request
+          .row.g-2.mb-2
+            .col
+              button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnEmuRead")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:logout.svg)")
+                | Load
+            .col
+              button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnEmuWrite")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+                | Emulate
+          button.btn.btn-sm.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnEmuReset")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            | Reset slot HF to default
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.svgmask-nfc
+          | Mifare Tag
+        .card-body.overflow-hidden
+          h6.card-title M1, CUID, FUID, UFUID
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-keys") keys
+            textarea.form-control#ss-keys(rows="4", v-model="ss.keys", :class="isValidKeys(ss.keys) ? 'is-valid' : 'is-invalid'")
+          .row.g-2.mb-2
+            .col
+              button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnGen2Read")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+                | Read
+            .col
+              button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnGen2Write")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+                | Write
+          button.btn.btn-sm.w-100.btn-outline-info.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnKeysGrab")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:key-outline.svg)")
+            | Grab keys from Mifare Dump
+          button.btn.btn-sm.w-100.btn-outline-secondary.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnKeysReset")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:fire.svg)")
+            | Reset to well-known keys
+        .card-body.overflow-hidden.border-top
+          h6.card-title UID (Chinese Magic Card gen1a)
+          .row.g-2.mb-2
+            .col
+              button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnGen1aRead")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+                | Read
+            .col
+              button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnGen1aWrite")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+                | Write
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:card-account-details-outline.svg)")
+          | Mifare Dump
+        .card-body.overflow-hidden
+          input.d-none(type="file", ref="dumpImportInput", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
+          .row.g-2.mb-2
+            .col
+              button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnImportDump")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-import-outline.svg)")
+                | Import
+            .col
+              button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnExportDump")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+                | Export
+          button.btn.btn-sm.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnResetDump")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            | Reset to empty dump
+        .card-body.overflow-hidden.border-top
+          h6.card-title Anti Collision
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-uid") UID
+            input.form-control.form-control-sm#ss-uid(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-atqa") ATQA
+            input.form-control.form-control-sm#ss-atqa(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-sak") SAK
+            input.form-control.form-control-sm#ss-sak(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-ats") ATS
+            input.form-control.form-control-sm#ss-ats(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.ats = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+        .card-body.overflow-hidden.border-top
+          h6.card-title Mifare 1k Card Dump
+          .input-group.input-group-sm.mb-2(v-for="i in sectorRange", :key="i")
+            label.input-group-text.justify-content-center.flex-column(style="width: 2rem", :for="`i-toggle-${i}`")
+              input.my-2(type="checkbox", v-model="ss.toggle[i]", :id="`i-toggle-${i}`")
+              span {{ `0${i}`.slice(-2) }}
+            textarea.form-control(rows="4", v-model="ss.dump[i]", :class="isValidBlock(ss.dump[i]) ? 'is-valid' : 'is-invalid'")
+    .modal.fade(tabindex="-1", ref="dumpExportModal")
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
           .modal-header
-            h5.modal-title #[i.fa.fa-fw.fa-floppy-o] Export Dump
-            button.close(type="button", data-dismiss="modal") #[span &times;]
+            h5.modal-title.icon-link
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+              | Export Dump
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body
-            a.btn.btn-block.btn-outline-primary.mb-2.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.json.download",
               :href="dumpExport.json.href",
               target="_blank")
               .my-1 {{ dumpExport.json.download }}
               h6.text-muted.mb-1 Click to download as JSON format. This format can be used in Proxmark3 and Chameleon Mini GUI.
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.bin.download",
               :href="dumpExport.bin.href",
               target="_blank")
               .my-1 {{ dumpExport.bin.download }}
               h6.text-muted.mb-1 Click to download as BIN format. This format can be used in Proxmark3, libnfc, mfoc...
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.eml.download",
               :href="dumpExport.eml.href",
               target="_blank")
               .my-1 {{ dumpExport.eml.download }}
               h6.text-muted.mb-1 Click to download as EML format. This format can be used in Proxmark3 emulator.
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.text-start(
               :download="dumpExport.mct.download",
               :href="dumpExport.mct.href",
               target="_blank")
@@ -161,9 +196,16 @@ block content
               h6.text-muted.mb-1 Click to download as MCT format. This format can be used in Mifare Classic Tool.
 
 block script
-  script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/joi@17/dist/joi-browser.min.js")
-  script.
-    const { Buffer, ChameleonUltra, Debug, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+  script(type="module").
+    import { Buffer, ChameleonUltra, DeviceMode, FreqType, TagType } from 'chameleon-ultra.js'
+    import Debug from 'chameleon-ultra.js/plugin/Debug'
+    import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+    import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+    import { Modal } from 'bootstrap'
+    import _ from 'lodash'
+    import { computed, createApp, nextTick, reactive, useTemplateRef, watch } from 'vue'
+    import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -173,18 +215,16 @@ block script
 
     const toHex = buf => _.toUpper(buf.toString('hex'))
     const WELL_KNOWN_KEYS = ['FFFFFFFFFFFF', 'A0A1A2A3A4A5', 'D3F7D3F7D3F7']
+    const SECTOR_RANGE = _.times(16)
 
     function toSectorsHex (dump) {
       return _.map(dump.chunk(64), sectorDump => _.map(sectorDump.chunk(16), toHex).join('\n'))
     }
 
-    window.vm = new Vue({
-      el: '#app',
-      data: {
-        ls: {
-          adapter: 'ble',
-        },
-        ss: {
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({ adapter: 'ble' })
+        const ss = reactive({
           antiColl: 0,
           atqa: '0004',
           ats: '',
@@ -199,83 +239,91 @@ block script
           toggle: _.times(16, () => true),
           uid: 'DEADBEEF',
           write: 0,
-        },
-        dumpImport: { cb: null },
-        dumpExport: {
+        })
+        const dumpImport = reactive({ cb: null })
+        const dumpExport = reactive({
           json: { download: '', href: '' },
           bin: { download: '', href: '' },
           eml: { download: '', href: '' },
           mct: { download: '', href: '' },
-        },
-      },
-      async mounted () {
-        // 自動儲存功能
-        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
-          try {
-            const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
-          } catch (err) {}
-          this.$watch(key, () => {
-            storage.setItem(location.pathname, JSON5.stringify(this[key]))
-          }, { deep: true })
-        }
-      },
-      computed: {
-        ultra () {
-          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
-        },
-      },
-      methods: {
-        async swalFire (args) {
-          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
-          return await Swal.fire(args)
-        },
-        async btnAdapterTips () {
-          await this.swalFire({
-            title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
-          })
-        },
-        async btnEmuRead () {
-          const { ultra } = this
-          const { slot } = this.ss
-          try {
-            this.showLoading({ text: 'Loading emulator' })
-            await ultra.cmdSlotSetActive(slot)
-            this.$set(this, 'ss', {
-              ...this.ss,
-              name: await ultra.cmdSlotGetFreqName(slot, FreqType.HF),
-              ..._.mapValues(await ultra.cmdMf1GetEmuSettings(), _.toInteger), // antiColl, detection, gen1a, gen2, write
-            })
-            this.mfCardSetAntiColl(await ultra.cmdHf14aGetAntiCollData())
-            for (let i = 0; i < 16; i++) {
-              if (!this.ss.toggle[i]) continue
-              this.mfSetSectorDump(i, await ultra.cmdMf1EmuReadBlock(i << 2, 4))
-            }
-            await this.swalFire({ icon: 'success', title: 'Load success' })
-          } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Load failed', text: err.message })
+        })
+
+        const dumpImportInputRef = useTemplateRef('dumpImportInput')
+        const dumpExportModalRef = useTemplateRef('dumpExportModal')
+
+        loadPageStorage(localStorage, ls)
+        loadPageStorage(sessionStorage, ss)
+        watch(ls, () => { savePageStorage(localStorage, ls) }, { deep: true })
+        watch(ss, () => { savePageStorage(sessionStorage, ss) }, { deep: true })
+
+        const ultra = computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)
+
+        const logError = err => { ultra.value.emitter.emit('error', err) }
+
+        function mfCardSetAntiColl (hf14aAntiColl) {
+          for (const k of ['uid', 'atqa', 'sak', 'ats']) {
+            let buf = hf14aAntiColl?.[k] ?? new Buffer()
+            if (k === 'atqa') buf = buf.toReversed()
+            ss[k] = toHex(buf)
           }
-        },
-        async btnEmuWrite () {
-          const { ultra } = this
-          const { antiColl, atqa, ats, detection, dump, gen1a, gen2, name, sak, slot, toggle, uid, write } = this.ss
+        }
+
+        function mfSetSectorDump (sectorNo, sectorData) {
+          ss.dump[sectorNo] = _.map(sectorData.chunk(16), toHex).join('\n')
+        }
+
+        function mfGetKeys () {
+          const keys = ChameleonUltra.mf1KeysFromDict(ss.keys)
+          if (keys.length === 0) throw new Error('No keys found')
+          return keys
+        }
+
+        function isValidBlock (str) {
+          return /^([\dA-Fa-f]{32}\s*){4}$/.test(str)
+        }
+
+        function isValidKeys (str) {
+          return /^([\dA-Fa-f]{12}\s*)+$/.test(str)
+        }
+
+        async function btnEmuRead () {
+          const { slot } = ss
           try {
-            this.showLoading({ text: 'Emulating tag...' })
-            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
+            showLoading({ text: 'Loading emulator' })
+            await ultra.value.cmdSlotSetActive(slot)
+            Object.assign(ss, {
+              name: await ultra.value.cmdSlotGetFreqName(slot, FreqType.HF),
+              ..._.mapValues(await ultra.value.cmdMf1GetEmuSettings(), _.toInteger), // antiColl, detection, gen1a, gen2, write
+            })
+            mfCardSetAntiColl(await ultra.value.cmdHf14aGetAntiCollData())
+            for (let i = 0; i < 16; i++) {
+              if (!ss.toggle[i]) continue
+              mfSetSectorDump(i, await ultra.value.cmdMf1EmuReadBlock(i << 2, 4))
+            }
+            await swalFire({ icon: 'success', title: 'Load success' })
+          } catch (err) {
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Load failed', text: err.message })
+          }
+        }
+
+        async function btnEmuWrite () {
+          const { antiColl, atqa, ats, detection, dump, gen1a, gen2, name, sak, slot, toggle, uid, write } = ss
+          try {
+            showLoading({ text: 'Emulating tag...' })
+            const slotName = await ultra.value.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `Slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Emulating tag...' })
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await ultra.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
-            if (_.isString(name) && name.length > 0) await ultra.cmdSlotSetFreqName(slot, FreqType.HF, name)
-            await ultra.cmdMf1SetAntiCollMode(antiColl)
-            await ultra.cmdMf1SetDetectionEnable(detection)
-            await ultra.cmdMf1SetGen1aMode(gen1a)
-            await ultra.cmdMf1SetGen2Mode(gen2)
-            await ultra.cmdMf1SetWriteMode(write)
-            await ultra.cmdHf14aSetAntiCollData({
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            showLoading({ text: 'Emulating tag...' })
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.value.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
+            if (_.isString(name) && name.length > 0) await ultra.value.cmdSlotSetFreqName(slot, FreqType.HF, name)
+            await ultra.value.cmdMf1SetAntiCollMode(antiColl)
+            await ultra.value.cmdMf1SetDetectionEnable(detection)
+            await ultra.value.cmdMf1SetGen1aMode(gen1a)
+            await ultra.value.cmdMf1SetGen2Mode(gen2)
+            await ultra.value.cmdMf1SetWriteMode(write)
+            await ultra.value.cmdHf14aSetAntiCollData({
               atqa: Buffer.from(atqa, 'hex').reverse(),
               ats: Buffer.from(ats, 'hex'),
               sak: Buffer.from(sak, 'hex'),
@@ -284,181 +332,182 @@ block script
             for (let i = 0; i < 16; i++) {
               if (!toggle[i]) continue
               const sectorData = Buffer.from(dump[i], 'hex')
-              await ultra.cmdMf1EmuWriteBlock(i << 2, sectorData)
+              await ultra.value.cmdMf1EmuWriteBlock(i << 2, sectorData)
             }
-            await ultra.cmdSlotSaveSettings()
-            await this.swalFire({ icon: 'success', title: 'Emulate success' })
+            await ultra.value.cmdSlotSaveSettings()
+            await swalFire({ icon: 'success', title: 'Emulate success' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Emulate failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Emulate failed', text: err.message })
           }
-        },
-        async btnEmuReset () {
-          const { ultra } = this
-          const { slot } = this.ss
+        }
+
+        async function btnEmuReset () {
+          const { slot } = ss
           try {
-            this.showLoading({ text: 'Resetting...' })
-            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
+            showLoading({ text: 'Resetting...' })
+            const slotName = await ultra.value.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `Slot ${slot + 1} "${slotName}" will be RESET! Continue?`
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Resetting...' })
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await ultra.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
-            await this.swalFire({ icon: 'success', title: 'Reset success' })
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            showLoading({ text: 'Resetting...' })
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.value.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
+            await swalFire({ icon: 'success', title: 'Reset success' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
-        },
-        async btnGen1aRead () {
-          const { ultra } = this
+        }
+
+        async function btnGen1aRead () {
           try {
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading mifare gen1a:</span><span>${i} / 16</span></div></div>`,
             })
-            this.showLoading(genSwalCfg(0))
-            this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
+            showLoading(genSwalCfg(0))
+            mfCardSetAntiColl(_.first(await ultra.value.cmdHf14aScan()))
             for (let i = 0; i < 16; i++) {
-              if (!this.ss.toggle[i]) continue
-              this.mfSetSectorDump(i, await ultra.mf1Gen1aReadBlocks(i << 2, 4))
-              this.showLoading(genSwalCfg(i + 1))
+              if (!ss.toggle[i]) continue
+              mfSetSectorDump(i, await ultra.value.mf1Gen1aReadBlocks(i << 2, 4))
+              showLoading(genSwalCfg(i + 1))
             }
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await this.swalFire({ icon: 'success', title: 'Read success' })
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
+            await swalFire({ icon: 'success', title: 'Read success' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
-        },
-        async btnGen1aWrite () {
-          const { ultra } = this
+        }
+
+        async function btnGen1aWrite () {
           try {
             const msg1 = 'Mifare Gen1a Tag will be REPLACE! Continue?'
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Writing mifare gen1a:</span><span>${i} / 16</span></div></div>`,
             })
-            this.showLoading(genSwalCfg(0))
+            showLoading(genSwalCfg(0))
             for (let i = 0; i < 16; i++) {
-              if (!this.ss.toggle[i]) continue
-              const sectorData = Buffer.from(this.ss.dump[i], 'hex')
-              await ultra.mf1Gen1aWriteBlocks(i << 2, sectorData)
-              this.showLoading(genSwalCfg(i + 1))
+              if (!ss.toggle[i]) continue
+              const sectorData = Buffer.from(ss.dump[i], 'hex')
+              await ultra.value.mf1Gen1aWriteBlocks(i << 2, sectorData)
+              showLoading(genSwalCfg(i + 1))
             }
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await this.swalFire({ icon: 'success', title: 'Write success' })
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
+            await swalFire({ icon: 'success', title: 'Write success' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
-        },
-        async btnGen2Read () {
-          const { ultra } = this
+        }
+
+        async function btnGen2Read () {
           try {
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
             })
-            this.showLoading(genSwalCfg(0))
-            const keys = this.mfGetKeys()
-            this.mfCardSetAntiColl(_.first(await ultra.cmdHf14aScan()))
+            showLoading(genSwalCfg(0))
+            const keys = mfGetKeys()
+            mfCardSetAntiColl(_.first(await ultra.value.cmdHf14aScan()))
             const failed = []
             for (let i = 0; i < 16; i++) {
               try {
-                if (!this.ss.toggle[i]) continue
-                const oldSectorData = Buffer.from(this.ss.dump[i], 'hex')
+                if (!ss.toggle[i]) continue
+                const oldSectorData = Buffer.from(ss.dump[i], 'hex')
                 const oldSectorKeys = _.map([0, 10], pos => oldSectorData.subarray(pos - 16).subarray(0, 6))
-                const { data: newSectorData, success } = await ultra.mf1ReadSectorByKeys(i, [...oldSectorKeys, ...keys])
-                this.mfSetSectorDump(i, newSectorData)
+                const { data: newSectorData, success } = await ultra.value.mf1ReadSectorByKeys(i, [...oldSectorKeys, ...keys])
+                mfSetSectorDump(i, newSectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
               } catch (err) {
-                if (!ultra.isConnected()) throw err
+                if (!ultra.value.isConnected()) throw err
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
-                ultra.emitter.emit('error', err)
+                logError(err)
               }
-              this.showLoading(genSwalCfg(i + 1))
+              showLoading(genSwalCfg(i + 1))
             }
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            if (failed.length === 0) return await this.swalFire({ icon: 'success', title: 'Read success' })
-            await this.swalFire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
+            if (failed.length === 0) return await swalFire({ icon: 'success', title: 'Read success' })
+            await swalFire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
-        },
-        async btnGen2Write () {
-          const { ultra } = this
+        }
+
+        async function btnGen2Write () {
           try {
             const msg1 = 'Mifare / Gen2 Tag will be REPLACE! Continue?'
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Writing Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
             })
-            this.showLoading(genSwalCfg(0))
-            const keys = this.mfGetKeys()
+            showLoading(genSwalCfg(0))
+            const keys = mfGetKeys()
             const failed = []
             for (let i = 0; i < 16; i++) {
               try {
-                if (!this.ss.toggle[i]) continue
-                const sectorData = Buffer.from(this.ss.dump[i], 'hex')
+                if (!ss.toggle[i]) continue
+                const sectorData = Buffer.from(ss.dump[i], 'hex')
                 const sectorKeys = _.map([0, 10], pos => sectorData.subarray(pos - 16).subarray(0, 6))
-                const { success } = await ultra.mf1WriteSectorByKeys(i, [...sectorKeys, ...keys], sectorData)
+                const { success } = await ultra.value.mf1WriteSectorByKeys(i, [...sectorKeys, ...keys], sectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
               } catch (err) {
-                if (!ultra.isConnected()) throw err
+                if (!ultra.value.isConnected()) throw err
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
-                ultra.emitter.emit('error', err)
+                logError(err)
               }
-              this.showLoading(genSwalCfg(i + 1))
+              showLoading(genSwalCfg(i + 1))
             }
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            if (failed.length === 0) return await this.swalFire({ icon: 'success', title: 'Write success' })
-            await this.swalFire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
+            if (failed.length === 0) return await swalFire({ icon: 'success', title: 'Write success' })
+            await swalFire({ icon: 'error', title: `${failed.length} blocks failed`, text: `Failed block: ${failed.join(',')}` })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
-        },
-        async btnKeysGrab () {
-          const { ultra } = this
+        }
+
+        async function btnKeysGrab () {
           try {
             const msg1 = 'Tool\'s mifare keys will be REPLACE! Continue?'
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Grabing' })
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            showLoading({ text: 'Grabing' })
             let keys = []
             for (let i = 0; i < 16; i++) {
-              if (!this.ss.toggle[i]) continue
-              const sectorData = Buffer.from(this.ss.dump[i], 'hex')
+              if (!ss.toggle[i]) continue
+              const sectorData = Buffer.from(ss.dump[i], 'hex')
               if (sectorData.length !== 64) continue
               keys.push(..._.map([48, 58], offset => toHex(sectorData.subarray(offset, offset + 6))))
             }
             keys = _.uniq(keys)
             if (keys.length === 0) throw new Error('No keys found')
-            this.$set(this.ss, 'keys', keys.join('\n'))
-            await this.swalFire({ icon: 'success', title: 'Grab success', text: `Grab ${keys.length} keys.` })
+            ss.keys = keys.join('\n')
+            await swalFire({ icon: 'success', title: 'Grab success', text: `Grab ${keys.length} keys.` })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Grab failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Grab failed', text: err.message })
           }
-        },
-        async btnKeysReset () {
+        }
+
+        async function btnKeysReset () {
           const msg1 = 'Tool\'s mifare keys will be REPLACE! Continue?'
-          if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-          this.$set(this.ss, 'keys', WELL_KNOWN_KEYS.join('\n'))
-        },
-        async btnImportDump () {
-          const { ultra } = this
+          if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+          ss.keys = WELL_KNOWN_KEYS.join('\n')
+        }
+
+        async function btnImportDump () {
           try {
             const file = await new Promise(resolve => {
-              this.$set(this.dumpImport, 'cb', resolve)
-              const $ref = this.$refs.dumpImport
-              $ref.value = ''
-              $ref.click()
+              dumpImport.cb = resolve
+              const inputEl = dumpImportInputRef.value
+              inputEl.value = ''
+              inputEl.click()
             })
             if (_.isNil(file)) throw new Error('No file selected')
             if (file.size > 1e6) throw new Error(`File size too large: ${file.size} bytes`)
             const dotIdx = file.name.lastIndexOf('.')
             if (dotIdx === -1) throw new Error('Invalid file name')
-            this.showLoading({ text: 'Importing' })
+            showLoading({ text: 'Importing' })
             const ext = _.toLower(file.name.slice(dotIdx + 1))
             const buf = new Buffer(await file.arrayBuffer())
             let dump = null
@@ -470,7 +519,7 @@ block script
               case 'json':
               case 'json5': {
                 const card = ChameleonUltra.mf1DumpFromPm3Json(buf)
-                _.merge(this.ss, {
+                _.merge(ss, {
                   uid: toHex(card.uid),
                   atqa: toHex(card.atqa.toReversed()),
                   sak: toHex(card.sak),
@@ -492,124 +541,100 @@ block script
             }
             if (_.isNil(dump)) throw new Error('Failed to import dump')
             if (dump?.length !== 1024) throw new Error(`dump size invalid: ${dump.length} bytes`)
-            for (const [i, sectorData] of _.entries(dump.chunk(64))) this.mfSetSectorDump(i, sectorData)
-            await this.swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
+            for (const [i, sectorData] of _.entries(dump.chunk(64))) mfSetSectorDump(i, sectorData)
+            await swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Import failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Import failed', text: err.message })
           }
-        },
-        async btnExportDump () {
+        }
+
+        async function btnExportDump () {
           const dump = new Buffer(1024)
           for (let i = 0; i < 16; i++) {
-            const sectorData = Buffer.from(this.ss.dump[i], 'hex')
+            const sectorData = Buffer.from(ss.dump[i], 'hex')
             if (sectorData.length !== 64) continue // skip invalid sector
             sectorData.copy(dump, i * 64)
           }
-          const atqa = Buffer.from(this.ss.atqa, 'hex').toReversed()
-          const ats = Buffer.from(this.ss.ats, 'hex')
-          const sak = Buffer.from(this.ss.sak, 'hex')
-          const uid = Buffer.from(this.ss.uid, 'hex')
+          const atqa = Buffer.from(ss.atqa, 'hex').toReversed()
+          const ats = Buffer.from(ss.ats, 'hex')
+          const sak = Buffer.from(ss.sak, 'hex')
+          const uid = Buffer.from(ss.uid, 'hex')
           const strUid = toHex(uid)
 
           // json
           const json = ChameleonUltra.mf1DumpToPm3Json({ atqa, ats, body: dump, sak, uid })
-          this.$set(this.dumpExport, 'json', {
+          dumpExport.json = {
             href: URL.createObjectURL(new Blob([JSON.stringify(json, null, 2)], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.json`,
-          })
+          }
 
           // bin
-          this.$set(this.dumpExport, 'bin', {
+          dumpExport.bin = {
             href: URL.createObjectURL(new Blob([dump], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.bin`,
-          })
+          }
 
           // eml
           const eml = ChameleonUltra.mf1DumpToEml({ body: dump })
-          this.$set(this.dumpExport, 'eml', {
+          dumpExport.eml = {
             href: URL.createObjectURL(new Blob([eml], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.eml`,
-          })
+          }
 
           // mct
           const mct = ChameleonUltra.mf1DumpToMct({ body: dump })
-          this.$set(this.dumpExport, 'mct', {
+          dumpExport.mct = {
             href: URL.createObjectURL(new Blob([mct], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.mct`,
-          })
+          }
 
-          await new Promise(resolve => this.$nextTick(resolve)) // wait for DOM update
-          const $ref = window.jQuery(this.$refs.dumpExport)
-          $ref.modal('show')
-        },
-        async btnResetDump () {
-          const { ultra } = this
+          await nextTick() // wait for DOM update
+          Modal.getOrCreateInstance(dumpExportModalRef.value).show()
+        }
+
+        async function btnResetDump () {
           try {
             const msg1 = 'Mifare dump will be RESET! Continue?'
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            const tmp = {
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            Object.assign(ss, {
               uid: 'deadbeef',
               atqa: '0004',
               sak: '08',
               ats: '',
               dump: toSectorsHex(ChameleonUltra.mf1GenEmptyDump()),
               toggle: _.times(16, () => true),
-            }
-            this.$set(this, 'ss', { ...this.ss, ...tmp })
+            })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
-        },
-        async confirm (text, confirmButtonText, cancelButtonText) {
-          return await new Promise((resolve, reject) => {
-            let isConfirmed = false
-            const args = {
-              cancelButtonColor: '#3085d6',
-              cancelButtonText,
-              confirmButtonColor: '#d33',
-              confirmButtonText,
-              didDestroy: () => { resolve(isConfirmed) },
-              focusCancel: true,
-              icon: 'warning',
-              reverseButtons: true,
-              showCancelButton: true,
-              text,
-            }
-            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
-          })
-        },
-        mfCardSetAntiColl (hf14aAntiColl) {
-          for (const k of ['uid', 'atqa', 'sak', 'ats']) {
-            let buf = hf14aAntiColl?.[k] ?? new Buffer()
-            if (k === 'atqa') buf = buf.toReversed()
-            this.$set(this.ss, k, toHex(buf))
-          }
-        },
-        mfSetSectorDump (sectorNo, sectorData) {
-          const sectorEml = _.map(sectorData.chunk(16), toHex).join('\n')
-          this.$set(this.ss.dump, sectorNo, sectorEml)
-        },
-        mfGetKeys () {
-          const keys = ChameleonUltra.mf1KeysFromDict(this.ss.keys)
-          if (keys.length === 0) throw new Error('No keys found')
-          return keys
-        },
-        isValidBlock (str) {
-          return /^([\dA-Fa-f]{32}\s*){4}$/.test(str)
-        },
-        isValidKeys (str) {
-          return /^([\dA-Fa-f]{12}\s*)+$/.test(str)
-        },
-        showLoading (opts = {}) {
-          opts = {
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            ...opts,
-          }
-          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
-          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
-        },
+        }
+
+        return {
+          ls,
+          ss,
+          dumpImport,
+          dumpExport,
+          sectorRange: SECTOR_RANGE,
+          ultra,
+          btnAdapterTips,
+          btnEmuRead,
+          btnEmuWrite,
+          btnEmuReset,
+          btnGen1aRead,
+          btnGen1aWrite,
+          btnGen2Read,
+          btnGen2Write,
+          btnKeysGrab,
+          btnKeysReset,
+          btnImportDump,
+          btnExportDump,
+          btnResetDump,
+          isValidBlock,
+          isValidKeys,
+          showLoading,
+          swalFire,
+        }
       },
-    })
+    }).mount('#app')

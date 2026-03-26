@@ -1,30 +1,49 @@
-extends /include/bootstrapV4
+extends /include/bootstrap5
 
 block beforehtml
-  - const title = 'Test'
+  - title = 'Test'
 
 block style
   style
     :sass
       [v-cloak]
         display: none
-      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
-        font-family: 'Noto Sans TC', sans-serif
 
 block content
-  #app.my-3.container(v-cloak)
-    h4.text-center #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group.mt-3
-      label Choose connection method:
-      select.form-control.form-control-sm(v-model="ls.adapter")
-        option(value="ble") via BLE (PC &amp; Android, bond is required)
-        option(value="usb") via USB Serial (PC only)
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      header.text-center.mb-3
+        h4.d-flex.justify-content-center.align-items-center.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          = title
+      include /include/bootstrap5-adapter-content
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/icon-park-outline:tips.svg)")
+          | Tips
+        .card-body.overflow-hidden.fs-14px
+          .mb-1 How to enable debug logs:
+          ol.mb-0
+            li.mb-1 Open devtools console
+            li.mb-1
+              | Run command to enable logs:
+              code.p-1.m-1.border.border-secondary.rounded localStorage.debug = 'ultra:*'
+            li.mb-1 Change Log Level: show "Verbose"
+            li.mb-1 Select adapter (BLE or USB Serial)
+            li Run snippets from docs
 
 block script
   script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/vconsole@3/dist/vconsole.min.js")
   script.
     window.vConsole = new window.VConsole()
-    const { Buffer, ChameleonUltra, Debug, NrfDfu, NrfDfuWebserialAdapter, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS // eslint-disable-line no-unused-vars
+  script(type="module").
+    import { ChameleonUltra } from 'chameleon-ultra.js'
+    import Debug from 'chameleon-ultra.js/plugin/Debug'
+    import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+    import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+    import { computed, createApp, reactive, watch } from 'vue'
+    import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalFire } from '@app/js/bootstrap5-utils.mjs'
+
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -32,40 +51,18 @@ block script
     ultraBle.use(new Debug())
     ultraBle.use(new WebbleAdapter())
 
-    window.vm = new Vue({
-      el: '#app',
-      data: {
-        ls: {
-          adapter: 'ble',
-        },
-        ss: {},
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({ adapter: 'ble' })
+        const ss = reactive({})
+
+        loadPageStorage(localStorage, ls)
+        loadPageStorage(sessionStorage, ss)
+        watch(ls, () => { savePageStorage(localStorage, ls) }, { deep: true })
+        watch(ss, () => { savePageStorage(sessionStorage, ss) }, { deep: true })
+
+        const ultra = computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)
+
+        return { btnAdapterTips, ls, ss, ultra, swalFire, showLoading }
       },
-      async mounted () {
-        // 自動儲存功能
-        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
-          try {
-            const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
-          } catch (err) {}
-          this.$watch(key, () => {
-            storage.setItem(location.pathname, JSON5.stringify(this[key]))
-          }, { deep: true })
-        }
-      },
-      computed: {
-        ultra () {
-          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
-        },
-      },
-      methods: {
-        showLoading (title, text) {
-          Swal.fire({
-            title,
-            text,
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            willOpen: () => { Swal.showLoading() },
-          })
-        },
-      },
-    })
+    }).mount('#app')
