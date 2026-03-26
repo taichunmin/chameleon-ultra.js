@@ -1,0 +1,175 @@
+extends /include/bootstrap5
+
+block beforehtml
+  -
+    title = 'MIFARE Ultralight'
+    description = 'Reading, writing, and emulating MIFARE Ultralight tags with ChameleonUltra.'
+
+block style
+  style
+    :sass
+      [v-cloak]
+        display: none
+      .input-group > .input-group-text:first-child
+        width: 80px
+
+block content
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
+      include /include/bootstrap5-adapter-content
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          | Emulator Management
+        .card-body.overflow-hidden
+          .row.g-2.ls-n1px
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-slot") slot
+              select.form-select.ls-n1px#ss-slot(v-model.number="ss.slot")
+                option(v-for="i of lo.range(8)" :value="i") Slot {{ i + 1 }}
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-emuType") emuType
+              input.form-control.ls-n1px#ss-emuType(disabled :value="emuTypeName")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="") Change
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-name") name
+              input.form-control.ls-n1px#ss-name(v-model="ss.name" placeholder="Slot name")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.name = ''")
+                span.svgmask(style="--svgmask-url: url(https://api.iconify.design/material-symbols:close.svg)")
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-magic") magic
+              select.form-select.ls-n1px#ss-magic(v-model.number="ss.magic")
+                option(value="0") Off
+                option(value="1") On
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-counters0") counter1
+              input.form-control.ls-n1px#ss-counters0(v-model.number="ss.counters[0]" placeholder="Counter 1")
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-detection") detection
+              select.form-select.ls-n1px#ss-detection(v-model.number="ss.detection")
+                option(value="0") Off
+                option(value="1") On
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-write") write
+              select.form-select.ls-n1px#ss-write(v-model.number="ss.write")
+                option(value="0") Normal
+                option(value="1") Denied
+                option(value="2") Deceive
+                option(value="3") Shadow
+                option(value="4") Shadow Request
+            .col-6: button.btn.w-100.btn-outline-success.ls-n1px.icon-link.justify-content-center #[span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/ph:sign-out-bold.svg)")] Load
+            .col-6: button.btn.w-100.btn-outline-primary.ls-n1px.icon-link.justify-content-center #[span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/ph:sign-in-bold.svg)")] Emulate
+            .col-12: button.btn.w-100.btn-sm.btn-outline-danger.ls-n1px.icon-link.justify-content-center #[span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/carbon:reset.svg)")] Reset HF slot to default
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.svgmask-nfc
+          | Tag Management
+        .card-body.overflow-hidden
+          .row.g-2.ls-n1px
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-keys") keys
+              textarea.form-control.ls-n1px#ss-keys(v-model="ss.keys" rows="4")
+            .col-6: button.btn.w-100.btn-outline-success.ls-n1px.icon-link.justify-content-center #[span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/carbon:tag-export.svg)")] Read
+            .col-6: button.btn.w-100.btn-outline-primary.ls-n1px.icon-link.justify-content-center #[span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/carbon:tag-import.svg)")] Write
+            .col-12: button.btn.w-100.btn-sm.btn-outline-secondary.ls-n1px.icon-link.justify-content-center #[span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/fluent:key-reset-20-regular.svg)")] Reset to well-known keys
+      .card.shadow.mb-2
+        h6.card-header.icon-link
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/material-symbols:id-card-outline-rounded.svg)")
+          | Dump Data
+        .card-body.overflow-hidden
+          .row.g-2.ls-n1px
+            .col-6: button.btn.w-100.btn-outline-success.ls-n1px.icon-link.justify-content-center #[span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/fa7-solid:file-import.svg)")] Import
+            .col-6: button.btn.w-100.btn-outline-primary.ls-n1px.icon-link.justify-content-center #[span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/fa7-solid:file-export.svg)")] Export
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-dumpType") dumpType
+              input.form-control.ls-n1px#ss-dumpType(disabled :value="dumpTypeName")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="") Change
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-uid") uid
+              input.form-control.ls-n1px#ss-uid(v-model="ss.uid" placeholder="UID")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
+                span.svgmask(style="--svgmask-url: url(https://api.iconify.design/material-symbols:close.svg)")
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-atqa") atqa
+              input.form-control.ls-n1px#ss-atqa(v-model="ss.atqa" placeholder="ATQA")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
+                span.svgmask(style="--svgmask-url: url(https://api.iconify.design/material-symbols:close.svg)")
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-sak") sak
+              input.form-control.ls-n1px#ss-sak(v-model="ss.sak" placeholder="SAK")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
+                span.svgmask(style="--svgmask-url: url(https://api.iconify.design/material-symbols:close.svg)")
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-signature") signature
+              textarea.form-control.ls-n1px#ss-signature(v-model="ss.signature" placeholder="Signature")
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-version") version
+              input.form-control.ls-n1px#ss-version(v-model="ss.version" placeholder="Version")
+            .input-group.input-group-sm
+              label.input-group-text.justify-content-center(for="ss-memory") memory
+              textarea.form-control.ls-n1px#ss-memory(v-model="ss.memory" placeholder="memory content" rows="17")
+
+block script
+  script(type="module").
+    import _ from 'lodash'
+    import { computed, createApp, onMounted, ref, reactive, watchEffect } from 'vue'
+    import { loadPageStorage, savePageStorage, btnAdapterTips, enumToOptions } from '@app/js/bootstrap5-utils.mjs'
+    import { TagType, NxpMfuType } from 'chameleon-ultra.js'
+    import * as z from 'zod'
+
+    const emuTypes = _.chain(TagType)
+      .pick(['MF0_ICU1', 'MF0_ICU2', 'MF0_UL11', 'MF0_UL21', 'NTAG_210', 'NTAG_212', 'NTAG_213', 'NTAG_215', 'NTAG_216'])
+      .flatMap((v, k) => [[k, v], [v, k]])
+      .fromPairs()
+      .value()
+
+    const dumpTypes = NxpMfuType
+
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({
+          adapter: 'ble',
+        })
+
+        const ss = reactive({
+          atqa: '',
+          counters: [0, 0, 0],
+          detection: 0,
+          emuType: 1100,
+          dumpType: 1,
+          keys: '',
+          magic: 0,
+          memory: '',
+          name: '',
+          sak: '',
+          signature: '',
+          slot: 0,
+          uid: '',
+          version: '',
+          write: 0,
+        })
+
+        onMounted(async () => {
+          loadPageStorage(localStorage, ls)
+          loadPageStorage(sessionStorage, ss)
+        })
+
+        watchEffect(() => { savePageStorage(localStorage, ls) })
+        watchEffect(() => { savePageStorage(sessionStorage, ss) })
+
+        const emuTypeName = computed(() => emuTypes[ss.emuType] ?? '?')
+        const dumpTypeName = computed(() => dumpTypes[ss.dumpType] ?? '?')
+
+        return {
+          btnAdapterTips,
+          dumpTypeName,
+          dumpTypes,
+          emuTypeName,
+          emuTypes,
+          lo: _,
+          ls,
+          ss,
+        }
+      },
+    }).mount('#app')
