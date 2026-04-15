@@ -203,7 +203,7 @@ block script
             const tag = {
               atqa: Buffer.from(atqa, 'hex').reverse(),
               sak: Buffer.from(sak, 'hex'),
-              uid: Buffer.from(uid, 'hex').slice(-4),
+              uid: Buffer.from(uid, 'hex'),
             }
             await ultra.cmdMf1SetAntiCollMode(false)
             await ultra.cmdHf14aSetAntiCollData(tag)
