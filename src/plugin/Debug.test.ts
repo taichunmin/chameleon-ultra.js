@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import * as sut from './Debug'
+import sut from './Debug'
 
 test('errToJson', async () => {
   const err = new Error('test', { cause: new Error('test') })

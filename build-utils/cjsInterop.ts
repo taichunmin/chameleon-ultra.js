@@ -14,12 +14,12 @@ async function main (): Promise<void> {
     for (let filepath of await fg(['../dist/**/*.d.ts'], { cwd: __dirname })) {
       filepath = path.resolve(__dirname, filepath)
       let code = await fsPromises.readFile(filepath, 'utf-8')
-      const matches = [...code.matchAll(/export { [\w$]+ as default };/g)]
+      const matches = [...code.matchAll(/export { [\w$]+ as default } from '[^']+';/g)]
       if (matches.length !== 1) continue
       // console.log(`filepath = ${filepath}`)
 
       const origCode = code
-      code = code.replace(/export { ([\w$]+) as default };/, 'export = $1;')
+      code = code.replace(/export { ([\w$]+) as default } from '([^']+)';/, 'import { $1 } from \'$2\';\nexport = $1;')
       if (origCode === code) continue
       await fsPromises.writeFile(filepath, code, 'utf8')
       cjsInteropFiles.add(filepath.substring(0, filepath.length - 5)) // for cjs

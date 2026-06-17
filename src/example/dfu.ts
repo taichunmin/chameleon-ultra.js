@@ -1,9 +1,11 @@
 import * as _ from 'lodash-es'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { Buffer, ChameleonUltra } from '../index'
-import Debug, { errToJson } from '../plugin/Debug'
+import Debug from '../plugin/Debug'
 import DfuZip from '../plugin/DfuZip'
 import SerialPortAdapter from '../plugin/SerialPortAdapter'
+
+const { errToJson } = Debug
 
 // run `serialport-list -f jsonline` to list port, see https://serialport.io/docs/bin-list
 // tsx src/example/dfu.ts

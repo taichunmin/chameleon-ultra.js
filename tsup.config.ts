@@ -1,10 +1,10 @@
 import { defineConfig, type Options } from 'tsup'
 import { nodeModulesPolyfillPlugin } from 'esbuild-plugins-node-modules-polyfill'
-import pkg from './package.json' assert { type: 'json' }
+import pkg from './package.json'
 
 const sharedConfig: Options = {
-  dts: true,
   env: { VERSION: pkg.version },
+  experimentalDts: true,
   format: ['cjs', 'esm', 'iife'],
   keepNames: true,
   publicDir: 'public',

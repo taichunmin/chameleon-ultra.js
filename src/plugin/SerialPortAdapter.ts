@@ -137,6 +137,13 @@ export default class SerialPortAdapter implements UltraPlugin {
 
     return adapter
   }
+
+  static async listDevices (): Promise<SerialPortInfo[]> {
+    return _.chain(await SerialPort.list())
+      .map<SerialPortInfo>(parsePortInfo)
+      .filter(info => _.some(SERIALPORT_FILTERS, filter => _.isMatch(info, filter)))
+      .value()
+  }
 }
 
 async function devicePickerDefault (infos: SerialPortInfo[]): Promise<SerialPortInfo | undefined> {
@@ -149,13 +156,6 @@ function parsePortInfo ({ vendorId, productId, ...others }: SerialPortInfo): Ser
     vendorId: _.isNil(vendorId) ? undefined : _.toLower(vendorId),
     productId: _.isNil(productId) ? undefined : _.toLower(productId),
   }
-}
-
-export async function listDevices (): Promise<SerialPortInfo[]> {
-  return _.chain(await SerialPort.list())
-    .map<SerialPortInfo>(parsePortInfo)
-    .filter(info => _.some(SERIALPORT_FILTERS, filter => _.isMatch(info, filter)))
-    .value()
 }
 
 setObject(globalThis, ['ChameleonUltraJS', 'SerialPortAdapter'], SerialPortAdapter)
