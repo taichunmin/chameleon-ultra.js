@@ -102,6 +102,7 @@ jobs:
       - name: jsDelivr Purge
         uses: egad13/purge-jsdelivr-cache@v1
         if: ${{ steps.npm-publish.outputs.type }}
+        continue-on-error: true
         with:
           url: |
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0
