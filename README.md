@@ -25,8 +25,6 @@
 
 ![](https://i.imgur.com/bWJGSGq.png)
 
-<script src="https://context7.com/widget.js" data-library="/llmstxt/taichunmin_idv_tw_chameleon-ultra_js_llms_txt"></script>
-
 ## Browser & OS compatibility
 
 ### SerialPort (Node.js)
