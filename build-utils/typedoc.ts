@@ -1,7 +1,7 @@
-import { fileURLToPath } from 'url'
 import fsPromises from 'fs/promises'
 import JSON5 from 'json5'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
 
@@ -11,14 +11,14 @@ async function main (): Promise<void> {
   const verFiles = [
     '../dist/variables/index.version.html',
   ]
-  for (let file of verFiles) {
+  for (let filepath of verFiles) {
     try {
-      file = path.resolve(__dirname, file)
-      let content = await fsPromises.readFile(file, 'utf8')
+      filepath = path.resolve(__dirname, filepath)
+      let content = await fsPromises.readFile(filepath, 'utf8')
       content = content.replace(/ = [.]{3}/g, ` = &#39;${pkg.version}&#39;`)
-      await fsPromises.writeFile(file, content, 'utf8')
+      await fsPromises.writeFile(filepath, content, 'utf8')
     } catch (err) {
-      err.message = `${err.message}, file: ${file}`
+      err.message = `${err.message}, filepath: ${filepath}`
       console.error(err)
     }
   }
