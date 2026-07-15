@@ -94,7 +94,7 @@ out
 .cache/
 # Comment in the public line in if your project uses Gatsby and not Next.js
 # https://nextjs.org/blog/next-9-1#public-directory-support
-# public
+/public
 
 # vuepress build output
 .vuepress/dist
@@ -132,6 +132,7 @@ out
 /mkcert
 
 # extra ignore file for npm
+.claude
 .env*
 .nojekyll
 *.config.js
@@ -158,6 +159,7 @@ out
 /tsconfig.json
 /tsdoc.json
 /typedoc.json
+context7.json
 llms.txt
 
 # Allowlist files
