@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["**/*.cjs", "**/*.js", "**/*.mjs", "**/*.pug.js", "**/*.pug.mjs", "**/*.pug", "**/*.ts", "pug/*/*.pug/*.pug.{mjs,js}"],
+  "exclude": ["dist/**/*", "node_modules/**/*", "**/*.d.ts"],
+}

@@ -1549,7 +1549,7 @@ export class ChameleonUltra {
    */
   async cmdMf1AcquireStaticNested (
     known: Mf1KnownBlockKey,
-    target: { block: number, keyType: Mf1KeyType }
+    target: { block: number, keyType: Mf1KeyType },
   ): Promise<{ uid: Buffer, atks: Array<{ nt1: Buffer, nt2: Buffer }> }> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!isMf1BlockNo(target.block)) throw new TypeError('Invalid target.block')
@@ -1629,16 +1629,16 @@ export class ChameleonUltra {
     block: number,
     keyType: Mf1KeyType,
     isFirst: boolean | number,
-    syncMax: number = 30
+    syncMax: number = 30,
   ): Promise<{
-      status: DarksideStatus
-      uid?: Buffer
-      nt?: Buffer
-      par?: Buffer
-      ks?: Buffer
-      nr?: Buffer
-      ar?: Buffer
-    }> {
+    status: DarksideStatus
+    uid?: Buffer
+    nt?: Buffer
+    par?: Buffer
+    ks?: Buffer
+    nr?: Buffer
+    ar?: Buffer
+  }> {
     if (!_.isSafeInteger(block)) throw new TypeError('Invalid block')
     if (!isMf1KeyType(keyType)) throw new TypeError('Invalid keyType')
     if (_.isNil(isFirst)) throw new TypeError('Invalid isFirst')
@@ -1745,7 +1745,7 @@ export class ChameleonUltra {
    */
   async cmdMf1AcquireNested (
     known: Mf1KnownBlockKey,
-    target: { block: number, keyType: Mf1KeyType }
+    target: { block: number, keyType: Mf1KeyType },
   ): Promise<Array<{ nt1: number, nt2: number, par: number }>> {
     validateMf1BlockKey(known.block, known.keyType, known.key, 'known.')
     if (!_.isSafeInteger(target.block)) throw new TypeError('Invalid target.block')
@@ -2052,7 +2052,7 @@ export class ChameleonUltra {
    */
   async mf1VblockSetValue (
     dst: Mf1KnownBlockKey,
-    val: { adr?: number, value?: number }
+    val: { adr?: number, value?: number },
   ): Promise<void> {
     const blkDt = new Buffer(16)
     const { value: val1 = 0, adr: adr1 = dst.block } = val

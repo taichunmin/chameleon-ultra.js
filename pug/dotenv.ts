@@ -2,7 +2,7 @@ import 'dotenv/config'
 import * as _ from 'lodash-es'
 
 export function getenv<T extends string | undefined> (key: string, defaultVal: T): string | T {
-  return process.env?.[key] ?? defaultVal
+  return process.env[key] ?? defaultVal
 }
 
 export function getPort (): number {

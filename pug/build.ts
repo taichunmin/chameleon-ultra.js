@@ -1,18 +1,18 @@
 import { getenv, getSiteurl } from './dotenv'
 
-import * as _ from 'lodash-es'
-import { errToJson } from './utils'
-import { fileURLToPath } from 'url'
-import { inspect } from 'util'
-import { minify as htmlMinifier } from 'html-minifier'
-import { promises as fsPromises } from 'fs'
 import fg from 'fast-glob'
+import { promises as fsPromises } from 'fs'
+import { minify as htmlMinifier } from 'html-minifier'
+import * as _ from 'lodash-es'
 import path from 'path'
 import process from 'process'
 import pug from 'pug'
 import UglifyJS from 'uglify-js'
+import { fileURLToPath } from 'url'
+import { inspect } from 'util'
+import { errToJson } from './utils'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = import.meta.dirname
 const srcDir = path.resolve(__dirname, './src/')
 const distDir = path.resolve(__dirname, '../dist/')
 

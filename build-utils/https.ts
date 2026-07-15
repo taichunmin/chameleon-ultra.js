@@ -1,16 +1,15 @@
 import { getPort, getSiteurl } from '../pug/dotenv'
 
-import * as _ from 'lodash-es'
-import { fileURLToPath } from 'url'
-import { promises as fsPromises } from 'fs'
 import finalhandler from 'finalhandler'
-import https from 'https'
 import livereload from 'livereload'
-import path from 'path'
-import serveStatic from 'serve-static'
+import * as _ from 'lodash-es'
 import watch from 'node-watch'
+import { promises as fsPromises } from 'node:fs'
+import https from 'node:https'
+import path from 'node:path'
+import serveStatic from 'serve-static'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
+const __dirname = import.meta.dirname
 
 async function readMkcert (): Promise<{ cert: Buffer, key: Buffer }> {
   try {
@@ -39,7 +38,9 @@ async function main (): Promise<void> {
   }) as LiveReloadServer1
 
   livereloadServer._filterRefresh = (livereloadServer as any).filterRefresh
-  livereloadServer.filterRefresh = _.debounce((filepath: string) => { livereloadServer._filterRefresh?.(filepath) }, 1000)
+  livereloadServer.filterRefresh = _.debounce((filepath: string) => {
+    livereloadServer._filterRefresh?.(filepath)
+  }, 1000)
   livereloadServer.watch(publicDir)
   console.log(`build finish. Visit: ${getSiteurl('/test.html')}`)
 

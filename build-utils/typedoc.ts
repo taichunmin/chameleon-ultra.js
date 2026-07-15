@@ -1,9 +1,8 @@
 import fsPromises from 'fs/promises'
 import JSON5 from 'json5'
 import path from 'path'
-import { fileURLToPath } from 'url'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
+const __dirname = import.meta.dirname
 
 async function main (): Promise<void> {
   // version in package.json
