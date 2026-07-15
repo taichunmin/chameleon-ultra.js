@@ -181,11 +181,11 @@ await run(ultraUsb)
 
 ## Star History
 
-<a href="https://www.star-history.com/#taichunmin/chameleon-ultra.js&type=timeline&legend=bottom-right">
+<a href="https://www.star-history.com/?type=timeline&legend=bottom-right&repos=taichunmin%2Fchameleon-ultra.js">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=timeline&theme=dark&legend=bottom-right" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=timeline&legend=bottom-right" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=taichunmin/chameleon-ultra.js&type=timeline&legend=bottom-right" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=taichunmin/chameleon-ultra.js&type=timeline&theme=dark&legend=bottom-right&sealed_token=cPFHopgrl_oUa1H86rDZDW_eTE0uPfRVP-k9JvdmY1ZosSsXQuwDuhh4_ELDEG-NcN4E75uoSY0pwu7h9cD0yw3Yb-awnkcJYtxnbuuH3Y4k7d02U0h9XzJM3t8latg1o8r5Dtzsc6iRl-QKmTlzvo_UjOcaaOWxO7HpyG-Q5kg7chMgrZEVKn-cOazU" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=taichunmin/chameleon-ultra.js&type=timeline&legend=bottom-right&sealed_token=cPFHopgrl_oUa1H86rDZDW_eTE0uPfRVP-k9JvdmY1ZosSsXQuwDuhh4_ELDEG-NcN4E75uoSY0pwu7h9cD0yw3Yb-awnkcJYtxnbuuH3Y4k7d02U0h9XzJM3t8latg1o8r5Dtzsc6iRl-QKmTlzvo_UjOcaaOWxO7HpyG-Q5kg7chMgrZEVKn-cOazU" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=taichunmin/chameleon-ultra.js&type=timeline&legend=bottom-right&sealed_token=cPFHopgrl_oUa1H86rDZDW_eTE0uPfRVP-k9JvdmY1ZosSsXQuwDuhh4_ELDEG-NcN4E75uoSY0pwu7h9cD0yw3Yb-awnkcJYtxnbuuH3Y4k7d02U0h9XzJM3t8latg1o8r5Dtzsc6iRl-QKmTlzvo_UjOcaaOWxO7HpyG-Q5kg7chMgrZEVKn-cOazU" />
  </picture>
 </a>
 
