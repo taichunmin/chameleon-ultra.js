@@ -34,12 +34,11 @@ jobs:
               "vars": ${{ toJSON(vars) }}
             }
         run: echo "$ACTION_CONTEXT" | jq .
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           cache: 'yarn'
           node-version: lts/*
-          registry-url: 'https://registry.npmjs.org'
       - name: install, lint, test, build
         run: |
           set -ex
@@ -48,6 +47,15 @@ jobs:
           yarn test:ci
           yarn build
           yarn publish:test
+      - name: Upload build output
+        if: github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-output
+          path: |
+            dist/
+            src/coverage/
+          retention-days: 3
   deploy:
     if: github.ref == 'refs/heads/master'
     needs: test
@@ -70,30 +78,26 @@ jobs:
               "vars": ${{ toJSON(vars) }}
             }
         run: echo "$ACTION_CONTEXT" | jq .
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          cache: 'yarn'
           node-version: lts/*
-          registry-url: 'https://registry.npmjs.org'
-      - name: install and build
-        run: |
-          set -ex
-          yarn
-          yarn test:ci
-          yarn build
+      - name: Download build output
+        uses: actions/download-artifact@v8
+        with:
+          name: build-output
       - name: Coveralls
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/configure-pages@v4
+      - uses: actions/configure-pages@v6
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: './dist'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
       - name: 發布至 npm
         uses: JS-DevTools/npm-publish@v4
         id: npm-publish
