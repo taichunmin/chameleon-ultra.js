@@ -36,7 +36,7 @@ jobs:
           echo 'secrets=${{ toJSON(secrets) }}'
           echo 'steps=${{ toJSON(steps) }}'
           echo 'vars=${{ toJSON(vars) }}'
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.REF_NAME }}
