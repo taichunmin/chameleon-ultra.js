@@ -24,7 +24,7 @@ block script
   script(crossorigin="anonymous", src="https://cdn.jsdelivr.net/npm/vconsole@3/dist/vconsole.min.js")
   script.
     window.vConsole = new window.VConsole()
-    const { Buffer, ChameleonUltra, Debug, NrfDfu, NrfDfuWebserialAdapter, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS // eslint-disable-line no-unused-vars, @typescript-eslint/no-unused-vars
+    const { Buffer, ChameleonUltra, Debug, NrfDfu, NrfDfuWebserialAdapter, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS // eslint-disable-line no-unused-vars
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())

@@ -90,7 +90,7 @@ export class DeviceSettings {
     btnLongPressA: ButtonAction,
     btnLongPressB: ButtonAction,
     blePairingMode: boolean,
-    blePairingKey: string
+    blePairingKey: string,
   ) {
     this.version = version
     this.animation = animation
@@ -192,7 +192,7 @@ export class Mf1DarksideRes {
     par?: Buffer,
     ks?: Buffer,
     nr?: Buffer,
-    ar?: Buffer
+    ar?: Buffer,
   ) {
     this.status = status
     this.uid = uid
@@ -272,7 +272,7 @@ export class Mf1DetectionLog {
     uid: Buffer,
     nt: Buffer,
     nr: Buffer,
-    ar: Buffer
+    ar: Buffer,
   ) {
     this.block = block
     this.isKeyB = flags.readBitLSB(0) === 1
@@ -375,7 +375,7 @@ export class Mf1AcquireStaticEncryptedNestedDecoder implements Mf1AcquireStaticE
           ntEnc: chunk.readUint32BE(13),
           par: chunk[17],
         },
-      ])
+      ]),
     )
   }
 }

@@ -5,9 +5,8 @@ import fg from 'fast-glob'
 import { promises as fsPromises } from 'fs'
 import * as _ from 'lodash-es'
 import path from 'path'
-import { fileURLToPath } from 'url'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
+const __dirname = import.meta.dirname
 
 const CONTEXT7_SCRIPT = '<script src="https://context7.com/widget.js" data-library="/llmstxt/taichunmin_idv_tw_chameleon-ultra_js_llms_txt"></script>'
 const OG_IMAGE_META = '<meta property="og:image" content="https://i.imgur.com/bWJGSGq.png"><meta property="og:image:width" content="1280"><meta property="og:image:height" content="640"></head>'

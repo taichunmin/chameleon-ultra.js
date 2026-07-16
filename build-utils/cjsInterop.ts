@@ -1,9 +1,8 @@
 import fg from 'fast-glob'
 import fsPromises from 'node:fs/promises'
 import path from 'path'
-import { fileURLToPath } from 'url'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url)) // eslint-disable-line @typescript-eslint/naming-convention
+const __dirname = import.meta.dirname
 
 async function main (): Promise<void> {
   try {
