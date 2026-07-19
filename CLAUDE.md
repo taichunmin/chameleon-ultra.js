@@ -37,7 +37,7 @@ Detailed guidance for each topic lives in `.claude/rules/` — most are path-sco
 - **[.claude/rules/typedoc.md](.claude/rules/typedoc.md)** (`**/*.ts`) — TSDoc tag conventions (`@group`, `@internal`, `@hidden`, `@inline @expand`, etc.) that drive the generated docs site.
 - **[.claude/rules/static-assets.md](.claude/rules/static-assets.md)** (`public/**/*`) — static assets shipped as-is in the published bundle (kept out of `public/` itself since that folder's contents get copied verbatim into `dist/`).
 - **[.claude/rules/demo-pages.md](.claude/rules/demo-pages.md)** (`pug/**/*`) — standalone browser demo pages.
-- **[.claude/rules/build-utils.md](.claude/rules/build-utils.md)** (`build-utils/**/*`) — one-off Node scripts that post-process build output (cjs interop, docs version patch, sitemap/og-image/Context7 injection, local HTTPS dev server).
+- **[.claude/rules/build-utils.md](.claude/rules/build-utils.md)** (`build-utils/**/*`) — one-off Node scripts that post-process build output (cjs interop, docs version patch + og-image/Context7 injection, sitemap generation, local HTTPS dev server).
 
 ### Other user interfaces
 

@@ -1,34 +1,22 @@
-extends /include/bootstrapV4
+extends /include/bootstrap5
 
 block beforehtml
   -
-    const title = 'Mifare Keychain'
-    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/1Xe3Fgs.png']
+    title = 'Mifare Keychain'
+    description = 'Keep a few mifare tags in browser with indexedDB.'
+    ogImage = 'https://i.imgur.com/1Xe3Fgs.png'
+    ogImageWidth = 1200
+    ogImageHeight = 600
+    ogUrl = `${baseurl}mifare-keychain.html`
 
 block style
-  meta(property="og:description", content="Keep a few mifare tags in browser with indexedDB.")
-  meta(property="og:locale", content="zh_TW")
-  meta(property="og:title", content=title)
-  meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}mifare-keychain.html`)
   style
     :sass
       [v-cloak]
         display: none
-      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
-        font-family: 'Noto Sans TC', sans-serif
-      .input-group-prepend > .input-group-text
+      .input-group-text
         width: 80px
-      .letter-spacing-n1px
-        &, .btn, textarea, select, input
-          letter-spacing: -1px
-      .letter-spacing-n2px
-        &, .btn, textarea, select, input
-          letter-spacing: -2px
-      .text-sm
-        font-size: 0.875rem
       .shield
-        display: -ms-inline-flexbox
         display: inline-flex
         font-size: 75%
         letter-spacing: -.5px
@@ -42,7 +30,6 @@ block style
           align-items: center
           border-bottom-left-radius: .25rem
           border-top-left-radius: .25rem
-          display: -ms-inline-flexbox
           display: inline-flex
         .shield-value
           border-bottom-right-radius: .25rem
@@ -59,93 +46,108 @@ block style
         background-color: #5D6D7E
 
 block content
-  #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group.letter-spacing-n1px
-      label Connect method:
-      .input-group.input-group-sm.mb-3
-        select.form-control(v-model="ls.adapter")
-          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
-          option(value="usb") USB Serial (PC only)
-        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
-    .card.shadow-sm.mb-3
-      h6.card-header #[i.fa.mr-1.fa-tags] Tag Anti Collision
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        .form-group.was-validated.mb-2
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      header.text-center.mb-3
+        h4.d-flex.justify-content-center.align-items-center.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          = title
+      include /include/bootstrap5-adapter-content
+      .card.shadow.mb-3
+        h6.card-header.icon-link
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-multiple-outline.svg)")
+          | Tag Anti Collision
+        .card-body.overflow-hidden
+          .was-validated
+            .input-group.input-group-sm.mb-2
+              label.input-group-text.justify-content-center(for="ss-tagType") TYPE
+              select.form-select.form-select-sm#ss-tagType(v-model.number="ss.tagType")
+                option(v-for="(v, k) in tagTypeOptions", :key="k", :value="k") {{ v }}
+            .input-group.input-group-sm.mb-2
+              label.input-group-text.justify-content-center(for="ss-name") NAME
+              input.form-control.form-control-sm#ss-name(placeholder="Name of HF slot", v-model="ss.name")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.name = ''")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+            .input-group.input-group-sm.mb-2
+              label.input-group-text.justify-content-center(for="ss-uid") UID
+              input.form-control.form-control-sm#ss-uid(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+            .input-group.input-group-sm.mb-2
+              label.input-group-text.justify-content-center(for="ss-atqa") ATQA
+              input.form-control.form-control-sm#ss-atqa(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+            .input-group.input-group-sm.mb-2
+              label.input-group-text.justify-content-center(for="ss-sak") SAK
+              input.form-control.form-control-sm#ss-sak(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+            .input-group.input-group-sm.mb-2
+              label.input-group-text.justify-content-center(for="ss-ats") ATS
+              input.form-control.form-control-sm#ss-ats(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
+              button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.ats = ''")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+            .row.mb-2: .col
+              small.form-text.text-muted(v-if="savedTagName") Tag is saved as "{{ savedTagName }}".
+              small.form-text.text-muted(v-else) Tag is not saved yet.
+            .row.g-2
+              .col: button.btn.w-100.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnLoadTag")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:folder-open-outline.svg)")
+                .mt-1 Load
+              .col: button.btn.w-100.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnSaveTag")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:content-save-outline.svg)")
+                .mt-1 Save
+              .col: button.btn.w-100.btn-outline-info.d-flex.flex-column.align-items-center(type="button", @click="btnTagCsv")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:database-outline.svg)")
+                .mt-1 CSV
+      .card.shadow.mb-3
+        h6.card-header.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          | HF Slot Emulator
+        .card-body.overflow-hidden
           .input-group.input-group-sm.mb-2
-            .input-group-prepend: span.input-group-text.justify-content-center TYPE
-            select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.tagType")
-              option(v-for="v, k of tagTypeOptions", :value="k") {{ v }}
-          .input-group.input-group-sm.mb-2
-            .input-group-prepend: span.input-group-text.justify-content-center NAME
-            input.form-control(placeholder="Name of HF slot", v-model="ss.name")
-            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.name = ''") #[i.fa.fa-fw.fa-times]
-          .input-group.input-group-sm.mb-2
-            .input-group-prepend: span.input-group-text.justify-content-center UID
-            input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
-            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
-          .input-group.input-group-sm.mb-2
-            .input-group-prepend: span.input-group-text.justify-content-center ATQA
-            input.form-control(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
-            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.atqa = ''") #[i.fa.fa-fw.fa-times]
-          .input-group.input-group-sm.mb-2
-            .input-group-prepend: span.input-group-text.justify-content-center SAK
-            input.form-control(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
-            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.sak = ''") #[i.fa.fa-fw.fa-times]
-          .input-group.input-group-sm.mb-2.was-validated
-            .input-group-prepend: span.input-group-text.justify-content-center ATS
-            input.form-control(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
-            .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.ats = ''") #[i.fa.fa-fw.fa-times]
-          small.form-text.text-muted(v-if="savedTagName") Tag is saved as "{{ savedTagName }}".
-          small.form-text.text-muted(v-else) Tag is not saved yet.
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnLoadTag")
-            i.fa.fa-2x.fa-fw.fa-folder-open-o
-            .mt-1 Load
-          .col.px-1: button.btn.btn-block.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnSaveTag")
-            i.fa.fa-2x.fa-fw.fa-floppy-o
-            .mt-1 Save
-          .col.px-1: button.btn.btn-block.btn-outline-info.d-flex.flex-column.align-items-center(type="button", @click="btnTagCsv")
-            i.fa.fa-2x.fa-fw.fa-database
-            .mt-1 CSV
-    .card.shadow-sm.mb-3
-      h6.card-header.bg-light #[.bgicon.bgicon-chameleon-ultra.mr-1] HF Slot Emulator
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center SLOT
-          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
-            option(value="-1") use active slot
-            option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnReadSlot")
-            i.fa.fa-2x.fa-fw.fa-upload
-            .mt-1 Read
-          .col.px-1: button.btn.btn-block.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnEmulateSlot")
-            i.fa.fa-2x.fa-fw.fa-download
-            .mt-1 Emulate
-    .card.shadow-sm.mb-3
-      h6.card-header.bg-light #[.bgicon.bgicon-nfc.mr-1] Magic Tag (Gen1a, Gen2)
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnScanTag")
-            span.fa-stack #[i.fa.fa-tag.fa-stack-2x] #[i.fa.fa-arrow-up.fa-inverse.fa-stack-1x]
-            .mt-1 Scan
-          .col.px-1: button.btn.btn-block.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnWriteTag")
-            span.fa-stack #[i.fa.fa-tag.fa-stack-2x] #[i.fa.fa-arrow-down.fa-inverse.fa-stack-1x]
-            .mt-1 Write
-          .col.px-1: button.btn.btn-block.btn-outline-info.d-flex.flex-column.align-items-center(type="button", @click="btnEditMfkeys")
-            i.fa.fa-2x.fa-fw.fa-key
-            .mt-1.letter-spacing-n2px Gen2 Keys
-    .modal.fade(data-keyboard="false", tabindex="-1", ref="tagPicker")
+            label.input-group-text.justify-content-center(for="ss-slot") SLOT
+            select.form-select.form-select-sm#ss-slot(v-model.number="ss.slot")
+              option(value="-1") use active slot
+              option(v-for="i of 8", :key="i", :value="i - 1") Slot {{ i }}
+          .row.g-2.mb-2
+            .col
+              button.btn.w-100.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnReadSlot")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:logout.svg)")
+                .mt-1 Read
+            .col
+              button.btn.w-100.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnEmulateSlot")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+                .mt-1 Emulate
+      .card.shadow.mb-3
+        h6.card-header.icon-link
+          span.svgmask.svgmask-nfc
+          | Magic Tag (Gen1a, Gen2)
+        .card-body.overflow-hidden
+          .row.g-2.mb-2
+            .col
+              button.btn.w-100.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnScanTag")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+                .mt-1 Scan
+            .col
+              button.btn.w-100.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnWriteTag")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+                .mt-1 Write
+            .col
+              button.btn.w-100.btn-outline-info.d-flex.flex-column.align-items-center(type="button", @click="btnEditMfkeys")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:key-outline.svg)")
+                .mt-1.ls-n2px Gen2 Keys
+    .modal.fade(data-bs-keyboard="false", tabindex="-1", ref="tagPickerModal")
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
           .modal-header.d-flex.align-items-center
             .modal-title.flex-fill
               .input-group
-                .input-group-prepend: span.input-group-text Search
-                input.form-control#h-keyword(placeholder="name or uid" v-model="tagPicker.keyword")
-                .input-group-append: button.btn.btn-outline-danger(type="button", @click="tagPicker.keyword = ''") Clear
-            button.close(type="button", data-dismiss="modal"): span &times;
+                span.input-group-text Search
+                input.form-control(placeholder="name or uid", v-model="tagPicker.keyword")
+                button.btn.btn-outline-danger(type="button", @click="tagPicker.keyword = ''") Clear
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body.p-0
             ul.list-group.list-group-flush
               button.list-group-item.list-group-item-action.d-flex.flex-column(
@@ -169,21 +171,33 @@ block content
                   .shield.mx-1.mb-1(v-if="tag.ats")
                     .shield-name.text-white.bg-5D6D7E ATS
                     .shield-value.text-dark.bg-white {{ tag.ats }}
-    .modal.fade(data-backdrop="static", data-keyboard="false", tabindex="-1", ref="exportimport")
+    .modal.fade(data-bs-backdrop="static", data-bs-keyboard="false", tabindex="-1", ref="exportimportModal")
       .modal-dialog.modal-dialog-centered.modal-xl.align-items-stretch
         .modal-content
           .modal-body.d-flex.flex-column
             textarea.form-control.form-control-sm.flex-fill(v-model="exportimport.text")
             small.text-muted.form-text Click "Copy" button to copy text, or modify data then click "Apply" button.
           .modal-footer
-            button.btn.btn-outline-success(type="button", @click="btnCopy(exportimport.text, $refs.exportimport)") Copy
+            button.btn.btn-outline-success(type="button", @click="btnCopy(exportimport.text)") Copy
             button.btn.btn-secondary(type="button", @click="exportimport?.cb?.()") Cancel
             button.btn.btn-primary(type="button", @click="exportimport?.cb?.(exportimport.text)") Apply
 
 block script
-  script.
+  script(type="module").
+    import { Buffer, ChameleonUltra, DeviceMode, FreqType, TagType } from 'chameleon-ultra.js'
+    import Debug from 'chameleon-ultra.js/plugin/Debug'
+    import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+    import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+    import { Modal } from 'bootstrap'
+    import JSON5 from 'json5'
+    import _ from 'lodash'
+    import Papa from 'papaparse'
+    import { computed, createApp, nextTick, reactive, useTemplateRef, watch } from 'vue'
+    import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import Swal from 'sweetalert2'
+
     const { FlexSearch } = window
-    const { Buffer, ChameleonUltra, Debug, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -226,14 +240,10 @@ block script
       }
     }
 
-    window.vm = new Vue({
-      el: '#app',
-      data: {
-        ls: {
-          adapter: 'ble',
-          tags: [],
-        },
-        ss: {
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({ adapter: 'ble', tags: [] })
+        const ss = reactive({
           atqa: '0004',
           ats: '',
           mfkeys: WELL_KNOWN_KEYS.join('\n'),
@@ -242,29 +252,23 @@ block script
           slot: -1,
           tagType: TagType.MIFARE_1024,
           uid: 'DEADBEEF',
-        },
-        exportimport: { text: '', cb: null },
-        tagPicker: { cb: null, cur: null, flexsearch: null, keyword: '', mTags: null, tags: [] },
-        tagTypeOptions,
-      },
-      async mounted () {
-        // 自動儲存功能
-        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
-          try {
-            const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) this.$set(this, key, _.merge({}, this[key], saved))
-          } catch (err) {}
-          this.$watch(key, () => {
-            storage.setItem(location.pathname, JSON5.stringify(this[key]))
-          }, { deep: true })
-        }
-      },
-      computed: {
-        mfkeys () { return ChameleonUltra.mf1KeysFromDict(this.ss.mfkeys) },
-        ssTag () { return validateTag(this.ss) },
-        ultra () { return this.ls.adapter === 'usb' ? ultraUsb : ultraBle },
-        filteredTags () {
-          const { flexsearch, keyword, mTags, tags } = this.tagPicker
+        })
+        const exportimport = reactive({ text: '', cb: null })
+        const tagPicker = reactive({ cb: null, cur: null, flexsearch: null, keyword: '', mTags: null, tags: [] })
+
+        const tagPickerModalRef = useTemplateRef('tagPickerModal')
+        const exportimportModalRef = useTemplateRef('exportimportModal')
+
+        loadPageStorage(localStorage, ls)
+        loadPageStorage(sessionStorage, ss)
+        watch(ls, () => { savePageStorage(localStorage, ls) }, { deep: true })
+        watch(ss, () => { savePageStorage(sessionStorage, ss) }, { deep: true })
+
+        const ultra = computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)
+        const mfkeys = computed(() => ChameleonUltra.mf1KeysFromDict(ss.mfkeys))
+        const ssTag = computed(() => validateTag(ss))
+        const filteredTags = computed(() => {
+          const { flexsearch, keyword, mTags, tags } = tagPicker
           const limit = 100
           try {
             if (_.isNil(flexsearch) || _.isNil(mTags) || keyword?.length === 0) return _.take(tags, limit)
@@ -272,27 +276,17 @@ block script
           } catch (err) {
             return _.take(tags, limit)
           }
-        },
-        savedTagName () {
-          return _.isNil(this.ssTag) ? null : _.find(this.ls.tags, _.omit(this.ssTag, ['name']))?.name
-        },
-      },
-      methods: {
-        async swalFire (args) {
-          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
-          return await Swal.fire(args)
-        },
-        async btnAdapterTips () {
-          await this.swalFire({
-            title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
-          })
-        },
-        async btnLoadTag () {
-          const { ultra } = this
+        })
+        const savedTagName = computed(() => {
+          return _.isNil(ssTag.value) ? null : _.find(ls.tags, _.omit(ssTag.value, ['name']))?.name
+        })
+
+        const logError = err => { ultra.value.emitter.emit('error', err) }
+
+        async function btnLoadTag () {
           try {
-            const tags = _.map(this.ls.tags, (tag, tagIdx) => ({ ...tag, id: tagIdx }))
-            const cur = _.isNil(this.ssTag) ? null : _.find(tags, _.omit(this.ssTag, ['name']))?.id
+            const tags = _.map(ls.tags, (tag, tagIdx) => ({ ...tag, id: tagIdx }))
+            const cur = _.isNil(ssTag.value) ? null : _.find(tags, _.omit(ssTag.value, ['name']))?.id
             const flexsearch = FlexSearch.Index({ preset: 'default', tokenize: 'full' })
             const mTags = new Map()
             for (const tag of tags) {
@@ -301,39 +295,41 @@ block script
             }
 
             // show tag picker
-            const $ref = window.jQuery(this.$refs.tagPicker)
+            const modalEl = tagPickerModalRef.value
+            const modal = Modal.getOrCreateInstance(modalEl)
             const newVal = validateTag(await new Promise(resolve => {
-              this.$set(this, 'tagPicker', { cb: resolve, cur, flexsearch, keyword: '', mTags, tags })
-              $ref.one('hide.bs.modal', () => resolve()).modal('show')
+              Object.assign(tagPicker, { cb: resolve, cur, flexsearch, keyword: '', mTags, tags })
+              modalEl.addEventListener('hidden.bs.modal', () => resolve(), { once: true })
+              modal.show()
             }))
-            $ref.modal('hide')
-            await new Promise(resolve => { this.$nextTick(resolve) }) // wait for next tick
-            if (!_.isNil(newVal)) _.merge(this.ss, newVal)
-            this.$set(this, 'tagPicker', { cb: null, cur: null, flexsearch: null, keyword: '', mTags: null, tags: [] })
+            modal.hide()
+            await nextTick() // wait for next tick
+            if (!_.isNil(newVal)) _.merge(ss, newVal)
+            Object.assign(tagPicker, { cb: null, cur: null, flexsearch: null, keyword: '', mTags: null, tags: [] })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Load failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Load failed', text: err.message })
           }
-        },
-        async btnSaveTag () {
-          const { ultra } = this
+        }
+
+        async function btnSaveTag () {
           try {
-            this.showLoading({ text: 'Saving tag...' })
-            const tag = validateTagOrFail(this.ss)
+            showLoading({ text: 'Saving tag...' })
+            const tag = validateTagOrFail(ss)
             if (!_.isString(tag.name) || tag.name.length < 1) tag.name = `UID_${tag.uid}`
-            const oldTag = _.find(this.ls.tags, _.omit(tag, ['name']))
-            if (_.isNil(oldTag)) this.ls.tags.push(tag)
+            const oldTag = _.find(ls.tags, _.omit(tag, ['name']))
+            if (_.isNil(oldTag)) ls.tags.push(tag)
             else _.merge(oldTag, tag)
-            await this.swalFire({ icon: 'success', title: 'Save successfully' })
+            await swalFire({ icon: 'success', title: 'Save successfully' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Save failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Save failed', text: err.message })
           }
-        },
-        async btnTagCsv () {
-          const { ultra } = this
+        }
+
+        async function btnTagCsv () {
           try {
-            const oldTags = _.chain(this.ls.tags)
+            const oldTags = _.chain(ls.tags)
               .map(validateTag)
               .compact()
               .map(tag => ({ ...tag, tagType: mTagType.get(tag.tagType) ?? tag.tagType }))
@@ -342,11 +338,14 @@ block script
               columns: ['tagType', 'uid', 'atqa', 'sak', 'ats', 'name'],
               header: true,
             })
+
             // show export import
-            const $ref = window.jQuery(this.$refs.exportimport)
+            const modalEl = exportimportModalRef.value
+            const modal = Modal.getOrCreateInstance(modalEl)
             let newVal = await new Promise(resolve => {
-              this.$set(this, 'exportimport', { cb: resolve, text: oldCsv })
-              $ref.one('hide.bs.modal', () => resolve()).modal('show')
+              Object.assign(exportimport, { cb: resolve, text: oldCsv })
+              modalEl.addEventListener('hidden.bs.modal', () => resolve(), { once: true })
+              modal.show()
             })
 
             // import newCsv
@@ -363,37 +362,35 @@ block script
                     throw _.update(err, 'message', msg => `line ${i + 2}: ${msg}, tag = ${JSON5.stringify(tag)}`)
                   }
                 }
-                this.$set(this.ls, 'tags', newTags)
-                await this.swalFire({ icon: 'success', title: `${newTags.length} records imported` })
+                ls.tags = newTags
+                await swalFire({ icon: 'success', title: `${newTags.length} records imported` })
                 break
               } catch (err) {
-                ultra.emitter.emit('error', err)
-                await this.swalFire({ icon: 'error', title: 'Import failed', text: err.message })
-                newVal = await new Promise(resolve => {
-                  this.$set(this.exportimport, 'cb', resolve)
-                })
+                logError(err)
+                await swalFire({ icon: 'error', title: 'Import failed', text: err.message })
+                newVal = await new Promise(resolve => { exportimport.cb = resolve })
               }
             }
 
-            $ref.modal('hide')
-            this.$set(this, 'exportimport', { cb: null, text: '' })
+            modal.hide()
+            Object.assign(exportimport, { cb: null, text: '' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Failed', text: err.message })
           }
-        },
-        async btnReadSlot () {
-          const { ultra } = this
+        }
+
+        async function btnReadSlot () {
           try {
-            this.showLoading({ text: 'Reading slot...' })
-            let { slot } = this.ss
-            if (slot < 0) slot = await ultra.cmdSlotGetActive()
-            await ultra.cmdSlotSetActive(slot)
-            const slotInfo = await ultra.cmdSlotGetInfo()
+            showLoading({ text: 'Reading slot...' })
+            let { slot } = ss
+            if (slot < 0) slot = await ultra.value.cmdSlotGetActive()
+            await ultra.value.cmdSlotSetActive(slot)
+            const slotInfo = await ultra.value.cmdSlotGetInfo()
             const tagType = slotInfo[slot].hfTagType
             if (!_.has(tagTypeOptions, tagType)) throw new Error(`slot tagType ${TagType[tagType]} is not supported.`)
-            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF)
-            const anticoll = await ultra.cmdHf14aGetAntiCollData()
+            const slotName = await ultra.value.cmdSlotGetFreqName(slot, FreqType.HF)
+            const anticoll = await ultra.value.cmdHf14aGetAntiCollData()
             const tag = validateTag({
               atqa: toHex(anticoll.atqa.toReversed()),
               ats: toHex(anticoll.ats),
@@ -403,19 +400,19 @@ block script
               uid: toHex(anticoll.uid),
             })
             if (_.isNil(tag)) throw new Error('Failed to read tag data from slot.')
-            ultra.emitter.emit('debug', 'web', `tag = ${JSON.stringify(tag)}`)
-            _.merge(this.ss, tag)
+            ultra.value.emitter.emit('debug', 'web', `tag = ${JSON.stringify(tag)}`)
+            _.merge(ss, tag)
             Swal.close()
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
-        },
-        async btnEmulateSlot () {
-          const { ultra } = this
+        }
+
+        async function btnEmulateSlot () {
           try {
-            let { slot } = this.ss
-            const tag = validateTagOrFail(this.ss)
+            let { slot } = ss
+            const tag = validateTagOrFail(ss)
             const antiColl = {
               atqa: Buffer.from(tag.atqa, 'hex').reverse(),
               ats: Buffer.from(tag.ats, 'hex'),
@@ -423,35 +420,35 @@ block script
               uid: Buffer.from(tag.uid, 'hex'),
             }
             if (!_.includes([4, 7], antiColl.uid.length)) throw new Error('Only support 4 or 7 bytes UID for emulation.')
-            this.showLoading({ text: 'Emulating slot...' })
-            if (slot < 0) slot = await ultra.cmdSlotGetActive()
-            ultra.emitter.emit('debug', 'web', JSON5.stringify(tag))
-            const oldName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
+            showLoading({ text: 'Emulating slot...' })
+            if (slot < 0) slot = await ultra.value.cmdSlotGetActive()
+            ultra.value.emitter.emit('debug', 'web', JSON5.stringify(tag))
+            const oldName = await ultra.value.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${oldName}" will be REPLACE! Continue?`
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Emulating slot...' })
-            await ultra.assureDeviceMode(DeviceMode.TAG)
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            showLoading({ text: 'Emulating slot...' })
+            await ultra.value.assureDeviceMode(DeviceMode.TAG)
             // tag anti-coll
-            await ultra.slotChangeTagTypeAndActive(slot, tag.tagType) // reset slot
+            await ultra.value.slotChangeTagTypeAndActive(slot, tag.tagType) // reset slot
             // set emulated tag
-            await ultra.cmdMf1SetAntiCollMode(false)
-            await ultra.cmdHf14aSetAntiCollData(antiColl)
-            await ultra.cmdMf1EmuWriteBlock(0, ChameleonUltra.mf1GenMagicBlock0(antiColl)) // set block0
-            await ultra.cmdSlotSetFreqName(slot, FreqType.HF, tag.name)
-            await ultra.cmdSlotSaveSettings()
-            await this.swalFire({ icon: 'success', title: 'Emulate successfully!' })
+            await ultra.value.cmdMf1SetAntiCollMode(false)
+            await ultra.value.cmdHf14aSetAntiCollData(antiColl)
+            await ultra.value.cmdMf1EmuWriteBlock(0, ChameleonUltra.mf1GenMagicBlock0(antiColl)) // set block0
+            await ultra.value.cmdSlotSetFreqName(slot, FreqType.HF, tag.name)
+            await ultra.value.cmdSlotSaveSettings()
+            await swalFire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Emulate Failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Emulate Failed', text: err.message })
           }
-        },
-        async btnScanTag () {
-          const { ultra } = this
+        }
+
+        async function btnScanTag () {
           try {
-            this.showLoading({ text: 'Scanning tag...' })
-            const anticoll = _.first(await ultra.cmdHf14aScan())
+            showLoading({ text: 'Scanning tag...' })
+            const anticoll = _.first(await ultra.value.cmdHf14aScan())
             const tagType = getNxpMifareClassType(anticoll.sak[0])
-            if (_.isNil(tagType)) await Swal.fire({ icon: 'warrning', title: 'Unknown tag type', text: 'You need to select the correct tag type.' })
+            if (_.isNil(tagType)) await Swal.fire({ icon: 'warning', title: 'Unknown tag type', text: 'You need to select the correct tag type.' })
             const tag = validateTagOrFail({
               atqa: toHex(anticoll.atqa.toReversed()),
               ats: toHex(anticoll.ats),
@@ -459,31 +456,43 @@ block script
               tagType: tagType ?? TagType.MIFARE_1024,
               uid: toHex(anticoll.uid),
             })
-            tag.name = _.find(this.ls.tags, _.omit(tag, ['name']))?.name ?? `UID_${tag.uid}`
-            ultra.emitter.emit('debug', 'web', `tag = ${JSON5.stringify(tag)}`)
-            _.merge(this.ss, tag)
+            tag.name = _.find(ls.tags, _.omit(tag, ['name']))?.name ?? `UID_${tag.uid}`
+            ultra.value.emitter.emit('debug', 'web', `tag = ${JSON5.stringify(tag)}`)
+            _.merge(ss, tag)
             Swal.close()
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Failed to scan tag.', text: err.message })
           }
-        },
-        async btnWriteTag () {
-          const { mfkeys, ultra } = this
+        }
+
+        function mf1GenMagicBlock0 (tag) {
+          tag ??= ssTag.value
+          if (_.isNil(tag)) throw new Error('Invalid tag data')
+          const block0 = ChameleonUltra.mf1GenMagicBlock0({
+            atqa: Buffer.from(tag.atqa, 'hex').reverse(),
+            sak: Buffer.from(tag.sak, 'hex'),
+            uid: Buffer.from(tag.uid, 'hex'),
+          })
+          ultra.value.emitter.emit('debug', 'web', `block0 = ${toHex(block0)}`)
+          return block0
+        }
+
+        async function btnWriteTag () {
           try {
-            const uid = _.toUpper(this.ss.uid)
+            const uid = _.toUpper(ss.uid)
             if (!/^[\dA-F]{8}$/.test(uid)) throw new Error('Only support 4 bytes UID')
-            this.showLoading({ text: 'Writing tag...' })
+            showLoading({ text: 'Writing tag...' })
             const errs = [null, null]
-            const block0 = this.mf1GenMagicBlock0()
+            const block0 = mf1GenMagicBlock0()
             // try Gen1a
-            await ultra.mf1Gen1aWriteBlocks(0, block0).catch(err => {
-              ultra.emitter.emit('error', err)
+            await ultra.value.mf1Gen1aWriteBlocks(0, block0).catch(err => {
+              logError(err)
               errs[0] = err
             })
             if (!_.isNil(errs[0])) { // try Gen2
-              await ultra.mf1WriteBlockByKeys(0, mfkeys, block0).catch(err => {
-                ultra.emitter.emit('error', err)
+              await ultra.value.mf1WriteBlockByKeys(0, mfkeys.value, block0).catch(err => {
+                logError(err)
                 errs[1] = err
               })
             }
@@ -494,76 +503,61 @@ block script
               }))
             }
             // double check
-            const scanned = toHex(_.first(await ultra.cmdHf14aScan()).uid)
+            const scanned = toHex(_.first(await ultra.value.cmdHf14aScan()).uid)
             if (scanned !== uid) throw new Error(`UID mismatch after write, scanned = ${scanned}`)
-            await this.swalFire({ icon: 'success', title: 'Write successfully' })
+            await swalFire({ icon: 'success', title: 'Write successfully' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
-        },
-        async btnEditMfkeys () {
-          const $ref = window.jQuery(this.$refs.exportimport)
+        }
+
+        async function btnEditMfkeys () {
+          const modalEl = exportimportModalRef.value
+          const modal = Modal.getOrCreateInstance(modalEl)
           const newVal = await new Promise(resolve => {
-            this.$set(this, 'exportimport', {
-              cb: resolve,
-              text: this.ss.mfkeys,
-            })
-            $ref.one('hide.bs.modal', () => resolve()).modal('show')
+            Object.assign(exportimport, { cb: resolve, text: ss.mfkeys })
+            modalEl.addEventListener('hidden.bs.modal', () => resolve(), { once: true })
+            modal.show()
           })
-          if (!_.isNil(newVal)) this.$set(this.ss, 'mfkeys', newVal || WELL_KNOWN_KEYS.join('\n'))
-          $ref.modal('hide')
-          this.$set(this, 'exportimport', { cb: null, text: '' })
-        },
-        mf1GenMagicBlock0 (tag) {
-          const { ultra } = this
-          tag ??= this.ssTag
-          if (_.isNil(tag)) throw new Error('Invalid tag data')
-          const block0 = ChameleonUltra.mf1GenMagicBlock0({
-            atqa: Buffer.from(tag.atqa, 'hex').reverse(),
-            sak: Buffer.from(tag.sak, 'hex'),
-            uid: Buffer.from(tag.uid, 'hex'),
-          })
-          ultra.emitter.emit('debug', 'web', `block0 = ${toHex(block0)}`)
-          return block0
-        },
-        async btnCopy (text) {
+          if (!_.isNil(newVal)) ss.mfkeys = newVal || WELL_KNOWN_KEYS.join('\n')
+          modal.hide()
+          Object.assign(exportimport, { cb: null, text: '' })
+        }
+
+        async function btnCopy (text) {
           try {
             text = `${text}`
             const clipboard = navigator.clipboard
             if (!clipboard) throw new Error('Clipboard API is not supported.')
             await clipboard.writeText(text)
-            await this.swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
+            await swalFire({ icon: 'success', title: `${text.length} bytes copied.` })
           } catch (err) {
-            await this.swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
+            await swalFire({ icon: 'error', title: 'Copy failed', text: err.message })
           }
-        },
-        async confirm (text, confirmButtonText, cancelButtonText) {
-          return await new Promise(resolve => {
-            let isConfirmed = false
-            const args = {
-              cancelButtonColor: '#3085d6',
-              cancelButtonText,
-              confirmButtonColor: '#d33',
-              confirmButtonText,
-              didDestroy: () => { resolve(isConfirmed) },
-              focusCancel: true,
-              icon: 'warning',
-              reverseButtons: true,
-              showCancelButton: true,
-              text,
-            }
-            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
-          })
-        },
-        showLoading (opts = {}) {
-          opts = {
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            ...opts,
-          }
-          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
-          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
-        },
+        }
+
+        return {
+          ls,
+          ss,
+          exportimport,
+          tagPicker,
+          tagTypeOptions,
+          ultra,
+          filteredTags,
+          savedTagName,
+          btnAdapterTips,
+          btnLoadTag,
+          btnSaveTag,
+          btnTagCsv,
+          btnReadSlot,
+          btnEmulateSlot,
+          btnScanTag,
+          btnWriteTag,
+          btnEditMfkeys,
+          btnCopy,
+          showLoading,
+          swalFire,
+        }
       },
-    })
+    }).mount('#app')

@@ -10,6 +10,8 @@ import pug from 'pug'
 import UglifyJS from 'uglify-js'
 import { fileURLToPath } from 'url'
 import { inspect } from 'util'
+import pkg from '../package.json'
+import typedocJson from '../typedoc.json'
 import { errToJson } from './utils'
 
 const __dirname = import.meta.dirname
@@ -23,6 +25,12 @@ export async function build (): Promise<void> {
     basedir: path.resolve(__dirname),
     baseurl: getSiteurl(),
     NODE_ENV: getenv('NODE_ENV', 'production'),
+    site: {
+      description: pkg.description,
+      gtagId: typedocJson.gaID,
+      name: pkg.name,
+      version: pkg.version,
+    },
   }
 
   const htmlMinifierOptions = {

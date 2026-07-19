@@ -1,110 +1,121 @@
-extends /include/bootstrapV4
+extends /include/bootstrap5
 
 block beforehtml
   -
-    const title = 'Xiaomi Watch Clone Tool'
-    ;[ogImageWidth, ogImageHeight, ogImage] = [1200, 600, 'https://i.imgur.com/M39Y0Be.png']
+    title = 'Xiaomi Watch Clone Tool'
+    description = 'A tool for Xiaomi Watch to clone encrypted Mifare Classic tag.'
+    ogImage = 'https://i.imgur.com/M39Y0Be.png'
+    ogImageWidth = 1200
+    ogImageHeight = 600
+    ogUrl = `${baseurl}mifare-xiaomi.html`
 
 block style
-  meta(property="og:description", content="A tool for Xiaomi Watch to clone encrypted Mifare Classic tag.")
-  meta(property="og:locale", content="zh_TW")
-  meta(property="og:title", content=title)
-  meta(property="og:type", content="website")
-  meta(property="og:url", content=`${baseurl}mifare-xiaomi.html`)
   style
     :sass
       [v-cloak]
         display: none
-      body, .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6
-        font-family: 'Noto Sans TC', sans-serif
-      .input-group-prepend > .input-group-text
+      .input-group-text
         width: 80px
-      .letter-spacing-n1px
-        &, .btn, textarea, select, input
-          letter-spacing: -1px
-      .text-sm
-        font-size: 0.875rem
 
 block content
-  #app.my-3.container.text-monospace(v-cloak)
-    h4.mb-3.text-center.letter-spacing-n1px #[.bgicon.bgicon-chameleon-ultra.mr-1] #{title}
-    .form-group.letter-spacing-n1px
-      label Connect method:
-      .input-group.input-group-sm.mb-3
-        select.form-control(v-model="ls.adapter")
-          option(value="ble") BLE (PC &amp; Android &amp; iPhone)
-          option(value="usb") USB Serial (PC only)
-        .input-group-append: button.btn.btn-outline-secondary(@click="btnAdapterTips") #[i.fa.fa-fw.fa-question]
-    .card.shadow-sm.mb-2
-      h6.card-header.bg-light ① Mifare Dump
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        p.text-sm Click "Import" button to import a mifare dump exported from #[a(target="_blank", href=`${baseurl}mifare1k.html`) mifare1k.html] or other tools like MCT, Proxmark3. Keys in dump will be used to sync with Xiaomi Watch. Dump will be deleted after page closed.
-        input.d-none(type="file", ref="dumpImport", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center UID
-          input.form-control(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.uid = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center ATQA
-          input.form-control(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.atqa = ''") #[i.fa.fa-fw.fa-times]
-        .input-group.input-group-sm.mb-2.was-validated
-          .input-group-prepend: span.input-group-text.justify-content-center SAK
-          input.form-control(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
-          .input-group-append: button.btn.btn-outline-secondary(type="button", @click="ss.sak = ''") #[i.fa.fa-fw.fa-times]
-        .row.mx-n1.mb-2
-          .col.px-1: button.btn.btn-block.btn-outline-success(@click="btnImportDump") #[i.fa.fa-fw.fa-file-code-o] Import
-          .col.px-1: button.btn.btn-block.btn-outline-primary(@click="btnExportDump") #[i.fa.fa-fw.fa-floppy-o] Export
-        button.btn.btn-sm.btn-block.btn-outline-danger.mb-2(@click="btnNewDump") #[i.fa.mr-1.fa-repeat] New dump
-    .card.shadow-sm.mb-2
-      h6.card-header.bg-light ② ChameleonUltra Emulate
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        p.text-sm Choose a slot and click the "Emulate" button to emulate as non-encrypted tag. Then use Xiaomi Watch to clone the ChameleonUltra.
-        .input-group.input-group-sm.mb-2
-          .input-group-prepend: span.input-group-text.justify-content-center Slot
-          select.form-control.form-control-sm.letter-spacing-n1px(v-model.number="ss.slot")
-            option(v-for="i of _.range(8)" :value="i") Slot {{ i + 1 }}
-        button.btn.btn-block.btn-outline-success.mb-2(@click="btnWriteEmuBlock0") #[i.fa.mr-1.fa-sign-in] Emulate
-    .card.shadow-sm.mb-2
-      h6.card-header.bg-light ③ Sync with Xiaomi Watch
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px
-        p.text-sm.mb-2 After clone, click "Write" button to write original dump to Xiaomi Watch.
-        .custom-control.custom-checkbox.mb-2
-          input.custom-control-input#ss-checkUidBeforeWrite(type="checkbox", v-model="ss.checkUidBeforeWrite")
-          label.custom-control-label(for="ss-checkUidBeforeWrite") Verify UID before write
-        button.btn.btn-block.btn-outline-primary.mb-2(@click="btnGen2Write") #[i.fa.mr-1.fa-download] Write
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
-        p.text-sm.mb-2 Click "Verify" button to compare between dump and Xiaomi Watch (skip block 0).
-        button.btn.btn-block.btn-outline-success.mb-2(@click="btnGen2Verify") #[i.fa.mr-1.fa-exchange] Verify
-      .card-body.px-3.pt-3.pb-2.letter-spacing-n1px.border-top
-        p.text-sm.mb-2 Click "Read" button to read from Xiaomi Watch (skip block 0). After read, you can click "Export" or "Write" button.
-        button.btn.btn-block.btn-outline-info.mb-2(@click="btnGen2Read") #[i.fa.mr-1.fa-upload] Read
-    .modal.fade(tabindex="-1", ref="dumpExport")
+  #app
+    .container.font-monospace.p-3.pb-5(v-cloak)
+      header.text-center.mb-3
+        h4.d-flex.justify-content-center.align-items-center.icon-link
+          span.svgmask.svgmask-chameleon-ultra
+          = title
+      include /include/bootstrap5-adapter-content
+      .card.shadow.mb-2
+        h6.card-header ① Mifare Dump
+        .card-body.overflow-hidden
+          p.fs-14px Click "Import" button to import a mifare dump exported from #[a(target="_blank", href=`${baseurl}mifare1k.html`) mifare1k.html] or other tools like MCT, Proxmark3. Keys in dump will be used to sync with Xiaomi Watch. Dump will be deleted after page closed.
+          input.d-none(type="file", ref="dumpImportInput", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-uid") UID
+            input.form-control.form-control-sm#ss-uid(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-atqa") ATQA
+            input.form-control.form-control-sm#ss-atqa(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .input-group.input-group-sm.mb-2.was-validated
+            label.input-group-text.justify-content-center(for="ss-sak") SAK
+            input.form-control.form-control-sm#ss-sak(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
+            button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+          .row.g-2.mb-2
+            .col
+              button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnImportDump")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-import-outline.svg)")
+                | Import
+            .col
+              button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnExportDump")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+                | Export
+          button.btn.btn-sm.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnNewDump")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            | New dump
+      .card.shadow.mb-2
+        h6.card-header ② ChameleonUltra Emulate
+        .card-body.overflow-hidden
+          p.fs-14px Choose a slot and click the "Emulate" button to emulate as non-encrypted tag. Then use Xiaomi Watch to clone the ChameleonUltra.
+          .input-group.input-group-sm.mb-2
+            label.input-group-text.justify-content-center(for="ss-slot") Slot
+            select.form-select.form-select-sm#ss-slot(v-model.number="ss.slot")
+              option(v-for="i of 8", :key="i", :value="i - 1") Slot {{ i }}
+          button.btn.w-100.btn-outline-success.icon-link.justify-content-center.mb-2(type="button", @click="btnWriteEmuBlock0")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+            | Emulate
+      .card.shadow.mb-2
+        h6.card-header ③ Sync with Xiaomi Watch
+        .card-body.overflow-hidden
+          p.fs-14px.mb-2 After clone, click "Write" button to write original dump to Xiaomi Watch.
+          .form-check.mb-2
+            input.form-check-input#ss-checkUidBeforeWrite(type="checkbox", v-model="ss.checkUidBeforeWrite")
+            label.form-check-label(for="ss-checkUidBeforeWrite") Verify UID before write
+          button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.mb-2(type="button", @click="btnGen2Write")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+            | Write
+        .card-body.overflow-hidden.border-top
+          p.fs-14px.mb-2 Click "Verify" button to compare between dump and Xiaomi Watch (skip block 0).
+          button.btn.w-100.btn-outline-success.icon-link.justify-content-center.mb-2(type="button", @click="btnGen2Verify")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-check-outline.svg)")
+            | Verify
+        .card-body.overflow-hidden.border-top
+          p.fs-14px.mb-2 Click "Read" button to read from Xiaomi Watch (skip block 0). After read, you can click "Export" or "Write" button.
+          button.btn.w-100.btn-outline-info.icon-link.justify-content-center.mb-2(type="button", @click="btnGen2Read")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+            | Read
+    .modal.fade(tabindex="-1", ref="dumpExportModal")
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
           .modal-header
-            h5.modal-title #[i.fa.fa-fw.fa-floppy-o] Export Dump
-            button.close(type="button", data-dismiss="modal") #[span &times;]
+            h5.modal-title.icon-link
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+              | Export Dump
+            button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body
-            a.btn.btn-block.btn-outline-primary.mb-2.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.json.download",
               :href="dumpExport.json.href",
               target="_blank")
               .my-1 {{ dumpExport.json.download }}
               h6.text-muted.mb-1 Click to download as JSON format. This format can be used in Proxmark3 and Chameleon Mini GUI.
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.bin.download",
               :href="dumpExport.bin.href",
               target="_blank")
               .my-1 {{ dumpExport.bin.download }}
               h6.text-muted.mb-1 Click to download as BIN format. This format can be used in Proxmark3, libnfc, mfoc...
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.mb-2.text-start(
               :download="dumpExport.eml.download",
               :href="dumpExport.eml.href",
               target="_blank")
               .my-1 {{ dumpExport.eml.download }}
               h6.text-muted.mb-1 Click to download as EML format. This format can be used in Proxmark3 emulator.
-            a.btn.btn-block.btn-outline-primary.text-left(
+            a.btn.w-100.btn-outline-primary.text-start(
               :download="dumpExport.mct.download",
               :href="dumpExport.mct.href",
               target="_blank")
@@ -112,8 +123,17 @@ block content
               h6.text-muted.mb-1 Click to download as MCT format. This format can be used in Mifare Classic Tool.
 
 block script
-  script.
-    const { Buffer, ChameleonUltra, Debug, DeviceMode, FreqType, TagType, WebbleAdapter, WebserialAdapter } = window.ChameleonUltraJS
+  script(type="module").
+    import { Buffer, ChameleonUltra, DeviceMode, FreqType, TagType } from 'chameleon-ultra.js'
+    import Debug from 'chameleon-ultra.js/plugin/Debug'
+    import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+    import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+    import { Modal } from 'bootstrap'
+    import JSON5 from 'json5'
+    import _ from 'lodash'
+    import { computed, createApp, nextTick, reactive, useTemplateRef, watch } from 'vue'
+    import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
     ultraUsb.use(new WebserialAdapter())
@@ -125,75 +145,74 @@ block script
     const WELL_KNOWN_KEYS = [Buffer.from('FFFFFFFFFFFF', 'hex')]
     const isMf1MagicBlock0 = buf => Buffer.isBuffer(buf) && buf.length >= 16 && _.includes([0x08, 0x88], buf[5]) && toHex(buf.subarray(6, 8)) === '0400' && buf[4] === buf.subarray(0, 4).xor()
 
-    window.vm = new Vue({
-      el: '#app',
-      data: {
-        ls: {
-          adapter: 'ble',
-        },
-        ss: {
+    window.vm = createApp({
+      setup () {
+        const ls = reactive({ adapter: 'ble' })
+        const ss = reactive({
           atqa: '0004',
           checkUidBeforeWrite: true,
           dump: null,
           sak: '08',
           slot: 0,
           uid: 'DEADBEEF',
-        },
-        dumpImport: { cb: null },
-        dumpExport: {
+        })
+        const dumpImport = reactive({ cb: null })
+        const dumpExport = reactive({
           json: { download: '', href: '' },
           bin: { download: '', href: '' },
           eml: { download: '', href: '' },
           mct: { download: '', href: '' },
-        },
-      },
-      async mounted () {
-        // 自動儲存功能
-        for (const [storage, key] of [[localStorage, 'ls'], [sessionStorage, 'ss']]) {
-          try {
-            const saved = JSON5.parse(storage.getItem(location.pathname))
-            if (saved) {
-              if (key === 'ss') {
-                try {
-                  saved.dump = Buffer.from(saved.dump, 'base64url')
-                } catch (err) {}
+        })
+
+        const dumpImportInputRef = useTemplateRef('dumpImportInput')
+        const dumpExportModalRef = useTemplateRef('dumpExportModal')
+
+        loadPageStorage(localStorage, ls)
+        watch(ls, () => { savePageStorage(localStorage, ls) }, { deep: true })
+
+        // ss.dump is a Buffer, JSON5 can't (de)serialize it directly, so it's stored as base64url
+        try {
+          const saved = JSON5.parse(sessionStorage.getItem(location.pathname))
+          if (_.isObject(saved)) {
+            if (!_.isNil(saved.dump)) {
+              try {
+                saved.dump = Buffer.from(saved.dump, 'base64url')
+              } catch (err) {
+                delete saved.dump
               }
-              this.$set(this, key, _.merge(this[key], saved))
             }
-          } catch (err) {}
-          this.$watch(key, () => {
-            let saved = { ...this[key] }
-            if (Buffer.isBuffer(saved.dump)) saved = { ...saved, dump: saved.dump.toString('base64url') }
-            storage.setItem(location.pathname, JSON5.stringify(saved))
-          }, { deep: true })
+            _.merge(ss, saved)
+          }
+        } catch (err) {}
+        watch(ss, () => {
+          const saved = { ...ss }
+          if (Buffer.isBuffer(saved.dump)) saved.dump = saved.dump.toString('base64url')
+          sessionStorage.setItem(location.pathname, JSON5.stringify(saved))
+        }, { deep: true })
+
+        const ultra = computed(() => ls.adapter === 'usb' ? ultraUsb : ultraBle)
+
+        const logError = err => { ultra.value.emitter.emit('error', err) }
+
+        function mf1GenEmptyDump (antiColl) {
+          antiColl ??= {
+            atqa: Buffer.from(ss.atqa, 'hex').toReversed(),
+            sak: Buffer.from(ss.sak, 'hex'),
+            uid: Buffer.from(ss.uid, 'hex'),
+          }
+          return ChameleonUltra.mf1GenEmptyDump({ ...antiColl, tagType: TagType.MIFARE_1024 })
         }
-        if (!Buffer.isBuffer(this.ss.dump)) this.ss.dump = this.mf1GenEmptyDump()
-      },
-      computed: {
-        ultra () {
-          return this.ls.adapter === 'usb' ? ultraUsb : ultraBle
-        },
-      },
-      methods: {
-        async swalFire (args) {
-          if (_.isPlainObject(args)) args.footer ??= '<a target="_blank" href="https://github.com/RfidResearchGroup/ChameleonUltra?tab=readme-ov-file#official-channels">Have questions? Join Discord!</a>'
-          return await Swal.fire(args)
-        },
-        async btnAdapterTips () {
-          await this.swalFire({
-            title: 'Browser & OS',
-            html: '<strong class="text-success">BLE</strong> is supported in ChromeOS, Chrome for Windows 10, macOS, Android 6.0, Microsoft Edge for Windows and <a class="btn-link" target="_blank" href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055">Bluefy</a> for iPhone and iPad.<hr><strong class="text-success">USB</strong> is supported on all desktop platforms (ChromeOS, Linux, macOS, and Windows).',
-          })
-        },
-        async btnImportDump () {
-          const { ultra } = this
+
+        if (!Buffer.isBuffer(ss.dump)) ss.dump = mf1GenEmptyDump()
+
+        async function btnImportDump () {
           try {
-            this.showLoading({ text: 'Importing' })
+            showLoading({ text: 'Importing' })
             const file = await new Promise(resolve => {
-              this.$set(this.dumpImport, 'cb', resolve)
-              const $ref = this.$refs.dumpImport
-              $ref.value = ''
-              $ref.click()
+              dumpImport.cb = resolve
+              const inputEl = dumpImportInputRef.value
+              inputEl.value = ''
+              inputEl.click()
             })
             if (_.isNil(file)) throw new Error('No file selected')
             if (file.size > 1e6) throw new Error(`File size too large: ${file.size} bytes`)
@@ -242,105 +261,105 @@ block script
                 uid: toHex(res.dump.subarray(0, 4)),
               })
             }
-            this.$set(this, 'ss', { ...this.ss, ...res })
+            Object.assign(ss, res)
 
-            await this.swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
+            await swalFire({ icon: 'success', title: 'Import success', text: 'Please verify import result. Invalid bytes has been replace with 0x00.' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Import failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Import failed', text: err.message })
           }
-        },
-        async btnExportDump () {
-          const dump = this.ss.dump
-          const atqa = Buffer.from(this.ss.atqa, 'hex').toReversed()
-          const sak = Buffer.from(this.ss.sak, 'hex')
-          const uid = Buffer.from(this.ss.uid, 'hex')
+        }
+
+        async function btnExportDump () {
+          const dump = ss.dump
+          const atqa = Buffer.from(ss.atqa, 'hex').toReversed()
+          const sak = Buffer.from(ss.sak, 'hex')
+          const uid = Buffer.from(ss.uid, 'hex')
           const strUid = toHex(uid)
 
           // json
           const json = ChameleonUltra.mf1DumpToPm3Json({ atqa, body: dump, sak, uid })
-          this.$set(this.dumpExport, 'json', {
+          dumpExport.json = {
             href: URL.createObjectURL(new Blob([JSON.stringify(json, null, 2)], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.json`,
-          })
+          }
 
           // bin
-          this.$set(this.dumpExport, 'bin', {
+          dumpExport.bin = {
             href: URL.createObjectURL(new Blob([dump], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.bin`,
-          })
+          }
 
           // eml
           const eml = ChameleonUltra.mf1DumpToEml({ body: dump })
-          this.$set(this.dumpExport, 'eml', {
+          dumpExport.eml = {
             href: URL.createObjectURL(new Blob([eml], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.eml`,
-          })
+          }
 
           // mct
           const mct = ChameleonUltra.mf1DumpToMct({ body: dump })
-          this.$set(this.dumpExport, 'mct', {
+          dumpExport.mct = {
             href: URL.createObjectURL(new Blob([mct], { type: 'application/octet-stream' })),
             download: `hf-mf-${strUid}.mct`,
-          })
+          }
 
-          await new Promise(resolve => this.$nextTick(resolve)) // wait for DOM update
-          const $ref = window.jQuery(this.$refs.dumpExport)
-          $ref.modal('show')
-        },
-        async btnNewDump () {
-          const { ultra } = this
+          await nextTick() // wait for DOM update
+          Modal.getOrCreateInstance(dumpExportModalRef.value).show()
+        }
+
+        async function btnNewDump () {
           try {
             const msg1 = 'Mifare dump will be REPLACED! Continue?'
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.$set(this.ss, 'dump', this.mf1GenEmptyDump())
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            ss.dump = mf1GenEmptyDump()
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Reset failed', text: err.message })
           }
-        },
-        async btnWriteEmuBlock0 () {
-          const { ultra } = this
+        }
+
+        async function btnWriteEmuBlock0 () {
           try {
-            const { atqa, dump, sak, slot, uid } = this.ss
-            ultra.emitter.emit('debug', 'web', JSON.stringify({ atqa, dump, sak, slot, uid }))
-            const slotName = await ultra.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
+            const { atqa, dump, sak, slot, uid } = ss
+            ultra.value.emitter.emit('debug', 'web', JSON.stringify({ atqa, dump, sak, slot, uid }))
+            const slotName = await ultra.value.cmdSlotGetFreqName(slot, FreqType.HF) ?? '(no name)'
             const msg1 = `The hf data of slot ${slot + 1} "${slotName}" will be REPLACE! Continue?`
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
-            this.showLoading({ text: 'Emulating...' })
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
-            await ultra.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
-            await ultra.cmdSlotSetFreqName(slot, FreqType.HF, `xiaomi_${uid}`)
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
+            showLoading({ text: 'Emulating...' })
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.value.slotChangeTagTypeAndActive(slot, TagType.MIFARE_1024) // reset slot
+            await ultra.value.cmdSlotSetFreqName(slot, FreqType.HF, `xiaomi_${uid}`)
             // set anti-coll
             const tag = {
               atqa: Buffer.from(atqa, 'hex').toReversed(),
               sak: Buffer.from(sak, 'hex'),
               uid: Buffer.from(uid, 'hex').slice(-4),
             }
-            await ultra.cmdMf1SetAntiCollMode(false)
-            await ultra.cmdHf14aSetAntiCollData(tag)
-            await ultra.cmdMf1EmuWriteBlock(0, dump.subarray(0, 16)) // set block0
-            await ultra.cmdSlotSaveSettings()
-            await this.swalFire({ icon: 'success', title: 'Emulate successfully!' })
+            await ultra.value.cmdMf1SetAntiCollMode(false)
+            await ultra.value.cmdHf14aSetAntiCollData(tag)
+            await ultra.value.cmdMf1EmuWriteBlock(0, dump.subarray(0, 16)) // set block0
+            await ultra.value.cmdSlotSaveSettings()
+            await swalFire({ icon: 'success', title: 'Emulate successfully!' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Failed to emulate tag.', text: err.message })
           }
-        },
-        async btnGen2Write () {
-          const { ultra } = this
+        }
+
+        async function btnGen2Write () {
           try {
-            const { checkUidBeforeWrite, dump, uid } = this.ss
+            const { checkUidBeforeWrite, dump, uid } = ss
             const msg1 = 'Mifare Data in Xiaomi Watch will be REPLACE! Continue?'
-            if (!await this.confirm(msg1, 'Yes', 'Cancel')) return
+            if (!await swalConfirm(msg1, 'Yes', 'Cancel')) return
             if (checkUidBeforeWrite) {
-              const antiColl = await this.mfReadAntiColl()
+              const antiColl = await mfReadAntiColl()
               if (antiColl.uid !== uid) throw new Error(`UID is different, read = ${toHex(antiColl.uid)}`)
             }
             const genSwalCfg = i => ({
               html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Writing Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
             })
-            this.showLoading(genSwalCfg(0))
+            showLoading(genSwalCfg(0))
             const failed = []
             for (let i = 0; i < 16; i++) {
               try {
@@ -349,55 +368,55 @@ block script
                   ..._.map([0, 10], pos => sectorData.subarray(pos - 16).subarray(0, 6)),
                   ...WELL_KNOWN_KEYS,
                 ]
-                const { success } = await ultra.mf1WriteSectorByKeys(i, keys, sectorData)
+                const { success } = await ultra.value.mf1WriteSectorByKeys(i, keys, sectorData)
                 for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
               } catch (err) {
-                if (!ultra.isConnected()) throw err
-                ultra.emitter.emit('error', err)
+                if (!ultra.value.isConnected()) throw err
+                logError(err)
                 for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
               }
-              this.showLoading(genSwalCfg(i + 1))
+              showLoading(genSwalCfg(i + 1))
             }
-            await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+            await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
             _.pull(failed, 0) // ignore error of block 0
             if (failed.length !== 0) throw new Error(`${failed.length} blocks failed: ${failed.join(',')}`)
-            await this.swalFire({ icon: 'success', title: 'Write success' })
+            await swalFire({ icon: 'success', title: 'Write success' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Write failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Write failed', text: err.message })
           }
-        },
-        async mfReadAntiColl () {
-          const { ultra } = this
+        }
+
+        async function mfReadAntiColl () {
           const antiColl = {}
-          this.showLoading({ text: 'Reading anti-collision...' })
-          const tag1 = _.first(await ultra.cmdHf14aScan())
+          showLoading({ text: 'Reading anti-collision...' })
+          const tag1 = _.first(await ultra.value.cmdHf14aScan())
           _.merge(antiColl, {
             atqa: toHex(tag1.atqa.toReversed()),
             sak: toHex(tag1.sak),
             uid: toHex(tag1.uid),
           })
           return antiColl
-        },
-        async mfGen2Read () {
-          const { ultra } = this
+        }
+
+        async function mfGen2Read () {
           const res = {}
 
           // read anti-collision
-          _.merge(res, await this.mfReadAntiColl())
-          ultra.emitter.emit('debug', 'web', `res = ${JSON.stringify(res)}`)
+          _.merge(res, await mfReadAntiColl())
+          ultra.value.emitter.emit('debug', 'web', `res = ${JSON.stringify(res)}`)
 
           const genSwalCfg = i => ({
             html: `<div class="d-flex flex-column"><div class="progress mb-2"><div class="progress-bar progress-bar-striped" role="progressbar" style="width: ${i / 16 * 100}%"></div></div><div class="d-flex justify-content-between"><span>Reading Mifare / Gen2:</span><span>${i} / 16</span></div></div>`,
           })
-          this.showLoading(genSwalCfg(0))
+          showLoading(genSwalCfg(0))
           const failed = []
-          const newDump = this.mf1GenEmptyDump({
+          const newDump = mf1GenEmptyDump({
             atqa: Buffer.from(res.atqa, 'hex').toReversed(),
             sak: Buffer.from(res.sak, 'hex'),
             uid: Buffer.from(res.uid, 'hex'),
           })
-          const oldDump = this.ss.dump
+          const oldDump = ss.dump
           for (let i = 0; i < 16; i++) {
             try {
               const oldSectorData = oldDump.subarray(i * 64).subarray(0, 64)
@@ -405,85 +424,68 @@ block script
                 ..._.map([0, 10], pos => oldSectorData.subarray(pos - 16).subarray(0, 6)),
                 ...WELL_KNOWN_KEYS,
               ]
-              const { data: newSectorData, success } = await ultra.mf1ReadSectorByKeys(i, keys)
+              const { data: newSectorData, success } = await ultra.value.mf1ReadSectorByKeys(i, keys)
               newDump.set(newSectorData, i * 64)
               for (let j = 0; j < 4; j++) if (!success[j]) failed.push(i * 4 + j)
             } catch (err) {
-              if (!ultra.isConnected()) throw err
+              if (!ultra.value.isConnected()) throw err
               for (let j = 0; j < 4; j++) failed.push(i * 4 + j)
-              ultra.emitter.emit('error', err)
+              logError(err)
             }
-            this.showLoading(genSwalCfg(i + 1))
+            showLoading(genSwalCfg(i + 1))
           }
-          await ultra.cmdChangeDeviceMode(DeviceMode.TAG)
+          await ultra.value.cmdChangeDeviceMode(DeviceMode.TAG)
           res.dump = newDump
           _.pull(failed, 0) // ignore error of block 0
           if (failed.length !== 0) throw new Error(`${failed.length} blocks failed: ${failed.join(',')}`)
           return res
-        },
-        async btnGen2Verify () {
-          const { ultra } = this
+        }
+
+        async function btnGen2Verify () {
           try {
-            const dump = this.ss.dump
-            const other = await this.mfGen2Read()
-            if (other.uid !== this.ss.uid) throw new Error(`UID is different, read = ${toHex(other.uid)}`)
+            const dump = ss.dump
+            const other = await mfGen2Read()
+            if (other.uid !== ss.uid) throw new Error(`UID is different, read = ${toHex(other.uid)}`)
             const diffs = []
             for (let i = 1; i < 64; i++) {
               const [blk1, blk2] = _.map([dump, other.dump], buf => buf.subarray(i * 16).subarray(0, 16))
               if (!blk1.equals(blk2)) diffs.push(i)
             }
             if (diffs.length !== 0) throw new Error(`${diffs.length} blocks are different: ${diffs.join(',')}`)
-            await this.swalFire({ icon: 'success', title: 'All blocks is equal.' })
+            await swalFire({ icon: 'success', title: 'All blocks is equal.' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Verify failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Verify failed', text: err.message })
           }
-        },
-        async btnGen2Read () {
-          const { ultra } = this
+        }
+
+        async function btnGen2Read () {
           try {
-            const other = await this.mfGen2Read()
-            this.$set(this, 'ss', { ...this.ss, ...other })
-            await this.swalFire({ icon: 'success', title: 'Read success' })
+            const other = await mfGen2Read()
+            Object.assign(ss, other)
+            await swalFire({ icon: 'success', title: 'Read success' })
           } catch (err) {
-            ultra.emitter.emit('error', err)
-            await this.swalFire({ icon: 'error', title: 'Read failed', text: err.message })
+            logError(err)
+            await swalFire({ icon: 'error', title: 'Read failed', text: err.message })
           }
-        },
-        async confirm (text, confirmButtonText, cancelButtonText) {
-          return await new Promise((resolve, reject) => {
-            let isConfirmed = false
-            const args = {
-              cancelButtonColor: '#3085d6',
-              cancelButtonText,
-              confirmButtonColor: '#d33',
-              confirmButtonText,
-              didDestroy: () => { resolve(isConfirmed) },
-              focusCancel: true,
-              icon: 'warning',
-              reverseButtons: true,
-              showCancelButton: true,
-              text,
-            }
-            Swal.fire(args).then(res => { isConfirmed = res.isConfirmed })
-          })
-        },
-        mf1GenEmptyDump (antiColl) {
-          antiColl ??= {
-            atqa: Buffer.from(this.ss.atqa, 'hex').toReversed(),
-            sak: Buffer.from(this.ss.sak, 'hex'),
-            uid: Buffer.from(this.ss.uid, 'hex'),
-          }
-          return ChameleonUltra.mf1GenEmptyDump({ ...antiColl, tagType: TagType.MIFARE_1024 })
-        },
-        showLoading (opts = {}) {
-          opts = {
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            ...opts,
-          }
-          if (Swal.isVisible()) return Swal.update(_.omit(opts, ['progressStepsDistance']))
-          Swal.fire({ ...opts, didRender: () => { Swal.showLoading() } })
-        },
+        }
+
+        return {
+          ls,
+          ss,
+          dumpImport,
+          dumpExport,
+          ultra,
+          btnAdapterTips,
+          btnImportDump,
+          btnExportDump,
+          btnNewDump,
+          btnWriteEmuBlock0,
+          btnGen2Write,
+          btnGen2Verify,
+          btnGen2Read,
+          showLoading,
+          swalFire,
+        }
       },
-    })
+    }).mount('#app')

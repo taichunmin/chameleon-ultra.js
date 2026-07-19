@@ -177,6 +177,7 @@ await run(ultraUsb)
 
 - [GitHub RfidResearchGroup/ChameleonUltra](https://github.com/RfidResearchGroup/ChameleonUltra)
 - [Chameleon Ultra Guide](https://chameleonultra.com/docs)
+- [GitHub taichunmin/ChameleonUltra-releases](https://github.com/taichunmin/ChameleonUltra-releases)
 - [Chameleon Ultra GUI Documentation](https://docs.chameleonultragui.dev/)
 
 ## Star History

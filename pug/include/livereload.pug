@@ -1,17 +1,18 @@
+//- https://github.com/livereload/livereload-js/blob/master/src/options.js
 if NODE_ENV !== 'production'
   script.
-    (function () {
-      const url = new URL(location)
-      const livereload = new URL('https://cdn.jsdelivr.net/npm/livereload-js@3/dist/livereload.js?snipver=1')
-      livereload.searchParams.set('host', url.hostname)
-      if (url.protocol === 'https:') {
-        livereload.searchParams.set('port', url.port || 443)
-        livereload.searchParams.set('https', 1)
-      } else {
-        livereload.searchParams.set('port', url.port || 80)
+    ;(function () {
+      const pageUrl = new URL(location)
+      const isHttps = pageUrl.protocol === 'https:'
+      const port = Number(pageUrl.port) || (isHttps ? 443 : 80)
+      window.LiveReloadOptions = {
+        host: pageUrl.hostname,
+        https: isHttps,
+        port,
+        snipver: 1,
       }
       const s = document.createElement('script')
-      s.src = livereload.href
+      s.src = 'https://cdn.jsdelivr.net/npm/livereload-js@4/dist/livereload.js'
       const h = document.getElementsByTagName('head')[0]
       h.appendChild(s)
     })()
