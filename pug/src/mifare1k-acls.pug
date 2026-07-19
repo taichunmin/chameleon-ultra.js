@@ -19,6 +19,7 @@ block style
 
 block content
   #app
+    nav-bar(baseurl=baseurl)
     .container.font-monospace.p-3.pb-5(v-cloak)
       header.text-center.mb-3
         h4.d-flex.justify-content-center.align-items-center.icon-link
@@ -152,6 +153,7 @@ block content
                   tr.ls-n2px(:class="{'tr-striped': !(acl % 2), 'table-success': acl === trailerAclPicker.acl}", @click="trailerAclPicker.cb?.(acl)")
                     td(scope="col", colspan="6") {{ TRAILER_BLK_REMARKS[acl] ?? '?' }}
             small.text-muted.form-text Click table row to pick new ACL. If key B is readable data, it cannot serve for authentication.
+  include /include/bootstrap5-navbar-content
 
 block script
   script(type="module").
@@ -160,6 +162,7 @@ block script
     import _ from 'lodash'
     import { computed, createApp, reactive, useTemplateRef, watch } from 'vue'
     import { loadPageStorage, savePageStorage, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import NavBar from '@app/js/bootstrap5-navbar.mjs'
 
     const toHex = buf => _.toUpper(buf.toString('hex'))
     const ACLS_BIT_OFFSET = [
@@ -199,6 +202,7 @@ block script
     ]
 
     window.vm = createApp({
+      components: { NavBar },
       setup () {
         const ss = reactive({ hexAcls: 'FF078069' })
         const dataAclPicker = reactive({ block: 0, cb: null, acl: -1 })

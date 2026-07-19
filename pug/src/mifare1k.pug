@@ -19,6 +19,7 @@ block style
 
 block content
   #app
+    nav-bar(baseurl=baseurl)
     .container.font-monospace.p-3.pb-5(v-cloak)
       header.text-center.mb-3
         h4.d-flex.justify-content-center.align-items-center.icon-link
@@ -194,6 +195,7 @@ block content
               target="_blank")
               .my-1 {{ dumpExport.mct.download }}
               h6.text-muted.mb-1 Click to download as MCT format. This format can be used in Mifare Classic Tool.
+  include /include/bootstrap5-navbar-content
 
 block script
   script(type="module").
@@ -205,6 +207,7 @@ block script
     import _ from 'lodash'
     import { computed, createApp, nextTick, reactive, useTemplateRef, watch } from 'vue'
     import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import NavBar from '@app/js/bootstrap5-navbar.mjs'
 
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
@@ -222,6 +225,7 @@ block script
     }
 
     window.vm = createApp({
+      components: { NavBar },
       setup () {
         const ls = reactive({ adapter: 'ble' })
         const ss = reactive({

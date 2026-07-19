@@ -17,6 +17,7 @@ block style
 
 block content
   #app
+    nav-bar(baseurl=baseurl)
     .container.font-monospace.p-3.pb-5(v-cloak)
       header.text-center.mb-3
         h4.d-flex.justify-content-center.align-items-center.icon-link
@@ -47,6 +48,7 @@ block content
           button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnUpdateSelected")
             span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:puzzle-outline.svg)")
             | Update selected
+  include /include/bootstrap5-navbar-content
 
 block script
   script(type="module").
@@ -58,6 +60,7 @@ block script
     import _ from 'lodash'
     import { computed, createApp, onMounted, reactive, ref, watch } from 'vue'
     import { btnAdapterTips, getJson, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import NavBar from '@app/js/bootstrap5-navbar.mjs'
     import Swal from 'sweetalert2'
 
     const ultraUsb = new ChameleonUltra()
@@ -68,6 +71,7 @@ block script
     ultraBle.use(new WebbleAdapter())
 
     window.vm = createApp({
+      components: { NavBar },
       setup () {
         const ls = reactive({ adapter: 'ble' })
         const ss = reactive({ tagName: '' })

@@ -19,6 +19,7 @@ block style
 
 block content
   #app
+    nav-bar(baseurl=baseurl)
     .container.font-monospace.p-3.pb-5(v-cloak)
       header.text-center.mb-3
         h4.d-flex.justify-content-center.align-items-center.icon-link
@@ -114,6 +115,7 @@ block content
             .col-12: button.btn.w-100.btn-outline-danger.ls-n1px.icon-link.justify-content-center(type="button" @click="btnWipeFds")
               span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:factory.svg)")
               | Factory reset
+  include /include/bootstrap5-navbar-content
 
 block script
   script(type="module").
@@ -124,6 +126,7 @@ block script
     import { computed, createApp, reactive, watch } from 'vue'
     import { z } from 'zod'
     import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import NavBar from '@app/js/bootstrap5-navbar.mjs'
     import Swal from 'sweetalert2'
 
     const ultraUsb = new ChameleonUltra()
@@ -145,6 +148,7 @@ block script
     })
 
     window.vm = createApp({
+      components: { NavBar },
       setup () {
         const ls = reactive({ adapter: 'ble' })
         const ss = reactive({

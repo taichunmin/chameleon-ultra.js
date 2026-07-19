@@ -1,0 +1,33 @@
+template#template-bootstrap5-navbar
+  nav#navbar.navbar.shadow-sm.navbar-expand-lg.bg-body-tertiary.sticky-top.d-print-none
+    .container-fluid
+      a.navbar-brand.icon-link(href=baseurl)
+        span.svgmask.svgmask-chameleon-ultra
+        | chameleon-ultra.js
+      button.navbar-toggler(type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation")
+        span.navbar-toggler-icon
+      .collapse.navbar-collapse#navbarSupportedContent
+        ul.navbar-nav.me-auto.mb-2.mb-lg-0
+          li.nav-item.position-relative
+            a.nav-link.stretched-link.icon-link(target="_blank" href="https://github.com/taichunmin/chameleon-ultra.js")
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/garden:github-stroke-16.svg)")
+              | GitHub
+          li.nav-item.position-relative
+            a.nav-link.stretched-link.icon-link(target="_blank" href=baseurl)
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:book.svg)")
+              | Docs
+          li.nav-item.dropdown
+            a.nav-link.dropdown-toggle.icon-link(href="#" role="button" data-bs-toggle="dropdown"  aria-expanded="false")
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:shape-plus-outline.svg)")
+              | DEMOs
+            ul.dropdown-menu
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}device-settings.html`") Device Settings
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}dfu.html`") Firmware Update
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}mfkey32.html`") MFKey32
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}mifare1k.html`") MIFARE 1K
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}mifare-keychain.html`") MIFARE Keychain
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}hf14a-scanner.html`") HF14A Scanner
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}mifare-xiaomi.html`") MIFARE Xiaomi
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}lf-em410x.html`") LF EM410X
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}mifare1k-acls.html`") MIFARE 1K ACLs
+              li: a.dropdown-item(target="_blank" :href="`${baseurl}test.html`") Test Page

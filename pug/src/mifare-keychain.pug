@@ -47,6 +47,7 @@ block style
 
 block content
   #app
+    nav-bar(baseurl=baseurl)
     .container.font-monospace.p-3.pb-5(v-cloak)
       header.text-center.mb-3
         h4.d-flex.justify-content-center.align-items-center.icon-link
@@ -181,6 +182,7 @@ block content
             button.btn.btn-outline-success(type="button", @click="btnCopy(exportimport.text)") Copy
             button.btn.btn-secondary(type="button", @click="exportimport?.cb?.()") Cancel
             button.btn.btn-primary(type="button", @click="exportimport?.cb?.(exportimport.text)") Apply
+  include /include/bootstrap5-navbar-content
 
 block script
   script(type="module").
@@ -194,6 +196,7 @@ block script
     import Papa from 'papaparse'
     import { computed, createApp, nextTick, reactive, useTemplateRef, watch } from 'vue'
     import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import NavBar from '@app/js/bootstrap5-navbar.mjs'
     import Swal from 'sweetalert2'
 
     const { FlexSearch } = window
@@ -241,6 +244,7 @@ block script
     }
 
     window.vm = createApp({
+      components: { NavBar },
       setup () {
         const ls = reactive({ adapter: 'ble', tags: [] })
         const ss = reactive({
