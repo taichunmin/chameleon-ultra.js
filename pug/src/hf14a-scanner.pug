@@ -17,6 +17,7 @@ block style
 
 block content
   #app
+    nav-bar(baseurl=baseurl)
     .container.font-monospace.p-3.pb-5(v-cloak)
       header.text-center.mb-3
         h4.d-flex.justify-content-center.align-items-center.icon-link
@@ -55,6 +56,7 @@ block content
               td(@click="btnCopy(tag.atqa)") {{ tag.atqa }}
               td(@click="btnCopy(tag.sak)") {{ tag.sak }}
               td.text-start(@click="btnCopy(tag.ats)") {{ tag.ats }}
+  include /include/bootstrap5-navbar-content
 
 block script
   script(type="module").
@@ -66,6 +68,7 @@ block script
     import _ from 'lodash'
     import { computed, createApp, reactive, ref, watch } from 'vue'
     import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, sleep, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import NavBar from '@app/js/bootstrap5-navbar.mjs'
     import Swal from 'sweetalert2'
 
     const ultraUsb = new ChameleonUltra()
@@ -77,6 +80,7 @@ block script
     const toHex = buf => _.toUpper(buf.toString('hex'))
 
     window.vm = createApp({
+      components: { NavBar },
       setup () {
         const ls = reactive({ adapter: 'ble' })
         const ss = reactive({ tags: [] })

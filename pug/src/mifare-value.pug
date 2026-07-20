@@ -19,6 +19,7 @@ block style
 
 block content
   #app
+    nav-bar(baseurl=baseurl)
     .container.font-monospace.p-3.pb-5(v-cloak)
       header.text-center.mb-3
         h4.d-flex.justify-content-center.align-items-center.icon-link
@@ -91,6 +92,7 @@ block content
           .col-4: button.btn.w-100.btn-outline-dark.d-flex.flex-column.align-items-center(type="button", @click="btnManipulateValue(Mf1VblockOperator.RESTORE)")
             span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:content-duplicate.svg)")
             .mt-1.ls-n1px Clone#[br]Value
+  include /include/bootstrap5-navbar-content
 
 block script
   script(type="module").
@@ -100,6 +102,7 @@ block script
     import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
     import { computed, createApp, reactive, watch } from 'vue'
     import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import NavBar from '@app/js/bootstrap5-navbar.mjs'
 
     const ultraUsb = new ChameleonUltra()
     ultraUsb.use(new Debug())
@@ -113,6 +116,7 @@ block script
     }
 
     window.vm = createApp({
+      components: { NavBar },
       setup () {
         const ls = reactive({ adapter: 'ble' })
         const ss = reactive({

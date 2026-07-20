@@ -19,6 +19,7 @@ block style
 
 block content
   #app
+    nav-bar(baseurl=baseurl)
     .container.font-monospace.p-3.pb-5(v-cloak)
       header.text-center.mb-3
         h4.d-flex.justify-content-center.align-items-center.icon-link
@@ -80,6 +81,7 @@ block content
             span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:fire.svg)")
             | Reset to well-known keys
           p.fs-14px.text-body-secondary.mb-0 Please place the LF tag on the back of ChameleonUltra.
+  include /include/bootstrap5-navbar-content
 
 block script
   script(type="module").
@@ -90,6 +92,7 @@ block script
     import _ from 'lodash'
     import { computed, createApp, reactive, watch } from 'vue'
     import { btnAdapterTips, loadPageStorage, savePageStorage, showLoading, swalConfirm, swalFire } from '@app/js/bootstrap5-utils.mjs'
+    import NavBar from '@app/js/bootstrap5-navbar.mjs'
     import Swal from 'sweetalert2'
 
     const ultraUsb = new ChameleonUltra()
@@ -103,6 +106,7 @@ block script
     const WELL_KNOWN_KEYS = ['1DD00A11', '19920427', '51243648']
 
     window.vm = createApp({
+      components: { NavBar },
       setup () {
         const ls = reactive({ adapter: 'ble' })
         const ss = reactive({
