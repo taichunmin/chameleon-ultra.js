@@ -129,3 +129,15 @@ jobs:
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/SerialPortAdapter/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/WebbleAdapter/+esm
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/WebserialAdapter/+esm
+      - name: Trigger Context7 Refresh
+        continue-on-error: true
+        env:
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+        run: |
+          set -ex
+          LIBRARY_NAME="$(jq -re '.url | sub("^https?://context7\\.com"; "")' dist/context7.json)"
+          echo "Refreshing Context7 library: $LIBRARY_NAME"
+          curl -s -X POST https://context7.com/api/v1/refresh \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $CONTEXT7_API_KEY" \
+            -d "$(jq -nc --arg name "$LIBRARY_NAME" '{ libraryName: $name }')"
