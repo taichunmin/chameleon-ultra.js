@@ -110,6 +110,119 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     expect(adapter.recv).toEqual([Buffer.from('11ef 03e9 0000 0001 13 00 00', 'hex')])
   })
 
+  test('#cmdMf1AcquireStaticEncryptedNested()', async () => {
+    // arrange: assureDeviceMode(READER) sends a change-mode cmd first, then cmd 2014.
+    adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // change-mode resp
+    // cmd 2014 resp: uid(4) + 1 sector (14 bytes): keyA[nt_first_half 1234 | par 0a | nt_enc aabbccdd], keyB[5678 | 05 | 11223344]
+    adapter.send.push(Buffer.from('11ef 07de 0068 0012 a1 01020304 1234 0a aabbccdd 5678 05 11223344 1b', 'hex'))
+
+    // act
+    const actual = await ultra.cmdMf1AcquireStaticEncryptedNested({ startSector: 0, maxSectors: 1 })
+
+    // assert
+    expect(actual.uid).toEqual(0x01020304)
+    expect(actual.atks).toEqual([
+      { sector: 0, keyType: Mf1KeyType.KEY_A, ntFirstHalf: 0x1234, ntEnc: 0xAABBCCDD, par: 0x0A },
+      { sector: 0, keyType: Mf1KeyType.KEY_B, ntFirstHalf: 0x5678, ntEnc: 0x11223344, par: 0x05 },
+    ])
+    expect(adapter.recv).toEqual([
+      Buffer.from('11ef 03e9 0000 0001 13 01 ff', 'hex'), // change to READER mode
+      Buffer.from('11ef 07de 0000 0008 13 a396efa4e24f 01 00 02', 'hex'), // key, maxSectors=01, startSector=00
+    ])
+  })
+
+  test('#cmdMf1AcquireStaticEncryptedNested() rejects on a non-FM11RF08S card', async () => {
+    // arrange: real frame captured from a standard MIFARE Classic 1K (no FUDAN backdoor).
+    // The backdoor auth fails, so the firmware replies with status MF_ERR_AUTH (0x06).
+    adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // change-mode resp
+    adapter.send.push(Buffer.from('11ef 07de 0006 0004 11 00000000 00', 'hex')) // status 0x06
+
+    // act + assert
+    await expect(ultra.cmdMf1AcquireStaticEncryptedNested({ startSector: 0, maxSectors: 1 }))
+      .rejects.toThrow('HF tag auth failed')
+  })
+
+  test('#mf1IsStaticEncryptedNestedSupported() true when nonces are static', async () => {
+    // arrange: change-mode once, then two identical acquisitions (static nonce)
+    const frame = '11ef 07de 0068 0012 a1 01020304 1234 0a aabbccdd 5678 05 11223344 1b'
+    adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // change-mode resp
+    adapter.send.push(Buffer.from(frame, 'hex'))
+    adapter.send.push(Buffer.from(frame, 'hex'))
+
+    // act
+    const actual = await ultra.mf1IsStaticEncryptedNestedSupported({ rounds: 2 })
+
+    // assert: first backdoor key authenticated, nonces matched, and the acquisition is returned
+    expect(actual.supported).toEqual(true)
+    expect(actual.key).toEqual(Buffer.from('A396EFA4E24F', 'hex'))
+    expect(actual.res?.uid).toEqual(0x01020304)
+    expect(actual.res?.atks).toHaveLength(2)
+  })
+
+  test('#mf1IsStaticEncryptedNestedSupported() false when nonces vary', async () => {
+    // arrange: two acquisitions whose ntFirstHalf differs (1234 vs 9999) => not static
+    adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // change-mode resp
+    adapter.send.push(Buffer.from('11ef 07de 0068 0012 a1 01020304 1234 0a aabbccdd 5678 05 11223344 1b', 'hex'))
+    adapter.send.push(Buffer.from('11ef 07de 0068 0012 a1 01020304 9999 0a aabbccdd 5678 05 11223344 2f', 'hex'))
+
+    // act
+    const actual = await ultra.mf1IsStaticEncryptedNestedSupported({ rounds: 2 })
+
+    // assert: a backdoor key worked but the card is not vulnerable
+    expect(actual.supported).toEqual(false)
+    expect(actual.key).toEqual(Buffer.from('A396EFA4E24F', 'hex'))
+  })
+
+  test('#mf1IsStaticEncryptedNestedSupported() false when no backdoor key authenticates', async () => {
+    // arrange: change-mode once, then every backdoor key fails with MF_ERR_AUTH (0x06)
+    adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // change-mode resp
+    for (let i = 0; i < 3; i++) adapter.send.push(Buffer.from('11ef 07de 0006 0004 11 00000000 00', 'hex'))
+
+    // act
+    const actual = await ultra.mf1IsStaticEncryptedNestedSupported({ rounds: 2 })
+
+    // assert
+    expect(actual.supported).toEqual(false)
+    expect(actual.key).toBeUndefined()
+  })
+
+  test('#mf1IsStaticEncryptedNestedSupported() propagates a non-auth error', async () => {
+    // arrange: the probe hits a non-MF_ERR_AUTH failure (HF tag not found, 0x01)
+    adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // change-mode resp
+    adapter.send.push(Buffer.from('11ef 07de 0001 0000 1a 00', 'hex')) // status 0x01
+
+    // act + assert: it must not be swallowed as "key rejected"
+    await expect(ultra.mf1IsStaticEncryptedNestedSupported({ rounds: 2 }))
+      .rejects.toThrow('HF tag not found')
+  })
+
+  test('#mf1IsStaticEncryptedNestedSupported() false when the sector range is not fully acquired', async () => {
+    // arrange: a backdoor key authenticates but the device returns a uid-only payload (no sectors)
+    adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // change-mode resp
+    adapter.send.push(Buffer.from('11ef 07de 0068 0004 af 01020304 f6', 'hex')) // uid only, atks empty
+
+    // act
+    const actual = await ultra.mf1IsStaticEncryptedNestedSupported({ rounds: 2 })
+
+    // assert: incomplete acquisition is not treated as a static nonce
+    expect(actual.supported).toEqual(false)
+    expect(actual.key).toEqual(Buffer.from('A396EFA4E24F', 'hex'))
+  })
+
+  test('#mf1IsStaticEncryptedNestedSupported() false when the card changes mid-probe', async () => {
+    // arrange: identical nonce records but a different uid on the second acquisition
+    adapter.send.push(Buffer.from('11ef 03e9 0068 0000 ac 00', 'hex')) // change-mode resp
+    adapter.send.push(Buffer.from('11ef 07de 0068 0012 a1 01020304 1234 0a aabbccdd 5678 05 11223344 1b', 'hex'))
+    adapter.send.push(Buffer.from('11ef 07de 0068 0012 a1 05060708 1234 0a aabbccdd 5678 05 11223344 0b', 'hex'))
+
+    // act
+    const actual = await ultra.mf1IsStaticEncryptedNestedSupported({ rounds: 2 })
+
+    // assert: a changed uid breaks the static-nonce signature
+    expect(actual.supported).toEqual(false)
+    expect(actual.key).toEqual(Buffer.from('A396EFA4E24F', 'hex'))
+  })
+
   test('#cmdDfuEnter()', async () => {
     // arrange
     vi.spyOn(ultra, 'isConnected').mockReturnValue(false).mockReturnValueOnce(false).mockReturnValueOnce(true)

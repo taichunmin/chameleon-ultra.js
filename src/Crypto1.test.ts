@@ -280,3 +280,62 @@ test.each([
   const actual = Crypto1.mfkey32IsReaderHasKey({ uid, nt, nr: nrEnc, ar: arEnc, key: Buffer.from(key, 'hex') })
   expect(actual).toEqual(true)
 })
+
+test.each([
+  { uid: '11223344', key: 'A0A1A2A3A4A5', ntFirstHalf: 0x5566 },
+  { uid: 'deadbeef', key: 'FFFFFFFFFFFF', ntFirstHalf: 0x0145 },
+  { uid: '65535D33', key: 'A9AC67832330', ntFirstHalf: 0x2C19 },
+])('.staticEncryptedNested1Nt() recovers $key', async ({ uid, key, ntFirstHalf }) => {
+  const uid32 = Buffer.from(uid, 'hex').readUint32BE(0)
+  const key48 = Buffer.from(key, 'hex').readUIntBE(0, 6)
+  // reconstruct full nt the same way staticEncryptedNested1Nt does
+  const nt = Crypto1.toUint32(ntFirstHalf * 0x10000 | (Crypto1.prngSuccessor(ntFirstHalf, 16) & 0xFFFF))
+  // tag-side forward encryption to derive ntEnc and nt_par_err
+  const input = Crypto1.toUint32(nt ^ uid32)
+  const s = new Crypto1().setLfsr(key48)
+  const ntEnc = Crypto1.toUint32(nt ^ s.lfsrWord(input, 0))
+  const kslastp = (s.lfsrWord(0, 0) >>> 24) & 1
+  const par = (Crypto1.oddParity8(nt & 0xFF) ^ kslastp ^ Crypto1.oddParity8(ntEnc & 0xFF)) & 1
+  // act
+  const keys = Crypto1.staticEncryptedNested1Nt({ uid: uid32, ntFirstHalf, ntEnc, par })
+  // assert: the real key is among the candidates
+  expect(_.map(keys, k => k.toString('hex'))).toContain(key.toLowerCase())
+})
+
+test.each([
+  { nt32: 0x1234341e, key: 'a0a1a2a3a4a5', expected: 0x68ac },
+  { nt32: 0x56788b92, key: 'ffffffffffff', expected: 0x529e },
+  { nt32: 0xdeadbeef, key: '112233445566', expected: 0xbf98 },
+])('.computeSeedNt16($nt32, $key) = $expected', async ({ nt32, key, expected }) => {
+  expect(Crypto1.computeSeedNt16(nt32 >>> 0, Buffer.from(key, 'hex'))).toEqual(expected)
+})
+
+test('.staticEncryptedNested2x1Nt() keeps the real key pair of a sector', async () => {
+  const uid = 0x65535D33
+  // forward-encrypt two nonces of the same sector, one per key, so A and B share a seed
+  const mkAtk = (key: string, ntFirstHalf: number): { ntFirstHalf: number, ntEnc: number, par: number } => {
+    const key48 = Buffer.from(key, 'hex').readUIntBE(0, 6)
+    const nt = Crypto1.toUint32(ntFirstHalf * 0x10000 | (Crypto1.prngSuccessor(ntFirstHalf, 16) & 0xFFFF))
+    const input = Crypto1.toUint32(nt ^ uid)
+    const s = new Crypto1().setLfsr(key48)
+    const ntEnc = Crypto1.toUint32(nt ^ s.lfsrWord(input, 0))
+    const kslastp = (s.lfsrWord(0, 0) >>> 24) & 1
+    const par = (Crypto1.oddParity8(nt & 0xFF) ^ kslastp ^ Crypto1.oddParity8(ntEnc & 0xFF)) & 1
+    return { ntFirstHalf, ntEnc, par }
+  }
+  const [keyA, keyB] = ['A0A1A2A3A4A5', 'B0B1B2B3B4B5']
+  // the two keys of a real sector share a seed; pick ntFirstHalfB so keyB matches keyA's seed
+  const ntFirstHalfA = 0x2C19
+  const ntA = Crypto1.toUint32(ntFirstHalfA * 0x10000 | (Crypto1.prngSuccessor(ntFirstHalfA, 16) & 0xFFFF))
+  const seedTarget = Crypto1.computeSeedNt16(ntA, Buffer.from(keyA, 'hex'))
+  let ntFirstHalfB = -1
+  for (let h = 0; h <= 0xFFFF; h++) {
+    const ntB = Crypto1.toUint32(h * 0x10000 | (Crypto1.prngSuccessor(h, 16) & 0xFFFF))
+    if (Crypto1.computeSeedNt16(ntB, Buffer.from(keyB, 'hex')) === seedTarget) { ntFirstHalfB = h; break }
+  }
+  expect(ntFirstHalfB).toBeGreaterThanOrEqual(0)
+  const atks = [mkAtk(keyA, ntFirstHalfA), mkAtk(keyB, ntFirstHalfB)]
+  const [keysA, keysB] = Crypto1.staticEncryptedNested2x1Nt({ uid, atks })
+  expect(_.map(keysA, k => k.toString('hex'))).toContain(keyA.toLowerCase())
+  expect(_.map(keysB, k => k.toString('hex'))).toContain(keyB.toLowerCase())
+})

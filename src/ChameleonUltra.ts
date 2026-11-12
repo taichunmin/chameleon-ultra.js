@@ -2185,8 +2185,37 @@ export class ChameleonUltra {
   /**
    * Execute nested attack against FUDAN static encrypted nonce cards (FM11RF08/FM11RF08S).
    * @param opts.key - FUDAN backdoor key, currently known: `A396EFA4E24F` (default), `A31667A8CEC1`, `518B3354E760`.
+   * @param opts.startSector - The first sector (inclusive) to acquire nonces from. Default: `0`.
+   * @param opts.maxSectors - The end sector (exclusive) to stop at; the firmware iterates `startSector <= sector < maxSectors`, so this is an exclusive upper bound, not a count. Default: `16` (all sectors of a 1K card).
    * @group Mifare Classic Related
    * @see [MIFARE Classic: exposing the static encrypted nonce variant](https://eprint.iacr.org/2024/1275)
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Buffer } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const { default: Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/Crypto1/+esm')
+   *   // acquire the key A and key B static encrypted nonces of sector 0; the backdoor key
+   *   // differs per card, so try each known key until one authenticates
+   *   const backdoorKeys = ['A396EFA4E24F', 'A31667A8CEC1', '518B3354E760']
+   *   let res
+   *   for (const key of backdoorKeys) {
+   *     try {
+   *       res = await ultra.cmdMf1AcquireStaticEncryptedNested({ key: Buffer.from(key, 'hex'), startSector: 0, maxSectors: 1 })
+   *       console.log(`backdoor key = ${key}`)
+   *       break
+   *     } catch (err) {
+   *       console.log(`backdoor key ${key} failed: ${err.message}`)
+   *     }
+   *   }
+   *   if (res == null) throw new Error('not a FUDAN FM11RF08/FM11RF08S card, or unknown backdoor key')
+   *   console.log(`uid = ${res.uid.toString(16).padStart(8, '0')}`)
+   *   // cross-filter the two nonces to recover the sector's key A and key B candidates
+   *   const [keysA, keysB] = Crypto1.staticEncryptedNested2x1Nt({ uid: res.uid, atks: res.atks })
+   *   console.log(`key A candidates = ${JSON.stringify(keysA.map(k => k.toString('hex')))}`)
+   *   console.log(`key B candidates = ${JSON.stringify(keysB.map(k => k.toString('hex')))}`)
+   * })(vm.ultra)
+   * ```
    */
   async cmdMf1AcquireStaticEncryptedNested (opts: {
     key?: Buffer
@@ -2201,6 +2230,80 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd, data })
     return Decoder.Mf1AcquireStaticEncryptedNestedDecoder.fromCmd2014(startSector, (await readResp()).data)
+  }
+
+  /**
+   * Probe whether a card is vulnerable to the FM11RF08S static encrypted nonce attack of
+   * {@link ChameleonUltra#cmdMf1AcquireStaticEncryptedNested}, which only works when the tag
+   * nonce is truly *static*. Tries the known backdoor keys until one authenticates, then
+   * acquires the same sector `rounds` times and checks the nonces are identical across reads.
+   * @param opts.keys - Candidate backdoor keys to try, in order. Default: the three currently known keys.
+   * @param opts.startSector - The first sector (inclusive) to probe. Default: `0`.
+   * @param opts.maxSectors - The end sector (exclusive) to probe. Default: `startSector + 1` (one sector).
+   * @param opts.rounds - How many acquisitions to compare (minimum 2). Default: `3`.
+   * @returns `supported: true` with the working `key` and the first acquisition `res` (feed it straight into {@link Crypto1.staticEncryptedNested2x1Nt}); `supported: false` with `key` when a backdoor key worked but the nonce is not static; `supported: false` without `key` when none authenticated.
+   * @throws Re-throws any acquisition error other than a backdoor auth failure (`MF_ERR_AUTH`), so a timeout or disconnect is not mistaken for an unsupported card.
+   * @group Mifare Classic Related
+   * @see [MIFARE Classic: exposing the static encrypted nonce variant](https://eprint.iacr.org/2024/1275)
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { default: Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/Crypto1/+esm')
+   *   const { supported, key, res } = await ultra.mf1IsStaticEncryptedNestedSupported()
+   *   console.log(`supported = ${supported}, backdoor key = ${key?.toString('hex') ?? 'none'}`)
+   *   if (supported) {
+   *     const [keysA, keysB] = Crypto1.staticEncryptedNested2x1Nt({ uid: res.uid, atks: res.atks })
+   *     console.log(`key A candidates = ${keysA.length}, key B candidates = ${keysB.length}`)
+   *   }
+   * })(vm.ultra)
+   * ```
+   */
+  async mf1IsStaticEncryptedNestedSupported (opts: {
+    keys?: Buffer[]
+    startSector?: number
+    maxSectors?: number
+    rounds?: number
+  } = {}): Promise<{ supported: boolean, key?: Buffer, res?: Mf1AcquireStaticEncryptedNestedRes }> {
+    opts.keys ??= ['A396EFA4E24F', 'A31667A8CEC1', '518B3354E760'].map(hex => Buffer.from(hex, 'hex'))
+    const {
+      keys,
+      startSector = 0,
+      maxSectors = startSector + 1,
+      rounds = 3,
+    } = opts
+    if (keys.length < 1) throw new TypeError('opts.keys must not be empty')
+    for (const key of keys) bufIsLenOrFail(key, BYTES_PER_MF1_KEY, 'keys')
+    if (maxSectors <= startSector) throw new TypeError('opts.maxSectors must be greater than opts.startSector')
+    const expectedAtks = (maxSectors - startSector) * 2
+    const acquire = async (key: Buffer): Promise<Mf1AcquireStaticEncryptedNestedRes> =>
+      await this.cmdMf1AcquireStaticEncryptedNested({ key, startSector, maxSectors })
+    // null unless every requested sector is present; keyed by uid so a card swap breaks it
+    const sigOf = (res: Mf1AcquireStaticEncryptedNestedRes): string | null => res.atks.length !== expectedAtks
+      ? null
+      : `${res.uid}#${_.map(res.atks, a => `${a.sector}:${a.keyType}:${a.ntFirstHalf}:${a.ntEnc}:${a.par}`).join('|')}`
+
+    // first acquisition finds the backdoor key and is round 1; non-auth errors propagate
+    let key: Buffer | undefined
+    let res: Mf1AcquireStaticEncryptedNestedRes | undefined
+    for (const candidate of keys) {
+      try {
+        res = await acquire(candidate)
+        key = candidate
+        break
+      } catch (err) {
+        if (err.status === UltraResCode.MF_ERR_AUTH) continue
+        throw err
+      }
+    }
+    if (key == null || res == null) return { supported: false }
+
+    const sig = sigOf(res)
+    if (sig == null) return { supported: false, key }
+    for (let i = 1; i < Math.max(2, rounds); i++) {
+      if (sigOf(await acquire(key)) !== sig) return { supported: false, key }
+    }
+    return { supported: true, key, res }
   }
 
   /**

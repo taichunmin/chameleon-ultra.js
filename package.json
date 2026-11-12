@@ -9,7 +9,7 @@
   "name": "chameleon-ultra.js",
   "packageManager": "yarn@1.22.22",
   "type": "commonjs",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },

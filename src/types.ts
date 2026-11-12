@@ -114,8 +114,11 @@ export interface Mf1AcquireStaticEncryptedNestedRes {
   atks: Array<{
     sector: number
     keyType: Mf1KeyType
-    nt: number
+    /** The first 16 bits of the clear static nested nonce (`nt_first_half`); the full nonce is reconstructed in {@link Crypto1.staticEncryptedNested1Nt}. */
+    ntFirstHalf: number
+    /** The encrypted static nested nonce (`nt_enc`). */
     ntEnc: number
+    /** The `nt_par_err` byte; only the lowest bit is used by the key recovery. */
     par: number
   }>
 }

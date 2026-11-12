@@ -978,6 +978,149 @@ export default class Crypto1 {
   }
 
   /**
+   * Generate the key candidates of a single FUDAN FM11RF08/FM11RF08S static encrypted
+   * nonce, as acquired by `ChameleonUltra#cmdMf1AcquireStaticEncryptedNested()`. Port of
+   * proxmark3's `staticnested_1nt`. This is only the first stage: one nonce yields a large
+   * dictionary of candidates, **not the key itself**. Pass the two nonces of the same
+   * sector (key A and key B) to {@link Crypto1.staticEncryptedNested2x1Nt} to pin down the
+   * real key.
+   * @param opts -
+   * @param opts.uid - The 4-bytes uid of the tag.
+   * @param opts.ntFirstHalf - The first 16 bits of the clear static nested nonce (`atk.ntFirstHalf`); the full nonce is reconstructed internally.
+   * @param opts.ntEnc - The encrypted static nested nonce (`atk.ntEnc`).
+   * @param opts.par - The `nt_par_err` byte (`atk.par`); only its lowest bit is used.
+   * @returns The candidate keys for this nonce (not the final key).
+   * @see [MIFARE Classic: exposing the static encrypted nonce variant](https://eprint.iacr.org/2024/1275)
+   * @example
+   * ```js
+   * const { default: Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/Crypto1/+esm')
+   * const res = await ultra.cmdMf1AcquireStaticEncryptedNested({ startSector: 0, maxSectors: 1 })
+   * const candidatesA = Crypto1.staticEncryptedNested1Nt({ uid: res.uid, ...res.atks[0] })
+   * ```
+   */
+  static staticEncryptedNested1Nt (opts: {
+    uid: UInt32Like
+    ntFirstHalf: number
+    ntEnc: UInt32Like
+    par: number
+  }): Buffer[] {
+    const { castToUint32, lfsrRecovery32, oddParity8, reconstructStaticNt, toUint32 } = Crypto1
+    const [uid, ntEnc] = _.map(['uid', 'ntEnc'] as const, k => castToUint32(opts[k]))
+    const nt = reconstructStaticNt(opts.ntFirstHalf)
+    const ks1 = toUint32(nt ^ ntEnc)
+    const input = toUint32(nt ^ uid)
+    const lastpar1 = oddParity8(nt & 0xFF)
+    const ntEncParity = oddParity8(ntEnc & 0xFF)
+    const parBit = opts.par & 1
+    const keys: Buffer[] = []
+    for (const state of lfsrRecovery32(ks1, input)) {
+      state.lfsrRollbackWord(input, 0)
+      const key = state.getLfsr()
+      // filter by the last encrypted parity bit of ks2
+      const s = new Crypto1().setLfsr(key)
+      s.lfsrWord(input, 0)
+      const kslastp = (s.lfsrWord(0, 0) >>> 24) & 1
+      const lastpar2 = parBit ^ ntEncParity ^ kslastp
+      if (lastpar1 === lastpar2) keys.push(new Buffer(6).writeUIntBE(key, 0, 6))
+    }
+    return keys
+  }
+
+  /** Rebuild the full 32-bit static nonce from its first 16 bits: low half is its prng successor. */
+  static reconstructStaticNt (ntFirstHalf: number): number {
+    const { prngSuccessor, toUint32 } = Crypto1
+    return toUint32(ntFirstHalf * 0x10000 | (prngSuccessor(ntFirstHalf, 16) & 0xFFFF))
+  }
+
+  static #sLfsr16: Uint16Array | null = null
+  static #iLfsr16: Uint16Array | null = null
+
+  /** Lazily build the forward/inverse 16-bit LFSR lookup tables used by {@link Crypto1.computeSeedNt16}. */
+  static #initLfsr16 (): { sLfsr16: Uint16Array, iLfsr16: Uint16Array } {
+    if (Crypto1.#sLfsr16 === null || Crypto1.#iLfsr16 === null) {
+      const sLfsr16 = new Uint16Array(1 << 16)
+      const iLfsr16 = new Uint16Array(1 << 16)
+      let x = 1
+      for (let i = 1; i <= 0xFFFF; i++) {
+        const swapped = ((x & 0xFF) << 8) | (x >> 8)
+        iLfsr16[swapped] = i
+        sLfsr16[i] = swapped
+        x = ((x >> 1) | (((x ^ (x >> 2) ^ (x >> 3) ^ (x >> 5)) & 1) << 15)) & 0xFFFF
+      }
+      ;[Crypto1.#sLfsr16, Crypto1.#iLfsr16] = [sLfsr16, iLfsr16]
+    }
+    return { sLfsr16: Crypto1.#sLfsr16, iLfsr16: Crypto1.#iLfsr16 }
+  }
+
+  /**
+   * Compute the 16-bit seed nonce of a FM11RF08S sector from its clear static nonce and a
+   * candidate key. A key A and a key B of the same sector share the same seed, which is how
+   * {@link Crypto1.staticEncryptedNested2x1Nt} cross-filters the two candidate dictionaries.
+   * Port of proxmark3's `compute_seednt16_nt32` (`staticnested_2x1nt_rf08s.c`).
+   * @param nt32 - The full 32-bit clear static nonce.
+   * @param key - The 6-bytes candidate key.
+   * @returns The 16-bit seed nonce.
+   */
+  static computeSeedNt16 (nt32: number, key: Buffer): number {
+    const { sLfsr16, iLfsr16 } = Crypto1.#initLfsr16()
+    const key48 = key.readUIntBE(0, 6)
+    const a = [0, 8, 9, 4, 6, 11, 1, 15, 12, 5, 2, 13, 10, 14, 3, 7]
+    const b = [0, 13, 1, 14, 4, 10, 15, 7, 5, 3, 8, 6, 9, 2, 12, 11]
+    const prevLfsr16 = (nonce: number): number => {
+      const i = iLfsr16[nonce]
+      return sLfsr16[i === 1 ? 0xFFFF : (i - 1) & 0xFFFF]
+    }
+    let nt = (nt32 >>> 16) & 0xFFFF
+    for (let i = 0; i < 14; i++) nt = prevLfsr16(nt)
+    let odd = true
+    for (let i = 0; i < 48; i += 8) {
+      const [lo, hi] = [Math.floor(key48 / 2 ** i) & 0xF, Math.floor(key48 / 2 ** (i + 4)) & 0xF]
+      nt ^= odd ? (a[lo] | (b[hi] << 4)) : (b[lo] | (a[hi] << 4))
+      odd = !odd
+      for (let j = 0; j < 8; j++) nt = prevLfsr16(nt)
+    }
+    return nt & 0xFFFF
+  }
+
+  /**
+   * Narrow the candidate keys of a FM11RF08S sector by cross-filtering two static encrypted
+   * nonces of that sector (typically key A and key B). Each candidate dictionary is produced
+   * by {@link Crypto1.staticEncryptedNested1Nt}; a key survives only when it shares a seed nonce
+   * ({@link Crypto1.computeSeedNt16}) with some candidate of the other nonce. Port of
+   * proxmark3's `staticnested_2x1nt_rf08s`.
+   * @param opts -
+   * @param opts.uid - The 4-bytes uid of the tag.
+   * @param opts.atks - Two attacks of the same sector with different nonces, from `cmdMf1AcquireStaticEncryptedNested()`.
+   * @returns The filtered candidate keys, one array per input attack, in the same order.
+   * @see [MIFARE Classic: exposing the static encrypted nonce variant](https://eprint.iacr.org/2024/1275)
+   * @example
+   * ```js
+   * const { default: Crypto1 } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/Crypto1/+esm')
+   * const res = await ultra.cmdMf1AcquireStaticEncryptedNested({ startSector: 0, maxSectors: 1 })
+   * const [keysA, keysB] = Crypto1.staticEncryptedNested2x1Nt({ uid: res.uid, atks: res.atks })
+   * ```
+   */
+  static staticEncryptedNested2x1Nt (opts: {
+    uid: UInt32Like
+    atks: Array<{ ntFirstHalf: number, ntEnc: UInt32Like, par: number }>
+  }): Buffer[][] {
+    const { computeSeedNt16, reconstructStaticNt, staticEncryptedNested1Nt } = Crypto1
+    if (opts.atks.length !== 2) throw new TypeError('opts.atks must contain exactly 2 attacks')
+    const lists = _.map(opts.atks, atk => {
+      const keys = staticEncryptedNested1Nt({ uid: opts.uid, ...atk })
+      const nt32 = reconstructStaticNt(atk.ntFirstHalf)
+      return { keys, seeds: _.map(keys, key => computeSeedNt16(nt32, key)) }
+    })
+    const [list0, list1] = lists
+    const seedSet1 = new Set(list1.seeds)
+    const seedSet0 = new Set(list0.seeds)
+    return [
+      _.filter(list0.keys, (_key, i) => seedSet1.has(list0.seeds[i])),
+      _.filter(list1.keys, (_key, i) => seedSet0.has(list1.seeds[i])),
+    ]
+  }
+
+  /**
    * Recover key from mifare tags with weak prng
    * @param opts -
    * @param opts.uid - The 4-bytes uid in the authentication.
