@@ -5,34 +5,41 @@ import pkg from './package.json'
 const sharedConfig: Options = {
   env: { VERSION: pkg.version },
   experimentalDts: true,
-  format: ['cjs', 'esm', 'iife'],
   keepNames: true,
   publicDir: 'public',
   splitting: false,
-  esbuildPlugins: [
-    nodeModulesPolyfillPlugin({
-      fallback: 'error',
-      globals: {
-        Buffer: false,
-      },
-      modules: {
-        'stream/web': 'empty',
-        stream: 'empty',
-      },
-    }),
-  ],
 }
 
-export default defineConfig((options): Options[] => [
+// SerialPortAdapter needs the real `stream`
+const nodePolyfill = nodeModulesPolyfillPlugin({
+  fallback: 'none',
+  globals: { Buffer: false },
+  modules: { 'stream/web': 'empty' },
+})
+
+const iifePolyfill = nodeModulesPolyfillPlugin({
+  fallback: 'error',
+  globals: { Buffer: false },
+  modules: { 'stream/web': 'empty', stream: 'empty' },
+})
+
+const formats: Options[] = [
+  { format: ['cjs', 'esm'], esbuildPlugins: [nodePolyfill] },
+  { format: ['iife'], esbuildPlugins: [iifePolyfill] },
+]
+
+export default defineConfig((options): Options[] => formats.flatMap((formatConfig, i) => [
   {
     ...sharedConfig,
-    clean: !options.watch, // only clean once when not watching
+    ...formatConfig,
+    clean: i === 0 && !options.watch, // only clean once when not watching
     minify: !options.watch,
     globalName: 'ChameleonUltraJS',
     entry: ['src/index.ts'],
   },
   {
     ...sharedConfig,
+    ...formatConfig,
     minify: !options.watch,
     entry: [
       'src/Crypto1.ts',
@@ -43,4 +50,4 @@ export default defineConfig((options): Options[] => [
       'src/plugin/WebserialAdapter.ts',
     ],
   },
-])
+]))

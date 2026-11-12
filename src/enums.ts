@@ -586,28 +586,28 @@ export function createIsValueOfArr <T extends readonly any[]> (arr: T): (val: an
   return (val: any): val is ValueOf<T> => set.has(val)
 }
 
-export const isAnimationMode = createIsEnum(AnimationMode)
-export const isButtonAction = createIsEnum(ButtonAction)
-export const isButtonType = createIsEnum(ButtonType)
-export const isCmd = createIsEnum(Cmd)
-export const isDarksideStatus = createIsEnum(DarksideStatus)
-export const isDeviceMode = createIsEnum(DeviceMode)
-export const isDeviceModel = createIsEnum(DeviceModel)
-export const isDfuFwId = createIsEnum(DfuFwId)
-export const isFreqType = createIsEnum(FreqType)
-export const isHf14aBccMode = createIsEnum(Hf14aBccMode)
-export const isHf14aCascadeLevelMode = createIsEnum(Hf14aCascadeLevelMode)
-export const isHf14aRatsMode = createIsEnum(Hf14aRatsMode)
-export const isMf1EmuWriteMode = createIsEnum(Mf1EmuWriteMode)
-export const isMf1KeyType = createIsEnum(Mf1KeyType)
-export const isMf1PrngType = createIsEnum(Mf1PrngType)
-export const isMf1VblockOperator = createIsEnum(Mf1VblockOperator)
-export const isMfuEmuWriteMode = createIsEnum(MfuEmuWriteMode)
-export const isSlot = createIsEnum(Slot)
-export const isTagType = createIsEnum(TagType)
-export const isUltraResCode = createIsEnum(UltraResCode)
+export const isAnimationMode = /* @__PURE__ */ createIsEnum(AnimationMode)
+export const isButtonAction = /* @__PURE__ */ createIsEnum(ButtonAction)
+export const isButtonType = /* @__PURE__ */ createIsEnum(ButtonType)
+export const isCmd = /* @__PURE__ */ createIsEnum(Cmd)
+export const isDarksideStatus = /* @__PURE__ */ createIsEnum(DarksideStatus)
+export const isDeviceMode = /* @__PURE__ */ createIsEnum(DeviceMode)
+export const isDeviceModel = /* @__PURE__ */ createIsEnum(DeviceModel)
+export const isDfuFwId = /* @__PURE__ */ createIsEnum(DfuFwId)
+export const isFreqType = /* @__PURE__ */ createIsEnum(FreqType)
+export const isHf14aBccMode = /* @__PURE__ */ createIsEnum(Hf14aBccMode)
+export const isHf14aCascadeLevelMode = /* @__PURE__ */ createIsEnum(Hf14aCascadeLevelMode)
+export const isHf14aRatsMode = /* @__PURE__ */ createIsEnum(Hf14aRatsMode)
+export const isMf1EmuWriteMode = /* @__PURE__ */ createIsEnum(Mf1EmuWriteMode)
+export const isMf1KeyType = /* @__PURE__ */ createIsEnum(Mf1KeyType)
+export const isMf1PrngType = /* @__PURE__ */ createIsEnum(Mf1PrngType)
+export const isMf1VblockOperator = /* @__PURE__ */ createIsEnum(Mf1VblockOperator)
+export const isMfuEmuWriteMode = /* @__PURE__ */ createIsEnum(MfuEmuWriteMode)
+export const isSlot = /* @__PURE__ */ createIsEnum(Slot)
+export const isTagType = /* @__PURE__ */ createIsEnum(TagType)
+export const isUltraResCode = /* @__PURE__ */ createIsEnum(UltraResCode)
 
-export const isFailedUltraResCode = createIsValueOfArr([
+export const isFailedUltraResCode = /* @__PURE__ */ createIsValueOfArr([
   UltraResCode.HF_TAG_NOT_FOUND,
   UltraResCode.HF_ERR_STAT,
   UltraResCode.HF_ERR_CRC,
@@ -627,7 +627,7 @@ export const isFailedUltraResCode = createIsValueOfArr([
   UltraResCode.FLASH_READ_FAIL,
   UltraResCode.INVALID_SLOT_TYPE,
 ] as const)
-export const isMfuEmuTagType = createIsValueOfArr([
+export const isMfuEmuTagType = /* @__PURE__ */ createIsValueOfArr([
   TagType.MF0_ICU1,
   TagType.MF0_ICU2,
   TagType.MF0_UL11,
@@ -638,16 +638,16 @@ export const isMfuEmuTagType = createIsValueOfArr([
   TagType.NTAG_215,
   TagType.NTAG_216,
 ] as const)
-export const isValidDfuObjType = createIsValueOfArr([
+export const isValidDfuObjType = /* @__PURE__ */ createIsValueOfArr([
   DfuObjType.COMMAND,
   DfuObjType.DATA,
 ] as const)
-export const isValidFreqType = createIsValueOfArr([
+export const isValidFreqType = /* @__PURE__ */ createIsValueOfArr([
   FreqType.HF,
   FreqType.LF,
 ] as const)
 
-export const TagTypeLfIdLen = new Map<TagType, number>([
+export const TagTypeLfIdLen = /* @__PURE__ */ new Map<TagType, number>([
   [TagType.EM410X, 5],
   [TagType.EM410X_16, 5],
   [TagType.EM410X_32, 5],
@@ -656,7 +656,7 @@ export const TagTypeLfIdLen = new Map<TagType, number>([
 ])
 
 // facility, id, issueLevel, oem
-export const HidProxFormatLimit = new Map<HidProxFormat, [number, number, number, number]>([
+export const HidProxFormatLimit = /* @__PURE__ */ new Map<HidProxFormat, [number, number, number, number]>([
   [HidProxFormat.H10301, [0xFF, 0xFFFF, 0, 0]],
   [HidProxFormat.IND26, [0xFFF, 0xFFF, 0, 0]],
   [HidProxFormat.IND27, [0x1FFF, 0x3FFF, 0, 0]],
@@ -689,7 +689,7 @@ export const HidProxFormatLimit = new Map<HidProxFormat, [number, number, number
   [HidProxFormat.MDI37, [0xF, 0x1FFFFFFF, 0, 0]],
 ])
 
-export const HidProxFormatName = new Map<HidProxFormat, string>([
+export const HidProxFormatName = /* @__PURE__ */ new Map<HidProxFormat, string>([
   [HidProxFormat.H10301, 'HID H10301 26-bit'],
   [HidProxFormat.IND26, 'Indala 26-bit'],
   [HidProxFormat.IND27, 'Indala 27-bit'],
@@ -737,7 +737,7 @@ export const Mf1AtqaSakDefaultMap = {
   },
 } as const
 
-export const MfuVerToNxpMfuType = new Map([
+export const MfuVerToNxpMfuType = /* @__PURE__ */ new Map([
   ['0004030101000B', NxpMfuType.UL_EV1_48],
   ['0004030101000E', NxpMfuType.UL_EV1_128],
   ['0004030102000B', NxpMfuType.UL_NANO_40],
@@ -766,7 +766,7 @@ export const MfuVerToNxpMfuType = new Map([
 /**
  * Get the maximum page number of a specific mifare ultralight tag type.
  */
-export const MfuMaxPage = new Map<NxpMfuType | TagType, number>([
+export const MfuMaxPage = /* @__PURE__ */ new Map<NxpMfuType | TagType, number>([
   [NxpMfuType.FUDAN_UL, 0x10],
   [NxpMfuType.MY_D_MOVE_LEAN, 0x10],
   [NxpMfuType.MY_D_MOVE, 0x26],
@@ -805,7 +805,7 @@ export const MfuMaxPage = new Map<NxpMfuType | TagType, number>([
   [TagType.NTAG_216, 0xE7],
 ])
 
-export const NxpMfuTypeName = new Map<NxpMfuType | TagType, string>([
+export const NxpMfuTypeName = /* @__PURE__ */ new Map<NxpMfuType | TagType, string>([
   [NxpMfuType.FUDAN_UL, 'FUDAN Ultralight Compatible (or other compatible)'],
   [NxpMfuType.MY_D_MOVE_LEAN, 'INFINEON my-d™ move lean (SLE 66R01L)'],
   [NxpMfuType.MY_D_MOVE, 'INFINEON my-d™ move (SLE 66R01P) / INFINEON my-d™ move NFC (SLE 66R01P)'],
@@ -848,7 +848,7 @@ export const NxpMfuTypeName = new Map<NxpMfuType | TagType, string>([
 /**
  * @see [MIFARE type identification procedure](https://www.nxp.com/docs/en/application-note/AN10833.pdf)
  */
-export const NxpTypeBySak = new Map([
+export const NxpTypeBySak = /* @__PURE__ */ new Map([
   [0x00, 'MIFARE Ultralight Classic/C/EV1/Nano | NTAG 2xx'],
   [0x08, 'MIFARE Classic 1K | Plus SE 1K | Plug S 2K | Plus X 2K'],
   [0x09, 'MIFARE Mini 0.3k'],
@@ -861,7 +861,7 @@ export const NxpTypeBySak = new Map([
   [0x38, 'SmartMX with MIFARE Classic 4K'],
 ])
 
-export const UltraErrMsg = new Map([
+export const UltraErrMsg = /* @__PURE__ */ new Map([
   [UltraResCode.HF_TAG_OK, 'HF tag operation succeeded'],
   [UltraResCode.HF_TAG_NOT_FOUND, 'HF tag not found'],
   [UltraResCode.HF_ERR_STAT, 'HF tag status error'],
@@ -887,7 +887,7 @@ export const UltraErrMsg = new Map([
   [UltraResCode.INVALID_SLOT_TYPE, 'Invalid slot tagType'],
 ])
 
-export const DfuErrMsg = new Map<number, string>([
+export const DfuErrMsg = /* @__PURE__ */ new Map<number, string>([
   // DFU operation result code.
   [DfuResCode.INVALID, 'Invalid opcode'],
   [DfuResCode.SUCCESS, 'Operation successful'],

@@ -33,7 +33,8 @@ async function main (): Promise<void> {
       // console.log(`filepath = ${filepath}`)
 
       const origCode = code
-      code = code.replace(/"use strict";.*?module.exports=[^;]+;/, '"use strict";')
+      // keep esbuild helpers
+      code = code.replace(/var ([\w$]+)=\{\};[\w$]+\(\1,\{default:\(\)=>[\w$]+\}\);module\.exports=[\w$]+\(\1\);/, '')
       code = code.replace(/[\w$]+\(globalThis,\[[^\]]+\],([\w$]+)\);/, 'module.exports=$1;')
       if (origCode === code) continue
       await fsPromises.writeFile(filepath, code, 'utf8')
