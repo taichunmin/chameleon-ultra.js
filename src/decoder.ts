@@ -360,20 +360,21 @@ export class Mf1AcquireStaticEncryptedNestedDecoder implements Mf1AcquireStaticE
     if (!Buffer.isBuffer(buf)) throw new TypeError('buf must be a Buffer')
     return new Mf1AcquireStaticEncryptedNestedDecoder(
       buf.readUint32BE(0), // uid
-      _.flatMap(buf.subarray(4).chunk(18), (chunk, i) => [
+      // 14 bytes/sector: key A then key B, each `nt_first_half[2] | par[1] | nt_enc[4]`
+      _.flatMap(buf.subarray(4).chunk(14), (chunk, i) => [
         { // key A
           sector: startSector + i,
           keyType: Mf1KeyType.KEY_A,
-          nt: chunk.readUint32BE(0),
-          ntEnc: chunk.readUint32BE(4),
-          par: chunk[8],
+          ntFirstHalf: chunk.readUint16BE(0),
+          ntEnc: chunk.readUint32BE(3),
+          par: chunk[2],
         },
         { // key B
           sector: startSector + i,
           keyType: Mf1KeyType.KEY_B,
-          nt: chunk.readUint32BE(9),
-          ntEnc: chunk.readUint32BE(13),
-          par: chunk[17],
+          ntFirstHalf: chunk.readUint16BE(7),
+          ntEnc: chunk.readUint32BE(10),
+          par: chunk[9],
         },
       ]),
     )
