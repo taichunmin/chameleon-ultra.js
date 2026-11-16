@@ -2,7 +2,6 @@ import { getenv, getSiteurl } from './dotenv'
 
 import fg from 'fast-glob'
 import { promises as fsPromises } from 'fs'
-import { minify as htmlMinifier } from 'html-minifier'
 import * as _ from 'lodash-es'
 import path from 'path'
 import process from 'process'
@@ -33,6 +32,7 @@ export async function build (): Promise<void> {
     },
   }
 
+  const { minify: htmlMinifier } = await import('html-minifier') // ESM-only
   const htmlMinifierOptions = {
     caseSensitive: true,
     collapseBooleanAttributes: true,
@@ -42,15 +42,12 @@ export async function build (): Promise<void> {
     decodeEntities: true,
     minifyCSS: true,
     minifyJS: (code: string) => UglifyJS.minify(code).code,
-    removeCDATASectionsFromCDATA: true,
     removeComments: true,
-    removeCommentsFromCDATA: true,
     removeEmptyAttributes: true,
+    removeDefaultTypeAttributes: true,
     removeRedundantAttributes: true,
-    removeScriptTypeAttributes: true,
-    removeStyleLinkTypeAttributes: true,
     sortAttributes: true,
-    sortClassName: true,
+    sortClassNames: true,
     useShortDoctype: true,
   }
 
@@ -61,7 +58,7 @@ export async function build (): Promise<void> {
   for (const file of pugFiles) {
     try {
       let html = pug.renderFile(path.resolve(srcDir, file), PUG_OPTIONS)
-      if (PUG_OPTIONS.NODE_ENV === 'production') html = htmlMinifier(html, htmlMinifierOptions)
+      if (PUG_OPTIONS.NODE_ENV === 'production') html = await htmlMinifier(html, htmlMinifierOptions)
       const dist = path.resolve(distDir, file.replace(/\.pug$/, '.html'))
       await fsPromises.mkdir(path.dirname(dist), { recursive: true })
       await fsPromises.writeFile(dist, html)

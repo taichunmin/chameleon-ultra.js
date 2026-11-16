@@ -1,6 +1,6 @@
 import { type Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
-import { TransformStream, WritableStream } from 'stream/web'
+import type { TransformStream, WritableStream } from 'stream/web'
 import { serial } from 'web-serial-polyfill'
 import { type ChameleonUltra } from '../ChameleonUltra'
 import { DfuOp } from '../enums'
@@ -38,8 +38,8 @@ export default class WebserialAdapter implements UltraPlugin {
 
   constructor () {
     const navigator = (globalThis as any)?.navigator ?? {}
-    this.#TransformStream = (globalThis as any)?.TransformStream ?? TransformStream
-    this.#WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
+    this.#TransformStream = (globalThis as any).TransformStream
+    this.#WritableStream = (globalThis as any).WritableStream
     this.#serial = navigator.serial ?? ('usb' in navigator ? serial : null)
     this.#emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'cause', err)) }
   }

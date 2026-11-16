@@ -131,7 +131,6 @@ dist
 
 # mkcert
 /mkcert
-/.rollup.cache
 
 # Claude Code local/personal files (not shared with the team)
 CLAUDE.local.md
