@@ -1,6 +1,6 @@
 import { type Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
-import { TransformStream, type UnderlyingSink, WritableStream } from 'stream/web'
+import type { TransformStream, UnderlyingSink, WritableStream } from 'stream/web'
 import { type bluetooth } from 'webbluetooth'
 import { type ChameleonUltra } from '../ChameleonUltra'
 import { sleep } from '../helper'
@@ -14,12 +14,23 @@ const ULTRA_RX_CHAR_UUID = toCanonicalUUID('6e400002-b5a3-f393-e0a9-e50e24dcca9e
 const ULTRA_SERV_UUID = toCanonicalUUID('6e400001-b5a3-f393-e0a9-e50e24dcca9e')
 const ULTRA_TX_CHAR_UUID = toCanonicalUUID('6e400003-b5a3-f393-e0a9-e50e24dcca9e')
 
-const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
+const BLE_NAME_FILTERS: BluetoothLEScanFilter[] = [
   { name: 'ChameleonUltra' }, // Chameleon Ultra
+  { name: 'ChameleonLite' }, // Chameleon Lite
   { namePrefix: 'CU-' }, // Chameleon Ultra DFU
-  { services: [DFU_SERV_UUID] }, // Chameleon Ultra DFU
-  { services: [ULTRA_SERV_UUID] }, // Chameleon Ultra, bluefy not support name filter
+  { namePrefix: 'CL-' }, // Chameleon Lite DFU
 ]
+
+const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
+  ...BLE_NAME_FILTERS,
+  { services: [DFU_SERV_UUID] }, // DFU
+  { services: [ULTRA_SERV_UUID] }, // bluefy not support name filter
+]
+
+/** The `webbluetooth` npm package (Node.js) finds nothing once a `services` filter is present. */
+function isWebbluetoothPkg (bluetooth: unknown): boolean {
+  return _.has(bluetooth, 'scanner') && _.has(bluetooth, 'deviceFound')
+}
 
 export default class WebbleAdapter implements UltraPlugin {
   #isOpen: boolean = false
@@ -39,8 +50,8 @@ export default class WebbleAdapter implements UltraPlugin {
   constructor () {
     const navigator = (globalThis as any)?.navigator ?? {}
     this.bluetooth = navigator?.bluetooth
-    this.WritableStream = (globalThis as any)?.WritableStream ?? WritableStream
-    this.TransformStream = (globalThis as any)?.TransformStream ?? TransformStream
+    this.WritableStream = (globalThis as any).WritableStream
+    this.TransformStream = (globalThis as any).TransformStream
     this.emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'cause', err)) }
   }
 
@@ -67,7 +78,7 @@ export default class WebbleAdapter implements UltraPlugin {
       try {
         if (!adapter.isSupported()) throw new Error('WebBLE not supported')
         this.device = await this.bluetooth?.requestDevice({
-          filters: BLE_SCAN_FILTERS,
+          filters: isWebbluetoothPkg(this.bluetooth) ? BLE_NAME_FILTERS : BLE_SCAN_FILTERS,
           optionalServices: [DFU_SERV_UUID, ULTRA_SERV_UUID],
         }).catch(err => { throw _.set(new Error(err.message), 'cause', err) }) ?? null
         if (_.isNil(this.device)) throw new Error('no device')

@@ -5,7 +5,7 @@ paths:
 
 # Static assets
 
-`public/` is tsup's `publicDir` (see `sharedConfig.publicDir` in `tsup.config.ts`) — everything in it is copied verbatim into `dist/` on `yarn build:js`, alongside the compiled bundles. This means anything placed in `public/` gets published to npm and the GitHub Pages site as-is, so **never put a CLAUDE.md or other repo-internal doc inside `public/`** — keep guidance about this folder here instead.
+`public/` is copied by tsdown's `copy` option (see `tsdown.config.mts`) — everything in it is copied verbatim into `dist/` on `yarn build:js`, alongside the compiled bundles. This means anything placed in `public/` gets published to npm and the GitHub Pages site as-is, so **never put a CLAUDE.md or other repo-internal doc inside `public/`** — keep guidance about this folder here instead.
 
 Currently holds:
 

@@ -35,7 +35,7 @@ async function absolutizeLlmsTxtLinks (): Promise<void> {
   console.log(`Rewrote ${cnt} relative links in llms.txt to ${getSiteurl()}`)
 }
 
-/** typedoc renders the source of the `version` export, which is the `...` placeholder that tsup only replaces at build time. */
+/** typedoc renders the source of the `version` export, which is the `...` placeholder that tsdown only replaces at build time. */
 async function replaceVersionPlaceholder (): Promise<void> {
   const pkg = JSON5.parse(await fsPromises.readFile(path.resolve(__dirname, '../package.json'), 'utf8'))
   const verFiles = [

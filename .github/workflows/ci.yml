@@ -39,14 +39,21 @@ jobs:
         with:
           cache: 'yarn'
           node-version: lts/*
-      - name: install, lint, test, build
+      - name: install, lint, test, build, pack
         run: |
           set -ex
           yarn
           yarn lint
           yarn test:ci
-          yarn build
-          yarn publish:test
+          yarn build # also runs publint and attw (CI only, see tsdown.config.mts)
+          mkdir -p "$RUNNER_TEMP/pack"
+          npm pack --pack-destination "$RUNNER_TEMP/pack"
+      - name: Upload packed tarball
+        uses: actions/upload-artifact@v7
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}/pack/*.tgz
+          retention-days: 3
       - name: Upload build output
         if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v7
@@ -56,9 +63,166 @@ jobs:
             dist/
             src/coverage/
           retention-days: 3
+  npm-test:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: Download packed tarball
+        uses: actions/download-artifact@v8
+        with:
+          name: npm-tarball
+          path: ${{ runner.temp }}
+      - name: install packed tarball
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -ex
+          mkdir npm-test
+          cd npm-test
+          npm init -y
+          npm pkg set type=commonjs
+          npm install ../chameleon-ultra.js-*.tgz serialport
+          npm install -D typescript@^6 @types/node
+      - name: require() and import
+        working-directory: ${{ runner.temp }}/npm-test
+        run: |
+          set -ex
+          cat << "EOF" > entries.json
+            ["Crypto1", "plugin/BufferMockAdapter", "plugin/Debug", "plugin/DfuZip", "plugin/SerialPortAdapter", "plugin/WebbleAdapter", "plugin/WebserialAdapter"]
+          EOF
+
+          cat << "EOF" > index.cjs
+            // WebbleAdapter needs the Web Bluetooth global at load time
+            globalThis.BluetoothUUID = require('webbluetooth').BluetoothUUID
+            const { ChameleonUltra, version } = require('chameleon-ultra.js')
+            if (typeof version !== 'string' || typeof ChameleonUltra !== 'function') throw new Error('index.cjs: bad index exports')
+            for (const name of require('./entries.json')) {
+              const mod = require(`chameleon-ultra.js/${name}`)
+              if (typeof mod !== 'function') throw new Error(`index.cjs: require('${name}') is ${typeof mod}`)
+              console.log(`index.cjs: ${name} = ${mod.name}`)
+            }
+          EOF
+          node ./index.cjs
+
+          cat << "EOF" > index.mjs
+            import { createRequire } from 'node:module'
+            const require = createRequire(import.meta.url)
+            globalThis.BluetoothUUID = (await import('webbluetooth')).BluetoothUUID
+            const { ChameleonUltra, version } = await import('chameleon-ultra.js')
+            if (typeof version !== 'string' || typeof ChameleonUltra !== 'function') throw new Error('index.mjs: bad index exports')
+            for (const name of require('./entries.json')) {
+              const { default: mod } = await import(`chameleon-ultra.js/${name}`)
+              if (typeof mod !== 'function') throw new Error(`index.mjs: import('${name}') is ${typeof mod}`)
+              console.log(`index.mjs: ${name} = ${mod.name}`)
+            }
+          EOF
+          node ./index.mjs
+      - name: types resolve for cjs and esm
+        working-directory: ${{ runner.temp }}/npm-test
+        run: |
+          set -ex
+          cat << "EOF" > tsconfig.json
+            {
+              "compilerOptions": {
+                "lib": ["es2023", "dom"],
+                "module": "node16",
+                "noEmit": true,
+                "skipLibCheck": true,
+                "strict": true,
+                "types": ["node"]
+              },
+              "files": ["index.cts", "index.mts"]
+            }
+          EOF
+
+          cat << "EOF" > index.cts
+            import { Buffer, ChameleonUltra, version } from 'chameleon-ultra.js'
+            import Crypto1 = require('chameleon-ultra.js/Crypto1')
+            import BufferMockAdapter = require('chameleon-ultra.js/plugin/BufferMockAdapter')
+            import Debug = require('chameleon-ultra.js/plugin/Debug')
+            import DfuZip = require('chameleon-ultra.js/plugin/DfuZip')
+            import SerialPortAdapter = require('chameleon-ultra.js/plugin/SerialPortAdapter')
+            import WebbleAdapter = require('chameleon-ultra.js/plugin/WebbleAdapter')
+            import WebserialAdapter = require('chameleon-ultra.js/plugin/WebserialAdapter')
+
+            const ultra = new ChameleonUltra()
+            ultra.use(new BufferMockAdapter())
+            ultra.use(new Debug())
+            ultra.use(new SerialPortAdapter())
+            ultra.use(new WebbleAdapter()) // #227
+            ultra.use(new WebserialAdapter())
+            export const check: [string, Buffer, typeof Crypto1, typeof DfuZip] = [version, Buffer.alloc(1), Crypto1, DfuZip]
+          EOF
+
+          cat << "EOF" > index.mts
+            import { Buffer, ChameleonUltra, version } from 'chameleon-ultra.js'
+            import Crypto1 from 'chameleon-ultra.js/Crypto1'
+            import BufferMockAdapter from 'chameleon-ultra.js/plugin/BufferMockAdapter'
+            import Debug from 'chameleon-ultra.js/plugin/Debug'
+            import DfuZip from 'chameleon-ultra.js/plugin/DfuZip'
+            import SerialPortAdapter from 'chameleon-ultra.js/plugin/SerialPortAdapter'
+            import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+            import WebserialAdapter from 'chameleon-ultra.js/plugin/WebserialAdapter'
+
+            const ultra = new ChameleonUltra()
+            ultra.use(new BufferMockAdapter())
+            ultra.use(new Debug())
+            ultra.use(new SerialPortAdapter())
+            ultra.use(new WebbleAdapter()) // #227
+            ultra.use(new WebserialAdapter())
+            export const check: [string, Buffer, typeof Crypto1, typeof DfuZip] = [version, Buffer.alloc(1), Crypto1, DfuZip]
+          EOF
+          npx tsc -p .
+      - name: bundle contents
+        working-directory: ${{ runner.temp }}/npm-test
+        run: |
+          set -ex
+          cat << "EOF" > bundle.cjs
+            const fs = require('node:fs')
+            const path = require('node:path')
+            const dist = path.dirname(require.resolve('chameleon-ultra.js'))
+
+            // every iife entry is published
+            for (const name of ['index', 'Crypto1', 'plugin/BufferMockAdapter', 'plugin/Debug', 'plugin/DfuZip', 'plugin/WebbleAdapter', 'plugin/WebserialAdapter']) {
+              if (!fs.existsSync(path.join(dist, `${name}.global.js`))) throw new Error(`missing ${name}.global.js`)
+            }
+
+            function * moduleGraph (file, mapRel = rel => rel, seen = new Set()) {
+              if (seen.has(file)) return
+              seen.add(file)
+              yield file
+              if (!fs.existsSync(file)) return
+              const code = fs.readFileSync(file, 'utf8')
+              for (const [, rel] of code.matchAll(/(?:from\s*|require\()["'](\.{1,2}\/[^"']+)["']/g)) {
+                yield * moduleGraph(path.resolve(path.dirname(file), mapRel(rel)), mapRel, seen)
+              }
+            }
+
+            // relative imports in .d.ts must resolve to declaration files (skipLibCheck hides this)
+            const dtsEntries = fs.readdirSync(dist, { recursive: true }).filter(file => /^(?:plugin\/)?\w+\.d\.m?ts$/.test(file))
+            for (const entry of dtsEntries) {
+              for (const file of moduleGraph(path.join(dist, entry), rel => rel.replace(/\.(m?)js$/, '.d.$1ts'))) {
+                if (!/\.d\.m?ts$/.test(file) || !fs.existsSync(file)) throw new Error(`${entry} imports ${path.relative(dist, file)}, which is not a declaration file`)
+              }
+            }
+            console.log(`bundle.cjs: ${dtsEntries.length} .d.ts entries only import declaration files`)
+
+            // Crypto1 and the chunks it imports don't contain unrelated enums
+            // cjs: only the entry file, rolldown keeps an unused require() of the enums chunk
+            for (const entry of ['Crypto1.js', 'Crypto1.mjs', 'Crypto1.global.js']) {
+              const files = entry === 'Crypto1.js' ? [path.join(dist, entry)] : moduleGraph(path.join(dist, entry))
+              for (const file of files) {
+                if (fs.readFileSync(file, 'utf8').includes('GET_APP_VERSION')) throw new Error(`${path.relative(dist, file)} (from ${entry}) contains GET_APP_VERSION`)
+              }
+              console.log(`bundle.cjs: ${entry} is tree-shaken`)
+            }
+          EOF
+          node ./bundle.cjs
   deploy:
     if: github.ref == 'refs/heads/master'
-    needs: test
+    needs: [test, npm-test]
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -113,7 +277,6 @@ jobs:
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/index.global.js
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/Crypto1.global.js
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/DfuZip.global.js
-            https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/SerialPortAdapter.global.js
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebbleAdapter.global.js
             https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/dist/plugin/WebserialAdapter.global.js
 
