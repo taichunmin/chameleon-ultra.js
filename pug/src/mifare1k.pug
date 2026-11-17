@@ -39,7 +39,7 @@ block content
             label.input-group-text.justify-content-center(for="ss-name") name
             input.form-control.form-control-sm#ss-name(placeholder="name of slot HF", v-model="ss.name")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.name = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2
             label.input-group-text.justify-content-center(for="ss-detection") detection
             select.form-select.form-select-sm#ss-detection(v-model.number="ss.detection")
@@ -71,14 +71,14 @@ block content
           .row.g-2.mb-2
             .col
               button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnEmuRead")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:logout.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/logout.svg)")
                 | Load
             .col
               button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnEmuWrite")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/login.svg)")
                 | Emulate
           button.btn.btn-sm.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnEmuReset")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/restore.svg)")
             | Reset slot HF to default
       .card.shadow.mb-2
         h6.card-header.icon-link
@@ -92,46 +92,46 @@ block content
           .row.g-2.mb-2
             .col
               button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnGen2Read")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-down-outline.svg)")
                 | Read
             .col
               button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnGen2Write")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-up-outline.svg)")
                 | Write
           button.btn.btn-sm.w-100.btn-outline-info.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnKeysGrab")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:key-outline.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/key-outline.svg)")
             | Grab keys from Mifare Dump
           button.btn.btn-sm.w-100.btn-outline-secondary.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnKeysReset")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:fire.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/fire.svg)")
             | Reset to well-known keys
         .card-body.overflow-hidden.border-top
           h6.card-title UID (Chinese Magic Card gen1a)
           .row.g-2.mb-2
             .col
               button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnGen1aRead")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-down-outline.svg)")
                 | Read
             .col
               button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnGen1aWrite")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-up-outline.svg)")
                 | Write
       .card.shadow.mb-2
         h6.card-header.icon-link
-          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:card-account-details-outline.svg)")
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/card-account-details-outline.svg)")
           | Mifare Dump
         .card-body.overflow-hidden
           input.d-none(type="file", ref="dumpImportInput", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
           .row.g-2.mb-2
             .col
               button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnImportDump")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-import-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-import-outline.svg)")
                 | Import
             .col
               button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnExportDump")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-export-outline.svg)")
                 | Export
           button.btn.btn-sm.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnResetDump")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/restore.svg)")
             | Reset to empty dump
         .card-body.overflow-hidden.border-top
           h6.card-title Anti Collision
@@ -139,22 +139,22 @@ block content
             label.input-group-text.justify-content-center(for="ss-uid") UID
             input.form-control.form-control-sm#ss-uid(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-atqa") ATQA
             input.form-control.form-control-sm#ss-atqa(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-sak") SAK
             input.form-control.form-control-sm#ss-sak(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-ats") ATS
             input.form-control.form-control-sm#ss-ats(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.ats = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
         .card-body.overflow-hidden.border-top
           h6.card-title Mifare 1k Card Dump
           .input-group.input-group-sm.mb-2(v-for="i in sectorRange", :key="i")
@@ -167,7 +167,7 @@ block content
         .modal-content
           .modal-header
             h5.modal-title.icon-link
-              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-export-outline.svg)")
               | Export Dump
             button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body

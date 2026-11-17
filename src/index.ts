@@ -5,6 +5,7 @@ export { Buffer } from '@taichunmin/buffer'
 export { ChameleonUltra } from './ChameleonUltra'
 export {
   AnimationMode,
+  BatteryCondition,
   ButtonAction,
   ButtonType,
   Cmd,

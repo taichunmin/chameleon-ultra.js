@@ -5,6 +5,7 @@ import { type Class } from 'type-fest'
 import {
   Mf1KeyType,
   type AnimationMode,
+  type BatteryCondition,
   type ButtonAction,
   type DarksideStatus,
   type Hf14aBccMode,
@@ -74,6 +75,21 @@ export class BatteryInfo {
   }
 }
 
+export class BatteryInfoEx {
+  voltage: number
+  level: number
+  condition: BatteryCondition
+
+  constructor (voltage: number, level: number, condition: BatteryCondition) {
+    ;[this.voltage, this.level, this.condition] = [voltage, level, condition]
+  }
+
+  static fromCmd1043 (buf: Buffer): BatteryInfoEx {
+    bufIsLenOrFail(buf, 4, 'buf')
+    return bufUnpackToClass(buf, '!HBB', BatteryInfoEx)
+  }
+}
+
 export class DeviceSettings {
   version: number // version of setting
   animation: AnimationMode
@@ -90,14 +106,14 @@ export class DeviceSettings {
     btnLongPressA: ButtonAction,
     btnLongPressB: ButtonAction,
     blePairingMode: boolean,
-    blePairingKey: string,
+    blePairingKey: Buffer | string,
   ) {
     this.version = version
     this.animation = animation
     this.buttonPressAction = [btnPressA, btnPressB]
     this.buttonLongPressAction = [btnLongPressA, btnLongPressB]
     this.blePairingMode = Boolean(blePairingMode)
-    this.blePairingKey = blePairingKey
+    this.blePairingKey = blePairingKey.toString()
   }
 
   static fromCmd1034 (buf: Buffer): DeviceSettings {

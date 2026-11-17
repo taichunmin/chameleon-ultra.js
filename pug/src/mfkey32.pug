@@ -28,7 +28,7 @@ block content
       include /include/bootstrap5-adapter-content
       .card.shadow.mb-3
         h6.card-header.icon-link
-          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:card-account-details-outline.svg)")
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/card-account-details-outline.svg)")
           | Mifare Dump
         .card-body.overflow-hidden
           input.d-none(type="file", ref="dumpImportInput", @change="dumpImport?.cb?.($event.target.files[0])", @cancel="dumpImport?.cb?.()")
@@ -41,48 +41,48 @@ block content
             label.input-group-text.justify-content-center(for="ss-uid") UID
             input.form-control.form-control-sm#ss-uid(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-atqa") ATQA
             input.form-control.form-control-sm#ss-atqa(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-sak") SAK
             input.form-control.form-control-sm#ss-sak(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-ats") ATS
             input.form-control.form-control-sm#ss-ats(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.ats = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .row.g-2.mb-2
             .col
               button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnEditKeys")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:key-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/key-outline.svg)")
                 | Edit Keys
             .col
               button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnReadTag")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-down-outline.svg)")
                 | Read Tag
           .row.g-2.mb-2
             .col
               button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnNewDump")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/restore.svg)")
                 | New dump
             .col
               button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnEditDump")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-edit-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-edit-outline.svg)")
                 | Edit dump
           .row.g-2.mb-2
             .col
               button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnImportDump")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-import-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-import-outline.svg)")
                 | Import file
             .col
               button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnExportDump")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-export-outline.svg)")
                 | Export file
           details.fs-14px
             summary.text-muted Click to open manual
@@ -105,7 +105,7 @@ block content
             p.my-2 To preserve your data, click "Export file" to save the data to a file. You may restore dump data later by clicking "Import file". #[span.text-danger Please ensure that you export the dump before closing the page to avoid data loss!]
       .card.shadow.mb-3
         h6.card-header.icon-link
-          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:lock-outline.svg)")
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/lock-outline.svg)")
           | Emulate / Recover key
         .card-body.overflow-hidden
           .input-group.input-group-sm.mb-2
@@ -115,11 +115,11 @@ block content
           .row.g-2.mb-2
             .col
               button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnWriteEmu")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/login.svg)")
                 | Emulate
             .col
               button.btn.btn-sm.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnRecoverKeys")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:lock-open-variant-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/lock-open-variant-outline.svg)")
                 | Recover
           details.fs-14px
             summary.text-muted Click to open manual
@@ -138,7 +138,7 @@ block content
         .modal-content
           .modal-body.d-flex.flex-column
             h5.modal-title.icon-link
-              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-edit-outline.svg)")
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-edit-outline.svg)")
               | {{ exportimport.title || 'Edit text' }}
             textarea.form-control.form-control-sm.flex-fill(v-model="exportimport.text")
             small.text-muted.form-text Click "Copy" to copy text, or click "Apply" to apply change.
@@ -152,7 +152,7 @@ block content
         .modal-content
           .modal-header
             h5.modal-title.icon-link
-              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-export-outline.svg)")
               | Export Dump
             button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body

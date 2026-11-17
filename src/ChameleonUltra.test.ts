@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { calcUltraMaxItemSize, ChameleonUltra } from './ChameleonUltra'
 import {
   AnimationMode,
+  BatteryCondition,
   ButtonAction,
   ButtonType,
   DarksideStatus,
@@ -282,6 +283,18 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     expect(adapter.recv).toEqual([Buffer.from('11ef 0401 0000 0000 fb 00', 'hex')])
   })
 
+  test('#cmdGetBatteryInfoEx()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 0413 0068 0004 7d 10546104 37', 'hex'))
+
+    // act
+    const actual = await ultra.cmdGetBatteryInfoEx()
+
+    // assert
+    expect(actual).toEqual({ level: 97, voltage: 4180, condition: BatteryCondition.EXCELLENT })
+    expect(adapter.recv).toEqual([Buffer.from('11ef 0413 0000 0000 e9 00', 'hex')])
+  })
+
   test('#cmdGetButtonLongPressAction()', async () => {
     // arrange
     adapter.send.push(Buffer.from('11ef 0404 0068 0001 8f 03 fd', 'hex'))
@@ -292,6 +305,18 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // assert
     expect(actual).toEqual(ButtonAction.CLONE_IC_UID)
     expect(adapter.recv).toEqual([Buffer.from('11ef 0404 0000 0001 f7 41 bf', 'hex')])
+  })
+
+  test('#cmdGetButtonLongPressThreshold()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 0411 0068 0002 81 03e8 15', 'hex'))
+
+    // act
+    const actual = await ultra.cmdGetButtonLongPressThreshold()
+
+    // assert
+    expect(actual).toEqual(1000)
+    expect(adapter.recv).toEqual([Buffer.from('11ef 0411 0000 0000 eb 00', 'hex')])
   })
 
   test('#cmdGetButtonPressAction()', async () => {
@@ -352,7 +377,7 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // assert
     expect(actual).toEqual({
       animation: AnimationMode.FULL,
-      blePairingKey: Buffer.from('123456'),
+      blePairingKey: '123456',
       blePairingMode: false,
       buttonLongPressAction: [ButtonAction.CLONE_IC_UID, ButtonAction.BATTERY],
       buttonPressAction: [ButtonAction.CYCLE_SLOT_INC, ButtonAction.CYCLE_SLOT_DEC],
@@ -371,6 +396,18 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     // assert
     expect(actual).toEqual('v2.0.0-122-g7fdb358')
     expect(adapter.recv).toEqual([Buffer.from('11ef 03f9 0000 0000 04 00', 'hex')])
+  })
+
+  test('#cmdGetSleepTimeout()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 040f 0068 0001 84 08 f8', 'hex'))
+
+    // act
+    const actual = await ultra.cmdGetSleepTimeout()
+
+    // assert
+    expect(actual).toEqual(8)
+    expect(adapter.recv).toEqual([Buffer.from('11ef 040f 0000 0000 ed 00', 'hex')])
   })
 
   test('#cmdGetSupportedCmds()', async () => {
@@ -429,6 +466,24 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     expect(adapter.recv).toEqual([Buffer.from('11ef 0405 0000 0002 f5 4103 bc', 'hex')])
   })
 
+  test('#cmdSetButtonLongPressThreshold()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 0412 0068 0000 82 00', 'hex'))
+
+    // act
+    await ultra.cmdSetButtonLongPressThreshold(1000)
+
+    // assert
+    expect(adapter.recv).toEqual([Buffer.from('11ef 0412 0000 0002 e8 03e8 15', 'hex')])
+  })
+
+  test('#cmdSetButtonLongPressThreshold() should throw on invalid value', async () => {
+    await expect(ultra.cmdSetButtonLongPressThreshold(-1)).rejects.toThrow(TypeError)
+    await expect(ultra.cmdSetButtonLongPressThreshold(0x10000)).rejects.toThrow(TypeError)
+    await expect(ultra.cmdSetButtonLongPressThreshold(1.5)).rejects.toThrow(TypeError)
+    expect(adapter.recv).toEqual([])
+  })
+
   test('#cmdSetButtonPressAction()', async () => {
     // arrange
     adapter.send.push(Buffer.from('11ef 0403 0068 0000 91 00', 'hex'))
@@ -438,6 +493,24 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(adapter.recv).toEqual([Buffer.from('11ef 0403 0000 0002 f7 4101 be', 'hex')])
+  })
+
+  test('#cmdSetSleepTimeout()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 0410 0068 0000 84 00', 'hex'))
+
+    // act
+    await ultra.cmdSetSleepTimeout(8)
+
+    // assert
+    expect(adapter.recv).toEqual([Buffer.from('11ef 0410 0000 0001 eb 08 f8', 'hex')])
+  })
+
+  test('#cmdSetSleepTimeout() should throw on invalid value', async () => {
+    await expect(ultra.cmdSetSleepTimeout(-1)).rejects.toThrow(TypeError)
+    await expect(ultra.cmdSetSleepTimeout(0x100)).rejects.toThrow(TypeError)
+    await expect(ultra.cmdSetSleepTimeout(1.5)).rejects.toThrow(TypeError)
+    expect(adapter.recv).toEqual([])
   })
 
   test('#cmdWipeFds()', async () => {
