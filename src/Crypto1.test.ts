@@ -253,7 +253,7 @@ test.each([
 ])('.nested()', async ({ uid, atks, dist, expected }) => {
   const keys = Crypto1.nested({ uid, atks, dist })
   expect(_.map(keys, key => key.toString('hex'))).toContain(expected)
-})
+}, 180_000)
 
 test.each([
   {

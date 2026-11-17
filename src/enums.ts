@@ -11,6 +11,15 @@ export enum AnimationMode {
   SYMMETRIC = 3,
 }
 
+/** Coarse battery charge rating derived by the firmware from the battery level. */
+export enum BatteryCondition {
+  CRITICAL = 0,
+  LOW = 1,
+  FAIR = 2,
+  GOOD = 3,
+  EXCELLENT = 4,
+}
+
 export enum ButtonAction {
   /** No Function */
   DISABLE = 0,
@@ -68,6 +77,11 @@ export enum Cmd {
   GET_BLE_PAIRING_ENABLE = 1036,
   SET_BLE_PAIRING_ENABLE = 1037,
   GET_ALL_SLOT_NICKS = 1038,
+  GET_SLEEP_TIMEOUT = 1039,
+  SET_SLEEP_TIMEOUT = 1040,
+  GET_LONG_PRESS_THRESHOLD = 1041,
+  SET_LONG_PRESS_THRESHOLD = 1042,
+  GET_BATTERY_INFO_EX = 1043,
 
   HF14A_SCAN = 2000,
   MF1_DETECT_SUPPORT = 2001,
@@ -587,6 +601,7 @@ export function createIsValueOfArr <T extends readonly any[]> (arr: T): (val: an
 }
 
 export const isAnimationMode = /* @__PURE__ */ createIsEnum(AnimationMode)
+export const isBatteryCondition = /* @__PURE__ */ createIsEnum(BatteryCondition)
 export const isButtonAction = /* @__PURE__ */ createIsEnum(ButtonAction)
 export const isButtonType = /* @__PURE__ */ createIsEnum(ButtonType)
 export const isCmd = /* @__PURE__ */ createIsEnum(Cmd)

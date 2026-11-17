@@ -53,7 +53,7 @@ File import: hidden `input.d-none(type="file", ref="dumpImportInput", @change="d
 
 ## Icon convention
 
-Icons are [Iconify](https://iconify.design/docs/usage/css/no-code/) SVGs via `.svgmask` (`background-color: currentColor` + CSS mask) — `span.svgmask(style="--svgmask-url: url(https://api.iconify.design/<set>:<name>.svg)")`. Always `mdi:` (Material Design Icons), one exception (`icon-park-outline:tips` in `test.pug`).
+Icons are [Iconify](https://iconify.design/docs/usage/css/no-code/) SVGs via `.svgmask` (`background-color: currentColor` + CSS mask) — `span.svgmask(style="--svgmask-url: url(https://api.iconify.design/<set>/<name>.svg)")`. Always `mdi` (Material Design Icons), one exception (`icon-park-outline/tips` in `test.pug`). Use the `/<set>/<name>.svg` path form; the `<set>:<name>.svg` form now returns 404.
 
 - Sizing: `.fs-1dot5em` inside a `<button>`, `.fs-1dot2em` beside a header/title (`card-header`, `modal-title`, `alert-heading`). Missing either is likely a bug — check for Pug's `.col: button.foo(...)` colon syntax, which a naive `grep '^\s*button'` misses.
 - Same action → same icon everywhere: Load device/slot config → `mdi:logout`; Save/Emulate (push config to device) → `mdi:login`; Read/Scan a physical tag → `mdi:tag-arrow-down-outline`; Write a physical tag → `mdi:tag-arrow-up-outline`; Import a file → `mdi:file-import-outline`; Export a file → `mdi:file-export-outline`; Reset/clear to defaults → `mdi:restore`; clear one field → `mdi:close`; recover a key (mfkey32) → `mdi:lock-open-variant-outline`.

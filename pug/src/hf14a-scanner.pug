@@ -27,14 +27,14 @@ block content
       .row.g-2.ls-n1px.mb-3
         .col
           button.btn.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px(type="button", @click="btnClear")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/restore.svg)")
             | Reset
         .col
           button.btn.w-100.btn-outline-success.icon-link.justify-content-center.ls-n1px(v-if="!scanning", type="button", @click="btnScanStart")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:play.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/play.svg)")
             | Start Scan
           button.btn.w-100.btn-outline-warning.icon-link.justify-content-center.ls-n1px(v-else, type="button", @click="btnScanStop")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:stop.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/stop.svg)")
             | Stop Scan
       .table-responsive.fw-light.ls-n1px.text-nowrap(style="font-size: .85rem")
         table.table.table-striped.table-bordered.table-sm.text-center

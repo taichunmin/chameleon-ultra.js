@@ -39,27 +39,27 @@ block content
             label.input-group-text.justify-content-center(for="ss-name") name
             input.form-control.form-control-sm#ss-name(placeholder="name of slot LF", v-model="ss.name")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.name = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-uid-1") ID
             input.form-control.form-control-sm#ss-uid-1(pattern="[\\dA-Fa-f]{10}", maxlength="10", placeholder="Hex format of ID", required, v-model="ss.uid")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .row.g-2.mb-2
             .col
               button.btn.w-100.btn-outline-success.icon-link.justify-content-center.ls-n1px(type="button", @click="btnEmuRead")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:logout.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/logout.svg)")
                 | Load
             .col
               button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnEmuWrite")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/login.svg)")
                 | Emulate
           button.btn.btn-sm.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px(type="button", @click="btnEmuReset")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/restore.svg)")
             | Reset slot LF to default
       .card.shadow.mb-2
         h6.card-header.icon-link
-          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-outline.svg)")
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-outline.svg)")
           | EM410x/T55xx Tag
         .card-body.overflow-hidden: .row.g-2
           h6.card-title.ls-n1px.mb-0 T55xx password candidates
@@ -70,15 +70,15 @@ block content
             label.input-group-text.justify-content-center(for="ss-uid-2") ID
             input.form-control.form-control-sm#ss-uid-2(pattern="[\\dA-Fa-f]{10}", maxlength="10", placeholder="Hex format of ID", required, v-model="ss.uid")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .col-6: button.btn.w-100.btn-outline-success.icon-link.justify-content-center.ls-n1px(type="button", @click="btnScanTag")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-down-outline.svg)")
             | Scan ID
           .col-6: button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnT55xxWrite")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-up-outline.svg)")
             | Write
           .col-12: button.btn.w-100.btn-outline-secondary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnKeysReset")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:fire.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/fire.svg)")
             | Reset to well-known keys
           p.fs-14px.text-body-secondary.mb-0 Please place the LF tag on the back of ChameleonUltra.
   include /include/bootstrap5-navbar-content

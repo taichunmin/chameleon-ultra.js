@@ -26,7 +26,7 @@ block content
       include /include/bootstrap5-adapter-content
       .card.shadow.mb-2
         h6.card-header.icon-link
-          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:github.svg)")
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/github.svg)")
           | From GitHub
         .card-body.overflow-hidden
           .mb-3
@@ -34,11 +34,11 @@ block content
             select.form-select.form-select-sm#ss-tagName(v-model="ss.tagName")
               option(v-for="[k, v] of tagNames", :value="k") {{ v }}
           button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnUpdateRelease")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:puzzle-outline.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/puzzle-outline.svg)")
             | Update release
       .card.shadow.mb-2
         h6.card-header.icon-link
-          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:folder-zip-outline.svg)")
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/folder-zip-outline.svg)")
           | From Zip File
         .card-body.overflow-hidden
           .mb-3
@@ -46,7 +46,7 @@ block content
             input.form-control.form-control-sm#zipSelected(type="file", @change="onZipSelected($event?.target?.files[0])", @cancel="onZipSelected()", accept=".zip,application/zip,application/x-zip-compressed")
             .form-text(v-if="imageGitVersion") Firmware gitVersion: {{ imageGitVersion }}
           button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.ls-n1px(type="button", @click="btnUpdateSelected")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:puzzle-outline.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/puzzle-outline.svg)")
             | Update selected
   include /include/bootstrap5-navbar-content
 

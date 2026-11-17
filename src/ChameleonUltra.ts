@@ -10,6 +10,7 @@ import { type MiddlewareComposeFn, middlewareCompose, sleep, versionCompare } fr
 
 import {
   type AnimationMode,
+  type BatteryCondition,
   BYTES_PER_MF1_KEY,
   type ButtonAction,
   type ButtonType,
@@ -1433,6 +1434,110 @@ export class ChameleonUltra {
       resp.push(freqNames)
     }
     return resp
+  }
+
+  /**
+   * Get the sleep timeout of device, which is how long the device stays awake after being woken by a button press.
+   * @returns The sleep timeout in seconds.
+   * @group Device Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   console.log(await ultra.cmdGetSleepTimeout()) // 8
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdGetSleepTimeout (): Promise<number> {
+    const cmd = Cmd.GET_SLEEP_TIMEOUT // cmd = 1039
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data[0]
+  }
+
+  /**
+   * Set the sleep timeout of device, which is how long the device stays awake after being woken by a button press. The valid range is decided by firmware, an out-of-range value will be rejected by firmware.
+   * @param seconds - The sleep timeout in seconds.
+   * @group Device Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   await ultra.cmdSetSleepTimeout(8)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdSetSleepTimeout (seconds: number): Promise<void> {
+    if (!_.isSafeInteger(seconds) || seconds < 0 || seconds > 0xFF) throw new TypeError('Invalid seconds')
+    const cmd = Cmd.SET_SLEEP_TIMEOUT // cmd = 1040
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!B', seconds) })
+    await readResp()
+  }
+
+  /**
+   * Get the long press threshold of device buttons, which is how long a button must be held to count as a long press.
+   * @returns The long press threshold in milliseconds.
+   * @group Device Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   console.log(await ultra.cmdGetButtonLongPressThreshold()) // 1000
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdGetButtonLongPressThreshold (): Promise<number> {
+    const cmd = Cmd.GET_LONG_PRESS_THRESHOLD // cmd = 1041
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data.readUInt16BE(0)
+  }
+
+  /**
+   * Set the long press threshold of device buttons, which is how long a button must be held to count as a long press. The valid range is decided by firmware, an out-of-range value may be adjusted by firmware.
+   * @param ms - The long press threshold in milliseconds.
+   * @group Device Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   await ultra.cmdSetButtonLongPressThreshold(1000)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdSetButtonLongPressThreshold (ms: number): Promise<void> {
+    if (!_.isSafeInteger(ms) || ms < 0 || ms > 0xFFFF) throw new TypeError('Invalid ms')
+    const cmd = Cmd.SET_LONG_PRESS_THRESHOLD // cmd = 1042
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!H', ms) })
+    await readResp()
+  }
+
+  /**
+   * Get the battery info of device, including the battery condition.
+   * @returns The battery info of device.
+   * @group Device Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { BatteryCondition } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   const battery = await ultra.cmdGetBatteryInfoEx()
+   *   console.log(JSON.stringify(battery)) // { "voltage": 4180, "level": 97, "condition": 4 }
+   *   console.log(BatteryCondition[battery.condition]) // 'EXCELLENT'
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdGetBatteryInfoEx (): Promise<{
+    voltage: number
+    level: number
+    condition: BatteryCondition
+  }> {
+    const cmd = Cmd.GET_BATTERY_INFO_EX // cmd = 1043
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return Decoder.BatteryInfoEx.fromCmd1043((await readResp()).data)
   }
 
   /**

@@ -29,9 +29,9 @@ block content
         span.input-group-text.justify-content-center ACLs (HEX)
         input.form-control(maxlength="8", v-model="ss.hexAcls", :class="[isValidAcls() ? 'is-valid' : 'is-invalid']")
         button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.hexAcls = 'FF078069'")
-          span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+          span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/restore.svg)")
         button.btn.btn-outline-secondary.icon-link(type="button", @click="btnCopy(ss.hexAcls)")
-          span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:content-copy.svg)")
+          span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/content-copy.svg)")
       table.table.table-sm.mb-2.table-bordered.text-center.fs-14px.ls-n1px
         thead
           tr
@@ -86,7 +86,7 @@ block content
         li If key B is readable data, it cannot serve for authentication. Please refer to NXP #[a(target="_blank", href="https://www.nxp.com/docs/en/data-sheet/MF1S50YYX_V1.pdf") MF1S50YYX_V1.pdf] for more information.
       .alert.alert-warning.mb-3.fs-14px.ls-n1px
         h6.alert-heading.icon-link
-          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:alert-outline.svg)")
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/alert-outline.svg)")
           | Warning
         div Writing an incorrect value to the access condition bits will permanently lock the sector.
     .modal.fade(data-bs-backdrop="static", data-bs-keyboard="false", tabindex="-1", ref="dataAclPickerModal")
@@ -94,7 +94,7 @@ block content
         .modal-content
           .modal-header
             h5.modal-title.icon-link.ls-n1px
-              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:content-save-outline.svg)")
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/content-save-outline.svg)")
               | New ACLs for Block {{ dataAclPicker.block }}
             button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body
@@ -124,7 +124,7 @@ block content
         .modal-content
           .modal-header
             h5.modal-title.icon-link.ls-n1px
-              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:content-save-outline.svg)")
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/content-save-outline.svg)")
               | New ACLs for Trailer Block
             button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body

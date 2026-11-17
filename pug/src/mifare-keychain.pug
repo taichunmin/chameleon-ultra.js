@@ -56,7 +56,7 @@ block content
       include /include/bootstrap5-adapter-content
       .card.shadow.mb-3
         h6.card-header.icon-link
-          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-multiple-outline.svg)")
+          span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-multiple-outline.svg)")
           | Tag Anti Collision
         .card-body.overflow-hidden
           .was-validated
@@ -68,39 +68,39 @@ block content
               label.input-group-text.justify-content-center(for="ss-name") NAME
               input.form-control.form-control-sm#ss-name(placeholder="Name of HF slot", v-model="ss.name")
               button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.name = ''")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
             .input-group.input-group-sm.mb-2
               label.input-group-text.justify-content-center(for="ss-uid") UID
               input.form-control.form-control-sm#ss-uid(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
               button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
             .input-group.input-group-sm.mb-2
               label.input-group-text.justify-content-center(for="ss-atqa") ATQA
               input.form-control.form-control-sm#ss-atqa(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
               button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
             .input-group.input-group-sm.mb-2
               label.input-group-text.justify-content-center(for="ss-sak") SAK
               input.form-control.form-control-sm#ss-sak(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
               button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
             .input-group.input-group-sm.mb-2
               label.input-group-text.justify-content-center(for="ss-ats") ATS
               input.form-control.form-control-sm#ss-ats(pattern="([\\dA-Fa-f]{2})*", placeholder="Hex format of ATS", v-model="ss.ats")
               button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.ats = ''")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
             .row.mb-2: .col
               small.form-text.text-muted(v-if="savedTagName") Tag is saved as "{{ savedTagName }}".
               small.form-text.text-muted(v-else) Tag is not saved yet.
             .row.g-2
               .col: button.btn.w-100.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnLoadTag")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:folder-open-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/folder-open-outline.svg)")
                 .mt-1 Load
               .col: button.btn.w-100.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnSaveTag")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:content-save-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/content-save-outline.svg)")
                 .mt-1 Save
               .col: button.btn.w-100.btn-outline-info.d-flex.flex-column.align-items-center(type="button", @click="btnTagCsv")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:database-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/database-outline.svg)")
                 .mt-1 CSV
       .card.shadow.mb-3
         h6.card-header.icon-link
@@ -115,11 +115,11 @@ block content
           .row.g-2.mb-2
             .col
               button.btn.w-100.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnReadSlot")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:logout.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/logout.svg)")
                 .mt-1 Read
             .col
               button.btn.w-100.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnEmulateSlot")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/login.svg)")
                 .mt-1 Emulate
       .card.shadow.mb-3
         h6.card-header.icon-link
@@ -129,15 +129,15 @@ block content
           .row.g-2.mb-2
             .col
               button.btn.w-100.btn-outline-primary.d-flex.flex-column.align-items-center(type="button", @click="btnScanTag")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-down-outline.svg)")
                 .mt-1 Scan
             .col
               button.btn.w-100.btn-outline-success.d-flex.flex-column.align-items-center(type="button", @click="btnWriteTag")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-up-outline.svg)")
                 .mt-1 Write
             .col
               button.btn.w-100.btn-outline-info.d-flex.flex-column.align-items-center(type="button", @click="btnEditMfkeys")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:key-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/key-outline.svg)")
                 .mt-1.ls-n2px Gen2 Keys
     .modal.fade(data-bs-keyboard="false", tabindex="-1", ref="tagPickerModal")
       .modal-dialog.modal-dialog-centered.modal-xl

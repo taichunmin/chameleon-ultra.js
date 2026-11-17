@@ -35,28 +35,28 @@ block content
             label.input-group-text.justify-content-center(for="ss-uid") UID
             input.form-control.form-control-sm#ss-uid(pattern="[\\dA-Fa-f]{8}([\\dA-Fa-f]{6})?([\\dA-Fa-f]{6})?", maxlength="20", placeholder="Hex format of UID", required, v-model="ss.uid")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.uid = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-atqa") ATQA
             input.form-control.form-control-sm#ss-atqa(pattern="[\\dA-Fa-f]{4}", maxlength="4", placeholder="Hex format of ATQA", required, v-model="ss.atqa")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.atqa = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .input-group.input-group-sm.mb-2.was-validated
             label.input-group-text.justify-content-center(for="ss-sak") SAK
             input.form-control.form-control-sm#ss-sak(pattern="[\\dA-Fa-f]{2}", maxlength="2", placeholder="Hex format of SAK", required, v-model="ss.sak")
             button.btn.btn-outline-secondary.icon-link(type="button", @click="ss.sak = ''")
-              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:close.svg)")
+              span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/close.svg)")
           .row.g-2.mb-2
             .col
               button.btn.w-100.btn-outline-success.icon-link.justify-content-center(type="button", @click="btnImportDump")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-import-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-import-outline.svg)")
                 | Import
             .col
               button.btn.w-100.btn-outline-primary.icon-link.justify-content-center(type="button", @click="btnExportDump")
-                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+                span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-export-outline.svg)")
                 | Export
           button.btn.btn-sm.w-100.btn-outline-danger.icon-link.justify-content-center.ls-n1px.mb-2(type="button", @click="btnNewDump")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:restore.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/restore.svg)")
             | New dump
       .card.shadow.mb-2
         h6.card-header ② ChameleonUltra Emulate
@@ -67,7 +67,7 @@ block content
             select.form-select.form-select-sm#ss-slot(v-model.number="ss.slot")
               option(v-for="i of 8", :key="i", :value="i - 1") Slot {{ i }}
           button.btn.w-100.btn-outline-success.icon-link.justify-content-center.mb-2(type="button", @click="btnWriteEmuBlock0")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:login.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/login.svg)")
             | Emulate
       .card.shadow.mb-2
         h6.card-header ③ Sync with Xiaomi Watch
@@ -77,24 +77,24 @@ block content
             input.form-check-input#ss-checkUidBeforeWrite(type="checkbox", v-model="ss.checkUidBeforeWrite")
             label.form-check-label(for="ss-checkUidBeforeWrite") Verify UID before write
           button.btn.w-100.btn-outline-primary.icon-link.justify-content-center.mb-2(type="button", @click="btnGen2Write")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-up-outline.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-up-outline.svg)")
             | Write
         .card-body.overflow-hidden.border-top
           p.fs-14px.mb-2 Click "Verify" button to compare between dump and Xiaomi Watch (skip block 0).
           button.btn.w-100.btn-outline-success.icon-link.justify-content-center.mb-2(type="button", @click="btnGen2Verify")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-check-outline.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-check-outline.svg)")
             | Verify
         .card-body.overflow-hidden.border-top
           p.fs-14px.mb-2 Click "Read" button to read from Xiaomi Watch (skip block 0). After read, you can click "Export" or "Write" button.
           button.btn.w-100.btn-outline-info.icon-link.justify-content-center.mb-2(type="button", @click="btnGen2Read")
-            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi:tag-arrow-down-outline.svg)")
+            span.svgmask.fs-1dot5em(style="--svgmask-url: url(https://api.iconify.design/mdi/tag-arrow-down-outline.svg)")
             | Read
     .modal.fade(tabindex="-1", ref="dumpExportModal")
       .modal-dialog.modal-dialog-centered.modal-xl
         .modal-content
           .modal-header
             h5.modal-title.icon-link
-              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi:file-export-outline.svg)")
+              span.svgmask.fs-1dot2em(style="--svgmask-url: url(https://api.iconify.design/mdi/file-export-outline.svg)")
               | Export Dump
             button.btn-close(type="button", data-bs-dismiss="modal", aria-label="Close")
           .modal-body
