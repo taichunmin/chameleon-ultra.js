@@ -39,6 +39,17 @@ For iPhone and iPad, the Web Bluetooth API is available in [Bluefy – Web BLE B
 
 For Linux and earlier versions of Windows, enable the `#experimental-web-platform-features` flag in `about://flags`.
 
+### Web Bluetooth (Node.js)
+
+In Node.js, `WebbleAdapter` works via [webbluetooth](https://www.npmjs.com/package/webbluetooth):
+
+```js
+import WebbleAdapter from 'chameleon-ultra.js/plugin/WebbleAdapter'
+
+const ultraNodeBle = new ChameleonUltra()
+await ultraNodeBle.use(new WebbleAdapter())
+```
+
 ### Web Serial API
 
 The Web Serial API is available on all desktop platforms (ChromeOS, Linux, macOS, and Windows) in Chrome 89. See MDN's [Browser compatibility](https://developer.mozilla.org/docs/Web/API/Serial#browser_compatibility) table for more information.
@@ -110,9 +121,9 @@ After importing the SDK, you need to register exactly one adapter to the `Chamel
 
 ```js
 const ultraUsb = new ChameleonUltra()
-ultraUsb.use(new WebserialAdapter())
+await ultraUsb.use(new WebserialAdapter())
 const ultraBle = new ChameleonUltra()
-ultraBle.use(new WebbleAdapter())
+await ultraBle.use(new WebbleAdapter())
 ```
 
 ## Getting Started
@@ -149,7 +160,7 @@ await run(vm.ultra)
 const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
 const { default: WebserialAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/WebserialAdapter/+esm')
 const ultraUsb = new ChameleonUltra()
-ultraUsb.use(new WebserialAdapter())
+await ultraUsb.use(new WebserialAdapter())
 await run(ultraUsb)
 ```
 
@@ -169,7 +180,7 @@ await run(vm.ultra)
 const { ChameleonUltra } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
 const { default: WebserialAdapter } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/plugin/WebserialAdapter/+esm')
 const ultraUsb = new ChameleonUltra()
-ultraUsb.use(new WebserialAdapter())
+await ultraUsb.use(new WebserialAdapter())
 await run(ultraUsb)
 ```
 

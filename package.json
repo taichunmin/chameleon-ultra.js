@@ -9,7 +9,7 @@
   "name": "chameleon-ultra.js",
   "packageManager": "yarn@1.22.22",
   "type": "commonjs",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "bugs": {
     "url": "https://github.com/taichunmin/chameleon-ultra.js/issues"
   },
@@ -28,7 +28,7 @@
     "lodash-es": "^4.18.1",
     "serialport": "^13.0.0",
     "web-serial-polyfill": "^1.0.15",
-    "webbluetooth": "^6.6.0"
+    "webbluetooth": "^7.1.1"
   },
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",

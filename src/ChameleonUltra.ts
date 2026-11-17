@@ -154,9 +154,9 @@ function wrapErr (cause: Error): never {
  *
  * ```js
  * const ultraUsb = new ChameleonUltra()
- * ultraUsb.use(new WebserialAdapter())
+ * await ultraUsb.use(new WebserialAdapter())
  * const ultraBle = new ChameleonUltra()
- * ultraBle.use(new WebbleAdapter())
+ * await ultraBle.use(new WebbleAdapter())
  * ```
  *
  * </details>

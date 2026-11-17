@@ -202,11 +202,11 @@ block script
     const { FlexSearch } = window
 
     const ultraUsb = new ChameleonUltra()
-    ultraUsb.use(new Debug())
-    ultraUsb.use(new WebserialAdapter())
+    await ultraUsb.use(new Debug())
+    await ultraUsb.use(new WebserialAdapter())
     const ultraBle = new ChameleonUltra()
-    ultraBle.use(new Debug())
-    ultraBle.use(new WebbleAdapter())
+    await ultraBle.use(new Debug())
+    await ultraBle.use(new WebbleAdapter())
 
     const toHex = buf => _.toUpper(buf.toString('hex'))
     const WELL_KNOWN_KEYS = ['FFFFFFFFFFFF', 'A0A1A2A3A4A5', 'D3F7D3F7D3F7']
