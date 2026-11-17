@@ -56,6 +56,7 @@ import {
   isHf14aRatsMode,
   isMf1EmuWriteMode,
   isMf1KeyType,
+  isMf1PrngType,
   isMf1VblockOperator,
   isMfuEmuTagType,
   isMfuEmuWriteMode,
@@ -3634,6 +3635,86 @@ export class ChameleonUltra {
     const readResp = await this.#createReadRespFn({ cmd })
     await this.#sendCmd({ cmd })
     return Decoder.MfuEmuSettings.fromCmd4037((await readResp()).data)
+  }
+
+  /**
+   * Set whether the mifare classic emulator of actived slot resets its state when the reader field is lost.
+   * @param enable - `true` to reset the emulator state on field off, `false` to keep it.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   await ultra.cmdMf1SetFieldOffDoReset(false)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMf1SetFieldOffDoReset (enable: boolean | number): Promise<void> {
+    if (_.isNil(enable)) throw new TypeError('enable is required')
+    const cmd = Cmd.MF1_SET_FIELD_OFF_DO_RESET // cmd = 4038
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!?', enable) })
+    await readResp()
+  }
+
+  /**
+   * Get whether the mifare classic emulator of actived slot resets its state when the reader field is lost.
+   * @returns `true` if the emulator state is reset on field off.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   console.log(await ultra.cmdMf1GetFieldOffDoReset()) // false
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMf1GetFieldOffDoReset (): Promise<boolean> {
+    const cmd = Cmd.MF1_GET_FIELD_OFF_DO_RESET // cmd = 4039
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data[0] === 1
+  }
+
+  /**
+   * Get the PRNG type used by the mifare classic emulator of actived slot to generate auth nonces.
+   * @returns The PRNG type of actived slot.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Mf1PrngType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   console.log(Mf1PrngType[await ultra.cmdMf1GetPrngType()]) // WEAK
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMf1GetPrngType (): Promise<Mf1PrngType> {
+    const cmd = Cmd.MF1_GET_PRNG_TYPE // cmd = 4040
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd })
+    return (await readResp()).data[0]
+  }
+
+  /**
+   * Set the PRNG type used by the mifare classic emulator of actived slot to generate auth nonces.
+   * @param prngType - The PRNG type of actived slot.
+   * @group Mifare Classic Related
+   * @example
+   * ```js
+   * // you can run in DevTools of https://taichunmin.idv.tw/chameleon-ultra.js/test.html
+   * await (async ultra => {
+   *   const { Mf1PrngType } = await import('https://cdn.jsdelivr.net/npm/chameleon-ultra.js@0/+esm')
+   *   await ultra.cmdMf1SetPrngType(Mf1PrngType.WEAK)
+   * })(vm.ultra)
+   * ```
+   */
+  async cmdMf1SetPrngType (prngType: Mf1PrngType): Promise<void> {
+    if (!isMf1PrngType(prngType)) throw new TypeError('Invalid prngType')
+    const cmd = Cmd.MF1_SET_PRNG_TYPE // cmd = 4041
+    const readResp = await this.#createReadRespFn({ cmd })
+    await this.#sendCmd({ cmd, data: Buffer.pack('!B', prngType) })
+    await readResp()
   }
 
   /**
