@@ -1,7 +1,7 @@
 import { type Buffer } from '@taichunmin/buffer'
 import * as _ from 'lodash-es'
 import type { TransformStream, UnderlyingSink, WritableStream } from 'stream/web'
-import { type bluetooth } from 'webbluetooth'
+import type * as WebBluetooth from 'webbluetooth'
 import { type ChameleonUltra } from '../ChameleonUltra'
 import { sleep } from '../helper'
 import { setObject } from '../iifeExportHelper'
@@ -14,27 +14,18 @@ const ULTRA_RX_CHAR_UUID = toCanonicalUUID('6e400002-b5a3-f393-e0a9-e50e24dcca9e
 const ULTRA_SERV_UUID = toCanonicalUUID('6e400001-b5a3-f393-e0a9-e50e24dcca9e')
 const ULTRA_TX_CHAR_UUID = toCanonicalUUID('6e400003-b5a3-f393-e0a9-e50e24dcca9e')
 
-const BLE_NAME_FILTERS: BluetoothLEScanFilter[] = [
+const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
   { name: 'ChameleonUltra' }, // Chameleon Ultra
   { name: 'ChameleonLite' }, // Chameleon Lite
   { namePrefix: 'CU-' }, // Chameleon Ultra DFU
   { namePrefix: 'CL-' }, // Chameleon Lite DFU
-]
-
-const BLE_SCAN_FILTERS: BluetoothLEScanFilter[] = [
-  ...BLE_NAME_FILTERS,
   { services: [DFU_SERV_UUID] }, // DFU
   { services: [ULTRA_SERV_UUID] }, // bluefy not support name filter
 ]
 
-/** The `webbluetooth` npm package (Node.js) finds nothing once a `services` filter is present. */
-function isWebbluetoothPkg (bluetooth: unknown): boolean {
-  return _.has(bluetooth, 'scanner') && _.has(bluetooth, 'deviceFound')
-}
-
 export default class WebbleAdapter implements UltraPlugin {
   #isOpen: boolean = false
-  bluetooth?: typeof bluetooth
+  bluetooth?: typeof WebBluetooth.webbluetooth
   Buffer?: typeof Buffer
   ctrlChar: BluetoothRemoteGATTCharacteristic | null = null
   device: BluetoothDevice | null = null
@@ -48,11 +39,31 @@ export default class WebbleAdapter implements UltraPlugin {
   WritableStream: typeof WritableStream
 
   constructor () {
-    const navigator = (globalThis as any)?.navigator ?? {}
-    this.bluetooth = navigator?.bluetooth
     this.WritableStream = (globalThis as any).WritableStream
     this.TransformStream = (globalThis as any).TransformStream
     this.emitErr = (err: Error): void => { this.ultra?.emitter.emit('error', _.set(new Error(err.message), 'cause', err)) }
+  }
+
+  /**
+   * Get the Web Bluetooth API: `navigator.bluetooth` if available, otherwise lazy-load the `webbluetooth` package (Node.js).
+   * @param ultra - Emits `debug` events about which API was loaded and any load error.
+   * @returns The Web Bluetooth API, or `undefined` if not available.
+   */
+  static async getBluetooth (ultra?: ChameleonUltra): Promise<typeof WebBluetooth.webbluetooth | undefined> {
+    const debug = (formatter: any, ...args: [] | any[]): void => { ultra?.emitter.emit('debug', 'webble', formatter, ...args) }
+    const navBluetooth = (globalThis as any).navigator?.bluetooth
+    if (!_.isNil(navBluetooth)) {
+      debug('bluetooth = navigator.bluetooth')
+      return navBluetooth
+    }
+    try {
+      const { bluetooth } = await import('webbluetooth')
+      debug(`bluetooth = webbluetooth${_.isNil(bluetooth) ? ' (unavailable)' : ''}`)
+      return bluetooth
+    } catch (err) {
+      debug(`failed to load webbluetooth: ${err.message}`)
+      return undefined
+    }
   }
 
   #debug (formatter: any, ...args: [] | any[]): void {
@@ -64,6 +75,7 @@ export default class WebbleAdapter implements UltraPlugin {
     ;[this.ultra, this.Buffer] = [ultra, Buffer]
 
     if (!_.isNil(ultra.$adapter)) await ultra.disconnect(new Error('adapter replaced'))
+    this.bluetooth ??= await WebbleAdapter.getBluetooth(ultra)
     const _isSupported = await this.bluetooth?.getAvailability() ?? false
     const adapter: AdapterInstallResp = {
       isSupported: (): boolean => _isSupported,
@@ -78,7 +90,7 @@ export default class WebbleAdapter implements UltraPlugin {
       try {
         if (!adapter.isSupported()) throw new Error('WebBLE not supported')
         this.device = await this.bluetooth?.requestDevice({
-          filters: isWebbluetoothPkg(this.bluetooth) ? BLE_NAME_FILTERS : BLE_SCAN_FILTERS,
+          filters: BLE_SCAN_FILTERS,
           optionalServices: [DFU_SERV_UUID, ULTRA_SERV_UUID],
         }).catch(err => { throw _.set(new Error(err.message), 'cause', err) }) ?? null
         if (_.isNil(this.device)) throw new Error('no device')
@@ -246,6 +258,6 @@ class DfuRxSink implements UnderlyingSink<Buffer> {
 
 function toCanonicalUUID (uuid: any): string {
   if (_.isString(uuid) && /^[0-9a-fA-F]{1,8}$/.test(uuid)) uuid = _.parseInt(uuid, 16)
-  if (_.isSafeInteger(uuid)) uuid = BluetoothUUID.canonicalUUID(uuid)
+  if (_.isSafeInteger(uuid)) uuid = `${uuid.toString(16).padStart(8, '0')}-0000-1000-8000-00805f9b34fb`
   return _.toLower(uuid)
 }

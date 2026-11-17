@@ -57,13 +57,17 @@ The ChameleonUltra class requires exactly one adapter plugin to work. If you wan
 ```js
 // For WebSerial and WebBluetooth
 const ultraUsb = new ChameleonUltra()
-ultraUsb.use(new WebserialAdapter())
+await ultraUsb.use(new WebserialAdapter())
 const ultraBle = new ChameleonUltra()
-ultraBle.use(new WebbleAdapter())
+await ultraBle.use(new WebbleAdapter())
 
 // For Node.js with SerialPortAdapter
 const ultraNode = new ChameleonUltra()
-ultraNode.use(new SerialPortAdapter())
+await ultraNode.use(new SerialPortAdapter())
+
+// WebbleAdapter also works in Node.js (via webbluetooth)
+const ultraNodeBle = new ChameleonUltra()
+await ultraNodeBle.use(new WebbleAdapter())
 ```
 
 ### Get the device Git version

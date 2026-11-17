@@ -8,6 +8,13 @@ const emptyStreamWeb: Rolldown.Plugin = {
   load: id => id === '\0empty-stream-web' ? 'module.exports = {}' : null,
 }
 
+// browser build only needs navigator.bluetooth, skip webbluetooth's uuid tables
+const browserWebbluetooth: Rolldown.Plugin = {
+  name: 'browser-webbluetooth',
+  resolveId: id => id === 'webbluetooth' ? '\0browser-webbluetooth' : null,
+  load: id => id === '\0browser-webbluetooth' ? 'export const bluetooth = globalThis.navigator?.bluetooth' : null,
+}
+
 const plugins = ['BufferMockAdapter', 'Debug', 'DfuZip', 'SerialPortAdapter', 'WebbleAdapter', 'WebserialAdapter']
 
 const entry: Record<string, string> = {
@@ -54,7 +61,7 @@ export default defineConfig((options): UserConfig[] => {
       format: 'iife',
       globalName: name === 'index' ? 'ChameleonUltraJS' : undefined,
       platform: 'browser',
-      plugins: [emptyStreamWeb],
+      plugins: [emptyStreamWeb, browserWebbluetooth],
       outputOptions: opts => ({ ...opts, entryFileNames: '[name].global.js' }),
     })),
   ]
