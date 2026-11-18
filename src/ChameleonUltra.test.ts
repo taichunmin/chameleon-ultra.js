@@ -1063,6 +1063,30 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
     expect(adapter.recv).toEqual([Buffer.from('11ef 0fac 0000 0000 45 00', 'hex')])
   })
 
+  test('#cmdMf1GetFieldOffDoReset()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 0fc7 0068 0001 c1 01 ff', 'hex'))
+
+    // act
+    const actual = await ultra.cmdMf1GetFieldOffDoReset()
+
+    // assert
+    expect(actual).toEqual(true)
+    expect(adapter.recv).toEqual([Buffer.from('11ef 0fc7 0000 0000 2a 00', 'hex')])
+  })
+
+  test('#cmdMf1GetPrngType()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 0fc8 0068 0001 c0 01 ff', 'hex'))
+
+    // act
+    const actual = await ultra.cmdMf1GetPrngType()
+
+    // assert
+    expect(actual).toEqual(Mf1PrngType.WEAK)
+    expect(adapter.recv).toEqual([Buffer.from('11ef 0fc8 0000 0000 29 00', 'hex')])
+  })
+
   test('#cmdMf1GetWriteMode()', async () => {
     // arrange
     adapter.send.push(Buffer.from('11ef 0fb0 0068 0001 d8 00 00', 'hex'))
@@ -1153,6 +1177,33 @@ describe('ChameleonUltra with BufferMockAdapter', () => {
 
     // assert
     expect(adapter.recv).toEqual([Buffer.from('11ef 0fad 0000 0001 43 00 00', 'hex')])
+  })
+
+  test('#cmdMf1SetFieldOffDoReset()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 0fc6 0068 0000 c3 00', 'hex'))
+
+    // act
+    await ultra.cmdMf1SetFieldOffDoReset(true)
+
+    // assert
+    expect(adapter.recv).toEqual([Buffer.from('11ef 0fc6 0000 0001 2a 01 ff', 'hex')])
+  })
+
+  test('#cmdMf1SetPrngType()', async () => {
+    // arrange
+    adapter.send.push(Buffer.from('11ef 0fc9 0068 0001 bf 02 fe', 'hex'))
+
+    // act
+    await ultra.cmdMf1SetPrngType(Mf1PrngType.HARD)
+
+    // assert
+    expect(adapter.recv).toEqual([Buffer.from('11ef 0fc9 0000 0001 27 02 fe', 'hex')])
+  })
+
+  test('#cmdMf1SetPrngType() with invalid value', async () => {
+    await expect(ultra.cmdMf1SetPrngType(3 as any)).rejects.toThrow(TypeError)
+    expect(adapter.recv).toEqual([])
   })
 
   test('#cmdMf1SetWriteMode()', async () => {
